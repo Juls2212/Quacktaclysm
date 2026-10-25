@@ -1,0 +1,28 @@
+# Godot
+.godot/
+*.translation
+.import/
+export.cfg
+export_credentials.cfg
+
+# Export / build output
+builds/
+export/
+build/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
