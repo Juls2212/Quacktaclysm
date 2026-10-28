@@ -1,0 +1,179 @@
+[gd_scene load_steps=18 format=3]
+
+[ext_resource type="Script" path="res://frontend/scenes/test/enemy_test.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://backend/player/player.tscn" id="2_player"]
+[ext_resource type="PackedScene" path="res://frontend/ui/player_health_hud.tscn" id="3_hud"]
+[ext_resource type="PackedScene" path="res://backend/progression/checkpoint.tscn" id="4_checkpoint"]
+[ext_resource type="PackedScene" path="res://backend/combat/kill_zone.tscn" id="5_killzone"]
+[ext_resource type="PackedScene" path="res://backend/enemies/melee_enemy.tscn" id="6_melee"]
+[ext_resource type="Resource" path="res://backend/enemies/stats/melee_tough_stats.tres" id="7_tough"]
+[ext_resource type="PackedScene" path="res://backend/enemies/fast_enemy.tscn" id="8_fast"]
+[ext_resource type="PackedScene" path="res://backend/enemies/ranged_enemy.tscn" id="9_ranged"]
+
+[sub_resource type="RectangleShape2D" id="Shape_ranged_platform"]
+size = Vector2(240, 20)
+
+[sub_resource type="RectangleShape2D" id="Shape_1"]
+size = Vector2(2800, 40)
+
+[sub_resource type="RectangleShape2D" id="Shape_2"]
+size = Vector2(40, 1000)
+
+[sub_resource type="RectangleShape2D" id="Shape_3"]
+size = Vector2(40, 1000)
+
+[sub_resource type="RectangleShape2D" id="Shape_4"]
+size = Vector2(130, 20)
+
+[sub_resource type="RectangleShape2D" id="Shape_5"]
+size = Vector2(200, 20)
+
+[sub_resource type="RectangleShape2D" id="Shape_6"]
+size = Vector2(40, 100)
+
+[node name="EnemyTest" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="Level" type="Node2D" parent="."]
+
+[node name="Floor" type="StaticBody2D" parent="Level"]
+position = Vector2(800, 620)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Level/Floor"]
+shape = SubResource("Shape_1")
+
+[node name="Visual" type="Polygon2D" parent="Level/Floor"]
+color = Color(0.35,0.3,0.25, 1)
+polygon = PackedVector2Array(-1400, -20, 1400, -20, 1400, 20, -1400, 20)
+
+[node name="WallLeft" type="StaticBody2D" parent="Level"]
+position = Vector2(-620, 100)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Level/WallLeft"]
+shape = SubResource("Shape_2")
+
+[node name="Visual" type="Polygon2D" parent="Level/WallLeft"]
+color = Color(0.3,0.3,0.35, 1)
+polygon = PackedVector2Array(-20, -500, 20, -500, 20, 500, -20, 500)
+
+[node name="WallRight" type="StaticBody2D" parent="Level"]
+position = Vector2(2220, 100)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Level/WallRight"]
+shape = SubResource("Shape_3")
+
+[node name="Visual" type="Polygon2D" parent="Level/WallRight"]
+color = Color(0.3,0.3,0.35, 1)
+polygon = PackedVector2Array(-20, -500, 20, -500, 20, 500, -20, 500)
+
+[node name="StepPlatform" type="StaticBody2D" parent="Level"]
+position = Vector2(185, 530)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Level/StepPlatform"]
+shape = SubResource("Shape_4")
+
+[node name="Visual" type="Polygon2D" parent="Level/StepPlatform"]
+color = Color(0.45,0.55,0.35, 1)
+polygon = PackedVector2Array(-65, -10, 65, -10, 65, 10, -65, 10)
+
+[node name="HighPlatform" type="StaticBody2D" parent="Level"]
+position = Vector2(400, 460)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Level/HighPlatform"]
+shape = SubResource("Shape_5")
+
+[node name="Visual" type="Polygon2D" parent="Level/HighPlatform"]
+color = Color(0.45,0.55,0.35, 1)
+polygon = PackedVector2Array(-100, -10, 100, -10, 100, 10, -100, 10)
+
+[node name="WallBlock" type="StaticBody2D" parent="Level"]
+position = Vector2(1720, 550)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Level/WallBlock"]
+shape = SubResource("Shape_6")
+
+[node name="Visual" type="Polygon2D" parent="Level/WallBlock"]
+color = Color(0.3,0.3,0.35, 1)
+polygon = PackedVector2Array(-20, -50, 20, -50, 20, 50, -20, 50)
+
+[node name="RangedPlatform" type="StaticBody2D" parent="Level"]
+position = Vector2(900, 460)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Level/RangedPlatform"]
+shape = SubResource("Shape_ranged_platform")
+
+[node name="Visual" type="Polygon2D" parent="Level/RangedPlatform"]
+color = Color(0.45, 0.55, 0.35, 1)
+polygon = PackedVector2Array(-120, -10, 120, -10, 120, 10, -120, 10)
+
+[node name="SpawnPoint" type="Marker2D" parent="."]
+position = Vector2(0, 560)
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+position = Vector2(0, 560)
+
+[node name="Enemies" type="Node2D" parent="."]
+
+[node name="EnemyBasic1" parent="Enemies" instance=ExtResource("6_melee")]
+position = Vector2(700, 576)
+
+[node name="EnemyBasic2" parent="Enemies" instance=ExtResource("6_melee")]
+position = Vector2(1300, 576)
+
+[node name="EnemyTough" parent="Enemies" instance=ExtResource("6_melee")]
+position = Vector2(1500, 576)
+stats = ExtResource("7_tough")
+
+[node name="Visual" parent="Enemies/EnemyTough"]
+modulate = Color(0.55, 0.55, 1, 1)
+
+[node name="EnemyPlatform" parent="Enemies" instance=ExtResource("6_melee")]
+position = Vector2(400, 426)
+
+[node name="FastEnemy1" parent="Enemies" instance=ExtResource("8_fast")]
+position = Vector2(1100, 576)
+
+[node name="FastEnemy2" parent="Enemies" instance=ExtResource("8_fast")]
+position = Vector2(1600, 576)
+
+[node name="RangedEnemyFloor" parent="Enemies" instance=ExtResource("9_ranged")]
+position = Vector2(2050, 576)
+
+[node name="RangedEnemyPlatform" parent="Enemies" instance=ExtResource("9_ranged")]
+position = Vector2(900, 426)
+
+[node name="CheckpointA" parent="." instance=ExtResource("4_checkpoint")]
+position = Vector2(900, 600)
+checkpoint_id = &"checkpoint_a"
+
+[node name="CheckpointB" parent="." instance=ExtResource("4_checkpoint")]
+position = Vector2(1900, 600)
+checkpoint_id = &"checkpoint_b"
+
+[node name="KillZone" parent="." instance=ExtResource("5_killzone")]
+position = Vector2(800, 1100)
+
+[node name="Hud" parent="." instance=ExtResource("3_hud")]
+
+[node name="DebugLayer" type="CanvasLayer" parent="."]
+
+[node name="DebugLabel" type="Label" parent="DebugLayer"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 456.0
+offset_bottom = 200.0
+text = "debug"

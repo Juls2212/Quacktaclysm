@@ -1,0 +1,9 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" path="res://backend/enemies/enemy_base.tscn" id="1_base"]
+[ext_resource type="Script" path="res://backend/enemies/fast_enemy.gd" id="2_script"]
+[ext_resource type="Resource" path="res://backend/enemies/stats/fast_basic_stats.tres" id="3_stats"]
+
+[node name="FastEnemy" instance=ExtResource("1_base")]
+script = ExtResource("2_script")
+stats = ExtResource("3_stats")

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="FastEnemyStats" format=3]
+
+[ext_resource type="Script" path="res://backend/enemies/fast_enemy_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+max_health = 2
+move_speed = 210.0
+acceleration = 1600.0
+patrol_speed_multiplier = 0.4
+detection_range = 200.0
+lose_target_range = 300.0
+attack_range = 90.0
+attack_knockback = Vector2(200, -120)
+attack_startup_time = 0.4
+attack_recovery_time = 0.7
+attack_cooldown = 0.6
+hurt_stun_time = 0.25
+lunge_speed = 420.0
+lunge_duration = 0.25

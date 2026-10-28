@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="RangedEnemyStats" format=3]
+
+[ext_resource type="Script" path="res://backend/enemies/ranged_enemy_stats.gd" id="1_stats"]
+[ext_resource type="Resource" path="res://backend/combat/stats/enemy_projectile_stats.tres" id="2_projectile"]
+[ext_resource type="PackedScene" path="res://backend/combat/projectile.tscn" id="3_scene"]
+
+[resource]
+script = ExtResource("1_stats")
+projectile_stats = ExtResource("2_projectile")
+projectile_scene = ExtResource("3_scene")
+max_health = 2
+move_speed = 70.0
+detection_range = 320.0
+lose_target_range = 460.0
+attack_range = 300.0
+attack_startup_time = 0.5
+attack_active_time = 0.05
+attack_recovery_time = 0.4
+attack_cooldown = 1.5
