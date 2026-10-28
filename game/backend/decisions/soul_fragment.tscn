@@ -1,0 +1,22 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://backend/decisions/soul_fragment.gd" id="1_script"]
+
+[sub_resource type="CircleShape2D" id="Shape_pickup"]
+radius = 24.0
+
+[node name="SoulFragment" type="Area2D"]
+script = ExtResource("1_script")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("Shape_pickup")
+
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="Halo" type="Polygon2D" parent="Visual"]
+color = Color(1, 1, 1, 0.3)
+polygon = PackedVector2Array(0, -22, 16, -16, 22, 0, 16, 16, 0, 22, -16, 16, -22, 0, -16, -16)
+
+[node name="Core" type="Polygon2D" parent="Visual"]
+color = Color(1, 1, 1, 0.95)
+polygon = PackedVector2Array(0, -12, 8, 0, 0, 12, -8, 0)

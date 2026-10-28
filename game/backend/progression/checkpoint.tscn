@@ -1,0 +1,16 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://backend/progression/checkpoint.gd" id="1_checkpoint"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_checkpoint"]
+size = Vector2(40, 120)
+
+[node name="Checkpoint" type="Area2D"]
+script = ExtResource("1_checkpoint")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -60)
+shape = SubResource("RectangleShape2D_checkpoint")
+
+[node name="Visual" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-3, 0, 3, 0, 3, -80, 22, -70, 3, -60, -3, -60)
