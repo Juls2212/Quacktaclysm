@@ -1,9 +1,19 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://backend/player/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://backend/combat/health_component.gd" id="2_health"]
+[ext_resource type="Script" path="res://backend/combat/hurtbox.gd" id="3_hurtbox"]
+[ext_resource type="Script" path="res://backend/player/player_visual.gd" id="4_visual"]
+[ext_resource type="Script" path="res://backend/combat/hitbox.gd" id="5_hitbox"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
 size = Vector2(28, 52)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_hurtbox"]
+size = Vector2(28, 52)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_sword"]
+size = Vector2(52, 44)
 
 [node name="Player" type="CharacterBody2D"]
 collision_layer = 2
@@ -13,7 +23,38 @@ script = ExtResource("1_player")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("RectangleShape2D_body")
 
-[node name="Visual" type="Node2D" parent="."]
+[node name="Health" type="Node" parent="."]
+script = ExtResource("2_health")
+
+[node name="Hurtbox" type="Area2D" parent="." node_paths=PackedStringArray("health")]
+script = ExtResource("3_hurtbox")
+team = 0
+health = NodePath("../Health")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+shape = SubResource("RectangleShape2D_hurtbox")
+
+[node name="AttackPivot" type="Node2D" parent="."]
+
+[node name="Hitbox" type="Area2D" parent="AttackPivot" node_paths=PackedStringArray("owner_body")]
+script = ExtResource("5_hitbox")
+team = 0
+owner_body = NodePath("../..")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackPivot/Hitbox"]
+position = Vector2(42, 0)
+shape = SubResource("RectangleShape2D_sword")
+
+[node name="Visual" type="Node2D" parent="." node_paths=PackedStringArray("health", "attack_hitbox", "sword")]
+script = ExtResource("4_visual")
+health = NodePath("../Health")
+attack_hitbox = NodePath("../AttackPivot/Hitbox")
+sword = NodePath("SwordVisual")
+
+[node name="SwordVisual" type="Polygon2D" parent="Visual"]
+visible = false
+color = Color(0.9, 0.9, 1, 1)
+polygon = PackedVector2Array(16, -6, 64, -6, 64, 6, 16, 6)
 
 [node name="Body" type="Polygon2D" parent="Visual"]
 color = Color(0.25, 0.6, 0.95, 1)
