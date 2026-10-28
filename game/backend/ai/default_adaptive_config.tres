@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="AdaptiveConfig" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://backend/ai/adaptive_config.gd" id="1_config"]
+[ext_resource type="Script" path="res://backend/ai/adaptive_profile_params.gd" id="2_params"]
+
+[sub_resource type="Resource" id="Resource_compassionate"]
+script = ExtResource("2_params")
+profile_id = "compassionate"
+narrative_variant = "mercy"
+allowed_narrative_variants = PackedStringArray("mercy", "mercy_hopeful")
+encounter_variant = "calm"
+ending_variant = "ending_compassionate"
+boss_aggression = 0.9
+
+[sub_resource type="Resource" id="Resource_neutral"]
+script = ExtResource("2_params")
+profile_id = "neutral"
+narrative_variant = "balanced"
+allowed_narrative_variants = PackedStringArray("balanced")
+encounter_variant = "standard"
+ending_variant = "ending_neutral"
+boss_aggression = 1.0
+
+[sub_resource type="Resource" id="Resource_corrupt"]
+script = ExtResource("2_params")
+profile_id = "corrupt"
+narrative_variant = "burden"
+allowed_narrative_variants = PackedStringArray("burden", "burden_bitter")
+encounter_variant = "corrupted"
+ending_variant = "ending_corrupt"
+boss_aggression = 1.15
+
+[resource]
+script = ExtResource("1_config")
+decision_margin_threshold = 2.0
+level_weights = PackedFloat32Array(1, 1, 1)
+max_profile_distance = 1
+params_compassionate = SubResource("Resource_compassionate")
+params_neutral = SubResource("Resource_neutral")
+params_corrupt = SubResource("Resource_corrupt")
