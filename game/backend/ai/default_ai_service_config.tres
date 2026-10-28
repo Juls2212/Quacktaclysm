@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="AiServiceConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://backend/ai/ai_service_config.gd" id="1_config"]
+
+[resource]
+script = ExtResource("1_config")
+enabled = true
+base_url = "http://127.0.0.1:8000"
+profile_path = "/v1/adaptive/profile"
+request_timeout_seconds = 10.0
+max_response_bytes = 4096
+env_url_override_name = "QUACKTACLYSM_AI_URL"
