@@ -1,0 +1,68 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://backend/bosses/boss_base.gd" id="1_boss"]
+[ext_resource type="Script" path="res://backend/combat/health_component.gd" id="2_health"]
+[ext_resource type="Script" path="res://backend/combat/hurtbox.gd" id="3_hurtbox"]
+[ext_resource type="Script" path="res://backend/combat/hitbox.gd" id="4_hitbox"]
+[ext_resource type="Script" path="res://backend/bosses/boss_visual.gd" id="5_visual"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
+size = Vector2(56, 88)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_hitbox"]
+size = Vector2(60, 60)
+
+[node name="BossBase" type="CharacterBody2D"]
+collision_layer = 64
+collision_mask = 1
+script = ExtResource("1_boss")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_body")
+
+[node name="Health" type="Node" parent="."]
+script = ExtResource("2_health")
+
+[node name="Hurtbox" type="Area2D" parent="." node_paths=PackedStringArray("health")]
+script = ExtResource("3_hurtbox")
+team = 1
+health = NodePath("../Health")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+shape = SubResource("RectangleShape2D_body")
+
+[node name="Visual" type="Node2D" parent="." node_paths=PackedStringArray("health")]
+script = ExtResource("5_visual")
+health = NodePath("../Health")
+
+[node name="Body" type="Polygon2D" parent="Visual"]
+color = Color(0.55, 0.2, 0.6, 1)
+polygon = PackedVector2Array(-28, -44, 28, -44, 28, 44, -28, 44)
+
+[node name="FacingMarker" type="Polygon2D" parent="Visual"]
+color = Color(1, 0.9, 0.3, 1)
+polygon = PackedVector2Array(8, -30, 28, -30, 28, -16, 8, -16)
+
+[node name="AttackPivot" type="Node2D" parent="."]
+
+[node name="Hitbox" type="Area2D" parent="AttackPivot"]
+script = ExtResource("4_hitbox")
+team = 1
+damage = 1
+knockback = Vector2(250, -150)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackPivot/Hitbox"]
+position = Vector2(60, 0)
+shape = SubResource("RectangleShape2D_hitbox")
+
+[node name="Patterns" type="Node2D" parent="."]
+
+[node name="LedgeCheck" type="RayCast2D" parent="."]
+position = Vector2(38, 30)
+target_position = Vector2(0, 30)
+collision_mask = 1
+
+[node name="WallCheck" type="RayCast2D" parent="."]
+position = Vector2(0, 10)
+target_position = Vector2(42, 0)
+collision_mask = 1

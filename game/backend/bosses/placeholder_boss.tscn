@@ -1,0 +1,60 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="PackedScene" path="res://backend/bosses/boss_base.tscn" id="1_base"]
+[ext_resource type="Resource" path="res://backend/bosses/stats/placeholder_boss_stats.tres" id="2_stats"]
+[ext_resource type="Script" path="res://backend/bosses/patterns/swipe_pattern.gd" id="3_swipe"]
+[ext_resource type="Script" path="res://backend/bosses/patterns/charge_pattern.gd" id="4_charge"]
+[ext_resource type="Script" path="res://backend/bosses/patterns/projectile_volley_pattern.gd" id="5_volley"]
+[ext_resource type="Script" path="res://backend/combat/hitbox.gd" id="6_hitbox"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_charge"]
+size = Vector2(50, 80)
+
+[node name="PlaceholderBoss" instance=ExtResource("1_base")]
+stats = ExtResource("2_stats")
+
+[node name="Hitbox" parent="AttackPivot" index="0"]
+knockback = Vector2(300, -150)
+
+[node name="ChargeHitbox" type="Area2D" parent="AttackPivot" index="1"]
+script = ExtResource("6_hitbox")
+team = 1
+damage = 2
+knockback = Vector2(400, -200)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackPivot/ChargeHitbox"]
+position = Vector2(40, 0)
+shape = SubResource("RectangleShape2D_charge")
+
+[node name="Swipe" type="Node" parent="Patterns" index="0" node_paths=PackedStringArray("hitbox")]
+script = ExtResource("3_swipe")
+hitbox = NodePath("../../AttackPivot/Hitbox")
+pattern_id = &"swipe"
+cooldown = 1.5
+max_distance_to_target = 120.0
+telegraph_time = 0.6
+recovery_time = 0.6
+active_time = 0.2
+
+[node name="Charge" type="Node" parent="Patterns" index="1" node_paths=PackedStringArray("hitbox")]
+script = ExtResource("4_charge")
+hitbox = NodePath("../../AttackPivot/ChargeHitbox")
+pattern_id = &"charge"
+cooldown = 3.0
+min_distance_to_target = 110.0
+telegraph_time = 0.8
+recovery_time = 0.9
+charge_speed = 450.0
+charge_duration = 0.7
+
+[node name="Volley" type="Node" parent="Patterns" index="2"]
+script = ExtResource("5_volley")
+pattern_id = &"volley"
+weight = 1.5
+min_phase = 2
+cooldown = 4.0
+telegraph_time = 0.7
+recovery_time = 0.8
+projectile_count = 5
+spread_angle_degrees = 40.0
+shot_interval = 0.12

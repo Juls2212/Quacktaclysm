@@ -1,0 +1,31 @@
+class_name BossStats
+extends Resource
+## Data-driven values for a boss. Units: pixels and seconds.
+
+@export_group("Identity")
+@export var boss_id: StringName = &"boss"
+@export var display_name: String = "Boss"
+
+@export_group("Body")
+@export_range(1, 9999, 1) var max_health: int = 40
+@export_range(0.0, 5000.0, 10.0, "suffix:px/s²") var gravity: float = 1800.0
+@export_range(0.0, 3000.0, 1.0, "suffix:px/s") var max_fall_speed: float = 900.0
+
+@export_group("Phases")
+## Phase 2 starts when health <= max_health * this ratio.
+@export_range(0.0, 1.0, 0.01) var phase_2_health_ratio: float = 0.5
+## The boss is invulnerable and idle while changing phase.
+@export_range(0.0, 10.0, 0.1, "suffix:s") var phase_transition_time: float = 1.5
+## Scales pattern timings and movement speeds in phase 2.
+@export_range(0.1, 5.0, 0.05) var phase_2_speed_multiplier: float = 1.3
+## Scales the gap between patterns in phase 2 (below 1 means less pause).
+@export_range(0.05, 5.0, 0.05) var phase_2_pattern_gap_multiplier: float = 0.6
+
+@export_group("Patterns")
+@export_range(0.0, 10.0, 0.05, "suffix:s") var pattern_gap_time: float = 1.2
+@export var avoid_immediate_repeat: bool = true
+
+@export_group("Death and feedback")
+@export_range(0.0, 10.0, 0.05, "suffix:s") var death_fade_time: float = 1.0
+## Visual hit flash only.
+@export_range(0.0, 1.0, 0.01, "suffix:s") var hit_flash_time: float = 0.08

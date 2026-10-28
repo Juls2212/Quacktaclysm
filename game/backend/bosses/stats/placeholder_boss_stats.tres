@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="BossStats" format=3]
+
+[ext_resource type="Script" path="res://backend/bosses/boss_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+boss_id = &"placeholder_boss"
+display_name = "Placeholder Boss"
+max_health = 40
