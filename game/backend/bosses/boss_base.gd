@@ -20,6 +20,9 @@ signal state_changed(old_state: State, new_state: State)
 
 enum State { INACTIVE, IDLE, PATTERN, PHASE_TRANSITION, DEAD }
 
+const MIN_AGGRESSION: float = 0.5
+const MAX_AGGRESSION: float = 2.0
+
 @export var stats: BossStats
 ## 0 seeds the pattern selection randomly. Any other value makes it deterministic.
 @export var rng_seed: int = 0
@@ -28,7 +31,12 @@ var state: State = State.INACTIVE
 var current_phase: int = 1
 var target: Node2D = null
 var current_pattern: BossPattern = null
+## EFFECTIVE speed multiplier read by the patterns: phase multiplier * aggression multiplier.
+## Always recomputed in `_update_speed_multiplier()`; never assign it directly.
 var speed_multiplier: float = 1.0
+## Adaptive aggression (1.0 = unchanged). Higher = faster patterns and shorter gaps. Set it with
+## `set_aggression()` before the encounter starts.
+var aggression_multiplier: float = 1.0
 var patterns: Array[BossPattern] = []
 ## Horizontal facing, 1 (right) or -1 (left). Flips Visual, attack pivot and rays.
 var facing_direction: int = 1:
@@ -45,6 +53,7 @@ var _gap_left: float = 0.0
 var _transition_left: float = 0.0
 var _fade_left: float = 0.0
 var _phase_2_started: bool = false
+var _phase_speed_multiplier: float = 1.0
 var _spawn_position: Vector2 = Vector2.ZERO
 var _ledge_origin: Vector2 = Vector2.ZERO
 var _wall_target: Vector2 = Vector2.ZERO
@@ -88,6 +97,24 @@ func set_rng_seed(new_seed: int) -> void:
 		_rng.seed = new_seed
 
 
+## Sets the adaptive aggression, clamped to [MIN_AGGRESSION, MAX_AGGRESSION]. It scales the
+## effective speed (pattern timings, charge and volley speed) and divides the gap between patterns,
+## multiplicatively with the phase 2 multipliers. Meant to be called once, before the encounter
+## starts. While a pattern is running the call is IGNORED (returns false) so the timeline of the
+## running pattern is never altered. Non-finite values are ignored too.
+func set_aggression(value: float) -> bool:
+	if state == State.PATTERN or not is_finite(value):
+		return false
+	aggression_multiplier = clampf(value, MIN_AGGRESSION, MAX_AGGRESSION)
+	_update_speed_multiplier()
+	return true
+
+
+## Effective gap between patterns for the current phase and aggression (seconds).
+func get_effective_gap_time() -> float:
+	return _gap_time()
+
+
 ## Re-reads the BossPattern children of `Patterns` (call after adding or removing patterns).
 func refresh_patterns() -> void:
 	for pattern in patterns:
@@ -125,7 +152,8 @@ func reset_encounter() -> void:
 		pattern.cooldown_left = 0.0
 	health.reset()
 	current_phase = 1
-	speed_multiplier = 1.0
+	_phase_speed_multiplier = 1.0
+	_update_speed_multiplier()
 	_phase_2_started = false
 	_previous_pattern = null
 	target = null
@@ -211,7 +239,8 @@ func _update_transition(delta: float) -> void:
 	_transition_left -= delta
 	if _transition_left <= 0.0:
 		current_phase = 2
-		speed_multiplier = stats.phase_2_speed_multiplier
+		_phase_speed_multiplier = stats.phase_2_speed_multiplier
+		_update_speed_multiplier()
 		phase_changed.emit(2)
 		_enter_idle()
 
@@ -232,7 +261,12 @@ func _gap_time() -> float:
 	var gap: float = stats.pattern_gap_time
 	if current_phase >= 2:
 		gap *= stats.phase_2_pattern_gap_multiplier
-	return gap
+	return gap / aggression_multiplier
+
+
+## The only place where the effective speed multiplier is computed.
+func _update_speed_multiplier() -> void:
+	speed_multiplier = _phase_speed_multiplier * aggression_multiplier
 
 
 func _tick_cooldowns(delta: float) -> void:
