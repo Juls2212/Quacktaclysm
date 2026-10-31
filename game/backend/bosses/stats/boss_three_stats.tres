@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="BossStats" format=3]
+
+[ext_resource type="Script" path="res://backend/bosses/boss_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+; Final guardian (placeholder name). Reasoning: 80 HP (2x the first boss) for the longest fight;
+; phase 2 at 50% with a short transition (1.2 s), 1.45x speed and half the usual gap between
+; patterns, so the heavy volley arrives often. The base gap (0.9 s) is the shortest of the three.
+boss_id = &"boss_three"
+display_name = "Guardian de la Tormenta (placeholder)"
+max_health = 80
+phase_2_health_ratio = 0.5
+phase_transition_time = 1.2
+phase_2_speed_multiplier = 1.45
+phase_2_pattern_gap_multiplier = 0.5
+pattern_gap_time = 0.9
