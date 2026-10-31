@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3]
+[gd_scene load_steps=23 format=3]
 
 [ext_resource type="Script" path="res://frontend/scenes/test/boss_test.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://backend/player/player.tscn" id="2_player"]
@@ -16,6 +16,10 @@
 [ext_resource type="Resource" path="res://backend/decisions/data/fragment_level_1.tres" id="13_data"]
 [ext_resource type="Script" path="res://backend/ai/adaptive_refiner.gd" id="14_refiner"]
 [ext_resource type="Resource" path="res://backend/ai/default_ai_service_config.tres" id="15_aiconfig"]
+
+[ext_resource type="PackedScene" path="res://frontend/ui/pause_menu.tscn" id="16_pause"]
+[ext_resource type="PackedScene" path="res://frontend/ui/game_over_panel.tscn" id="17_gameover"]
+[ext_resource type="Script" path="res://backend/progression/game_over_controller.gd" id="18_controller"]
 
 [sub_resource type="RectangleShape2D" id="Shape_floor"]
 size = Vector2(2000, 40)
@@ -105,6 +109,16 @@ script = ExtResource("10_flow")
 drop = NodePath("../SoulFragmentDrop")
 panel = NodePath("../DecisionPanel")
 refiner = NodePath("../AdaptiveRefiner")
+
+[node name="PauseMenu" parent="." node_paths=PackedStringArray("player") instance=ExtResource("16_pause")]
+player = NodePath("../Player")
+
+[node name="GameOverPanel" parent="." instance=ExtResource("17_gameover")]
+
+[node name="GameOverController" type="Node" parent="." node_paths=PackedStringArray("player", "panel")]
+script = ExtResource("18_controller")
+player = NodePath("../Player")
+panel = NodePath("../GameOverPanel")
 
 [node name="DebugLayer" type="CanvasLayer" parent="."]
 
