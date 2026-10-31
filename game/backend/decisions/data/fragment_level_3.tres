@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_data")
 fragment_id = "fragment_level_3"
-boss_id = "placeholder_boss_3"
+boss_id = "boss_three"
 level = 3
 display_name = "Fragmento de la Tormenta"
 description = "Un eco brillante del tercer guardian."
