@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SceneRegistry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://backend/progression/scene_registry.gd" id="1_registry"]
+
+[resource]
+script = ExtResource("1_registry")
+scenes = {
+"level_1": "res://frontend/levels/level_1.tscn",
+"level_2": "res://frontend/levels/level_2.tscn",
+"level_3": "res://frontend/levels/level_3.tscn",
+"ending": "res://frontend/ui/ending.tscn",
+"main_menu": "res://frontend/ui/main_menu.tscn",
+"tutorial": "res://frontend/levels/tutorial.tscn"
+}
+new_game_scene_id = "tutorial"
+main_menu_scene_id = "main_menu"
+level_scene_ids = PackedStringArray("level_1", "level_2", "level_3")
+fade_out_time = 0.35
+fade_in_time = 0.35
+fade_color = Color(0, 0, 0, 1)
