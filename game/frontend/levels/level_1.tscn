@@ -1,0 +1,122 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="PackedScene" path="res://frontend/levels/level_base.tscn" id="1_base"]
+[ext_resource type="PackedScene" path="res://frontend/levels/blocks/placeholder_platform.tscn" id="2_platform"]
+[ext_resource type="PackedScene" path="res://frontend/levels/blocks/placeholder_wall.tscn" id="3_wall"]
+[ext_resource type="PackedScene" path="res://frontend/levels/blocks/arena_gate.tscn" id="4_gate"]
+[ext_resource type="PackedScene" path="res://backend/progression/checkpoint.tscn" id="5_checkpoint"]
+[ext_resource type="PackedScene" path="res://backend/combat/kill_zone.tscn" id="6_killzone"]
+[ext_resource type="PackedScene" path="res://backend/enemies/melee_enemy.tscn" id="7_melee"]
+[ext_resource type="PackedScene" path="res://backend/enemies/fast_enemy.tscn" id="8_fast"]
+[ext_resource type="PackedScene" path="res://backend/enemies/ranged_enemy.tscn" id="9_ranged"]
+[ext_resource type="PackedScene" path="res://backend/bosses/placeholder_boss.tscn" id="10_boss"]
+[ext_resource type="PackedScene" path="res://backend/bosses/boss_encounter.tscn" id="11_encounter"]
+[ext_resource type="Script" path="res://backend/decisions/soul_fragment_drop.gd" id="12_drop"]
+[ext_resource type="PackedScene" path="res://backend/decisions/soul_fragment.tscn" id="13_fragment"]
+[ext_resource type="Resource" path="res://backend/decisions/data/fragment_level_1.tres" id="14_data"]
+
+[node name="Level1" instance=ExtResource("1_base") node_paths=PackedStringArray("boss", "encounter", "fragment_drop", "arena_gates")]
+level_number = 1
+level_id = &"level_1"
+start_checkpoint_id = "level_1_start"
+next_scene_id = "level_2"
+show_game_over = true
+camera_limits = Rect2i(0, 0, 5520, 720)
+boss = NodePath("Content/Boss")
+encounter = NodePath("Content/Encounter")
+fragment_drop = NodePath("SoulFragmentDrop")
+arena_gates = [NodePath("Content/ArenaGate")]
+
+[node name="WallLeft" parent="Content" index="0" instance=ExtResource("3_wall")]
+position = Vector2(-20, 400)
+size = Vector2(40, 1000)
+
+[node name="FloorStart" parent="Content" index="1" instance=ExtResource("2_platform")]
+position = Vector2(1200, 620)
+size = Vector2(2400, 40)
+
+[node name="FloorEnd" parent="Content" index="2" instance=ExtResource("2_platform")]
+position = Vector2(4050, 620)
+size = Vector2(2700, 40)
+
+[node name="PlatformStart1" parent="Content" index="3" instance=ExtResource("2_platform")]
+position = Vector2(600, 520)
+size = Vector2(160, 24)
+
+[node name="PlatformStart2" parent="Content" index="4" instance=ExtResource("2_platform")]
+position = Vector2(800, 440)
+size = Vector2(160, 24)
+
+[node name="StepLow" parent="Content" index="5" instance=ExtResource("2_platform")]
+position = Vector2(3050, 530)
+size = Vector2(140, 24)
+
+[node name="StepMid" parent="Content" index="6" instance=ExtResource("2_platform")]
+position = Vector2(3250, 452)
+size = Vector2(140, 24)
+
+[node name="PlatformRaised" parent="Content" index="7" instance=ExtResource("2_platform")]
+position = Vector2(3500, 372)
+size = Vector2(300, 24)
+
+[node name="CheckpointStart" parent="Content" index="8" instance=ExtResource("5_checkpoint")]
+position = Vector2(200, 600)
+checkpoint_id = &"level_1_start"
+
+[node name="CheckpointArena" parent="Content" index="9" instance=ExtResource("5_checkpoint")]
+position = Vector2(4250, 600)
+checkpoint_id = &"level_1_arena"
+order = 1
+
+[node name="Melee1" parent="Content" index="10" instance=ExtResource("7_melee")]
+position = Vector2(1500, 576)
+
+[node name="Melee2" parent="Content" index="11" instance=ExtResource("7_melee")]
+position = Vector2(1950, 576)
+
+[node name="Fast1" parent="Content" index="12" instance=ExtResource("8_fast")]
+position = Vector2(2200, 576)
+
+[node name="Melee3" parent="Content" index="13" instance=ExtResource("7_melee")]
+position = Vector2(3000, 576)
+
+[node name="Ranged1" parent="Content" index="14" instance=ExtResource("9_ranged")]
+position = Vector2(3500, 336)
+
+[node name="Fast2" parent="Content" index="15" instance=ExtResource("8_fast")]
+position = Vector2(3850, 576)
+
+[node name="KillZone" parent="Content" index="16" instance=ExtResource("6_killzone")]
+position = Vector2(2750, 1100)
+size = Vector2(6000, 100)
+
+[node name="ArenaGate" parent="Content" index="17" instance=ExtResource("4_gate")]
+position = Vector2(4500, 380)
+size = Vector2(40, 440)
+
+[node name="ArenaCeiling" parent="Content" index="18" instance=ExtResource("2_platform")]
+position = Vector2(4975, 140)
+size = Vector2(1050, 40)
+
+[node name="WallRight" parent="Content" index="19" instance=ExtResource("3_wall")]
+position = Vector2(5470, 360)
+size = Vector2(40, 520)
+
+[node name="Encounter" parent="Content" index="20" node_paths=PackedStringArray("boss") instance=ExtResource("11_encounter")]
+position = Vector2(4620, 410)
+boss = NodePath("../Boss")
+
+[node name="Boss" parent="Content" index="21" instance=ExtResource("10_boss")]
+position = Vector2(5150, 556)
+
+[node name="SpawnPoint" parent="." index="1"]
+position = Vector2(120, 570)
+
+[node name="DecisionFlow" parent="." index="7" node_paths=PackedStringArray("drop")]
+drop = NodePath("../SoulFragmentDrop")
+
+[node name="SoulFragmentDrop" type="Node" parent="." index="12" node_paths=PackedStringArray("boss")]
+script = ExtResource("12_drop")
+boss = NodePath("../Content/Boss")
+fragment_data = ExtResource("14_data")
+fragment_scene = ExtResource("13_fragment")
