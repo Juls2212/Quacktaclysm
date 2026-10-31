@@ -46,6 +46,9 @@ var _attack_cooldown_left: float = 0.0
 var _attack_buffer_left: float = 0.0
 var _respawn_left: float = 0.0
 var _respawn_point: Vector2 = Vector2.ZERO
+var _auto_respawn_override_set: bool = false
+var _input_locked: bool = false
+var _auto_respawn_override: bool = false
 
 @onready var visual: Node2D = $Visual
 @onready var camera: Camera2D = $Camera2D
@@ -75,12 +78,36 @@ func _ready() -> void:
 
 ## Later phases can extend this to block input (cutscenes, etc.).
 func can_act() -> bool:
-	return not is_dead and state != State.HURT
+	return not is_dead and state != State.HURT and not _input_locked
+
+
+## While locked, no input is processed (gravity and physics keep running). Set by levels
+## (e.g. during scene fades); respawn() does not clear it.
+func set_input_locked(value: bool) -> void:
+	_input_locked = value
+	if value:
+		_jump_buffer_left = 0.0
+		_attack_buffer_left = 0.0
+
+
+func is_input_locked() -> bool:
+	return _input_locked
 
 
 ## Used by the Hurtbox: dash and post-hit invulnerability both ignore hits.
 func is_invulnerable() -> bool:
 	return is_dash_invulnerable or health.is_invulnerable()
+
+
+## Runtime override of `stats.auto_respawn` (e.g. a Game Over controller). Never mutates the
+## shared PlayerStats resource; without a call the stats value applies.
+func set_auto_respawn(value: bool) -> void:
+	_auto_respawn_override_set = true
+	_auto_respawn_override = value
+
+
+func is_auto_respawn_enabled() -> bool:
+	return _auto_respawn_override if _auto_respawn_override_set else stats.auto_respawn
 
 
 func set_respawn_point(point: Vector2) -> void:
@@ -126,7 +153,7 @@ func _physics_process(delta: float) -> void:
 		_hurt_left -= delta
 		if _hurt_left <= 0.0:
 			_set_state(_locomotion_state())
-	elif state == State.DEAD and stats.auto_respawn:
+	elif state == State.DEAD and is_auto_respawn_enabled():
 		_respawn_left -= delta
 		if _respawn_left <= 0.0:
 			respawn()
