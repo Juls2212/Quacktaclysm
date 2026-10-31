@@ -1,0 +1,123 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="PackedScene" path="res://frontend/levels/level_base.tscn" id="1_base"]
+[ext_resource type="PackedScene" path="res://frontend/levels/blocks/placeholder_platform.tscn" id="2_platform"]
+[ext_resource type="PackedScene" path="res://frontend/levels/blocks/placeholder_wall.tscn" id="3_wall"]
+[ext_resource type="PackedScene" path="res://frontend/scenes/test/training_dummy.tscn" id="4_dummy"]
+[ext_resource type="PackedScene" path="res://backend/progression/checkpoint.tscn" id="5_checkpoint"]
+[ext_resource type="PackedScene" path="res://backend/combat/kill_zone.tscn" id="6_killzone"]
+[ext_resource type="Script" path="res://backend/progression/tutorial_controller.gd" id="7_tutorial"]
+
+[sub_resource type="RectangleShape2D" id="Shape_exit"]
+size = Vector2(60, 220)
+
+[node name="Tutorial" instance=ExtResource("1_base")]
+level_number = 0
+level_id = &"tutorial"
+next_scene_id = "level_1"
+show_game_over = false
+camera_limits = Rect2i(0, 0, 2600, 720)
+
+[node name="Floor" parent="Content" index="0" instance=ExtResource("2_platform")]
+position = Vector2(1300, 620)
+size = Vector2(2600, 40)
+
+[node name="WallLeft" parent="Content" index="1" instance=ExtResource("3_wall")]
+position = Vector2(-20, 400)
+size = Vector2(40, 1000)
+
+[node name="WallRight" parent="Content" index="2" instance=ExtResource("3_wall")]
+position = Vector2(2620, 400)
+size = Vector2(40, 1000)
+
+[node name="PlatformLow" parent="Content" index="3" instance=ExtResource("2_platform")]
+position = Vector2(1450, 510)
+size = Vector2(200, 24)
+
+[node name="PlatformHigh" parent="Content" index="4" instance=ExtResource("2_platform")]
+position = Vector2(1750, 410)
+size = Vector2(200, 24)
+
+[node name="Grandfather" type="Node2D" parent="Content" index="5"]
+position = Vector2(420, 600)
+
+[node name="Visual" type="Polygon2D" parent="Content/Grandfather"]
+color = Color(0.55, 0.45, 0.7, 1)
+polygon = PackedVector2Array(-18, -70, 18, -70, 18, 0, -18, 0)
+
+[node name="Label" type="Label" parent="Content/Grandfather"]
+offset_left = -160.0
+offset_top = -130.0
+offset_right = 160.0
+offset_bottom = -80.0
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="TrainingDummy" parent="Content" index="6" instance=ExtResource("4_dummy")]
+position = Vector2(900, 600)
+
+[node name="Checkpoint" parent="Content" index="7" instance=ExtResource("5_checkpoint")]
+position = Vector2(1950, 600)
+checkpoint_id = &"tutorial_checkpoint"
+
+[node name="ExitTrigger" type="Area2D" parent="Content" index="8"]
+position = Vector2(2450, 510)
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Content/ExitTrigger"]
+shape = SubResource("Shape_exit")
+
+[node name="Visual" type="Polygon2D" parent="Content/ExitTrigger"]
+color = Color(0.3, 0.9, 0.4, 0.35)
+polygon = PackedVector2Array(-30, -110, 30, -110, 30, 110, -30, 110)
+
+[node name="KillZone" parent="Content" index="9" instance=ExtResource("6_killzone")]
+position = Vector2(1300, 1100)
+
+[node name="SpawnPoint" parent="." index="1"]
+position = Vector2(120, 570)
+
+[node name="PromptLayer" type="CanvasLayer" parent="." index="12"]
+
+[node name="PromptLabel" type="Label" parent="PromptLayer"]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -400.0
+offset_top = 70.0
+offset_right = 400.0
+offset_bottom = 120.0
+grow_horizontal = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="TutorialController" type="Node" parent="." index="13" node_paths=PackedStringArray("player", "dummy", "exit_area", "prompt_label", "grandfather_label")]
+script = ExtResource("7_tutorial")
+player = NodePath("../Player")
+dummy = NodePath("../Content/TrainingDummy")
+exit_area = NodePath("../Content/ExitTrigger")
+prompt_label = NodePath("../PromptLayer/PromptLabel")
+grandfather_label = NodePath("../Content/Grandfather/Label")
+steps = Array[Dictionary]([{
+"id": "move",
+"kind": "move",
+"text": "Muévete con {move_left} / {move_right}"
+}, {
+"id": "jump",
+"kind": "jump",
+"text": "Salta con {jump}"
+}, {
+"id": "dash",
+"kind": "dash",
+"text": "Esquiva con {dash}"
+}, {
+"id": "attack",
+"kind": "attack",
+"text": "Ataca con {attack}"
+}, {
+"id": "hit_dummy",
+"kind": "hit_dummy",
+"text": "Golpea al muñeco de entrenamiento"
+}])
