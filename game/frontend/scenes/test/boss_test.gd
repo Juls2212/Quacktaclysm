@@ -6,6 +6,7 @@ extends Node2D
 ## way to clear recorded decisions (otherwise a decided fragment will not drop again).
 ## Persistence: 1 saves now, 2 loads and moves the player to the saved checkpoint,
 ## 3 deletes the save file, 4 writes a corrupt save file (to test recovery).
+## Esc/P opens the pause menu; the player's death opens the Game Over panel (retry / main menu).
 ## 7 asks the AI service to refine the profile now (the game works without the service).
 ## Adaptive profile: 5 records a fake "released" decision, 6 a fake "kept" one (same sequence as DecisionFlow).
 
@@ -40,6 +41,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			player.respawn()
 			encounter.reset()
 		KEY_L:
+			PauseLock.reset(get_tree())
 			get_tree().reload_current_scene()
 		KEY_H:
 			if is_instance_valid(boss):
@@ -78,6 +80,8 @@ func _process(_delta: float) -> void:
 	lines.append("souls released %d  kept %d  decisions %d  last: %s" % [
 		GameState.souls_released, GameState.souls_kept, GameState.decisions.size(), _last_decision_text()])
 	lines.append("save file: %s  last io: %s" % ["yes" if SaveSystem.has_save() else "no", _last_io_text])
+	lines.append("pause holders: %d  transitioning: %s  save exists: %s  [Esc/P] pause" % [
+		PauseLock.holder_count(), SceneManager.is_transitioning(), "yes" if SaveSystem.has_save() else "no"])
 	var adaptive: AdaptiveResult = GameState.get_adaptive_result()
 	var adaptive_input: AdaptiveInput = AdaptiveInput.from_state_dict(GameState.to_dict(), AdaptiveInput.POINT_AFTER_DECISION)
 	lines.append("profile: %s (%s)  score: %.2f  [5] fake released  [6] fake kept" % [
