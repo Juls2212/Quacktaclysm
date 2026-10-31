@@ -22,6 +22,8 @@ const DEFAULT_ADAPTIVE_CONFIG_PATH: String = "res://backend/ai/default_adaptive_
 
 const DEFAULT_LEVEL: int = MIN_LEVEL
 const DEFAULT_CHECKPOINT: String = "start"
+## Checkpoint id written when the game is finished (no schema change: still a plain string).
+const CHECKPOINT_ENDING: String = "ending"
 const DEFAULT_ADAPTIVE_PROFILE: String = PROFILE_NEUTRAL
 
 var save_version: int = SAVE_VERSION
@@ -94,6 +96,11 @@ func get_decision(fragment_id: String) -> Dictionary:
 		if entry["fragment_id"] == fragment_id:
 			return entry.duplicate(true)
 	return {}
+
+
+## True once the last level was completed (the save holds the ending marker).
+func is_game_completed() -> bool:
+	return checkpoint == CHECKPOINT_ENDING
 
 
 func set_current_level(level: int) -> void:
