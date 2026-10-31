@@ -1,0 +1,81 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://backend/progression/level_base.gd" id="1_level"]
+[ext_resource type="PackedScene" path="res://backend/player/player.tscn" id="2_player"]
+[ext_resource type="PackedScene" path="res://frontend/ui/player_health_hud.tscn" id="3_hud"]
+[ext_resource type="PackedScene" path="res://frontend/ui/boss_health_bar.tscn" id="4_bar"]
+[ext_resource type="PackedScene" path="res://frontend/ui/decision_panel.tscn" id="5_panel"]
+[ext_resource type="Script" path="res://backend/decisions/decision_flow.gd" id="6_flow"]
+[ext_resource type="Script" path="res://backend/ai/adaptive_refiner.gd" id="7_refiner"]
+[ext_resource type="Resource" path="res://backend/ai/default_ai_service_config.tres" id="8_aiconfig"]
+[ext_resource type="PackedScene" path="res://frontend/ui/pause_menu.tscn" id="9_pause"]
+[ext_resource type="PackedScene" path="res://frontend/ui/game_over_panel.tscn" id="10_gameover"]
+[ext_resource type="Script" path="res://backend/progression/game_over_controller.gd" id="11_controller"]
+[ext_resource type="Script" path="res://backend/progression/level_debug.gd" id="12_debug"]
+
+[node name="LevelBase" type="Node2D"]
+script = ExtResource("1_level")
+
+[node name="Content" type="Node2D" parent="."]
+
+[node name="SpawnPoint" type="Marker2D" parent="."]
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+
+[node name="Hud" parent="." instance=ExtResource("3_hud")]
+
+[node name="BossHealthBar" parent="." instance=ExtResource("4_bar")]
+
+[node name="DecisionPanel" parent="." instance=ExtResource("5_panel")]
+
+[node name="AdaptiveRefiner" type="Node" parent="."]
+script = ExtResource("7_refiner")
+config = ExtResource("8_aiconfig")
+
+[node name="DecisionFlow" type="Node" parent="." node_paths=PackedStringArray("panel", "refiner")]
+script = ExtResource("6_flow")
+panel = NodePath("../DecisionPanel")
+refiner = NodePath("../AdaptiveRefiner")
+
+[node name="PauseMenu" parent="." node_paths=PackedStringArray("player") instance=ExtResource("9_pause")]
+player = NodePath("../Player")
+
+[node name="GameOverPanel" parent="." instance=ExtResource("10_gameover")]
+
+[node name="GameOverController" type="Node" parent="." node_paths=PackedStringArray("player", "panel")]
+script = ExtResource("11_controller")
+player = NodePath("../Player")
+panel = NodePath("../GameOverPanel")
+
+[node name="LevelDebug" type="Node" parent="."]
+script = ExtResource("12_debug")
+
+[node name="BackgroundLayer" type="CanvasLayer" parent="."]
+layer = -10
+
+[node name="Background" type="ColorRect" parent="BackgroundLayer"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
+
+[node name="IntroLayer" type="CanvasLayer" parent="."]
+layer = 60
+
+[node name="IntroLabel" type="Label" parent="IntroLayer"]
+visible = false
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -400.0
+offset_top = 48.0
+offset_right = 400.0
+offset_bottom = 96.0
+grow_horizontal = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+
