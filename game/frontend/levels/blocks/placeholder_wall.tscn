@@ -1,0 +1,7 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://frontend/levels/blocks/placeholder_platform.tscn" id="1_platform"]
+
+[node name="PlaceholderWall" instance=ExtResource("1_platform")]
+size = Vector2(40, 400)
+color = Color(0.3, 0.3, 0.35, 1)
