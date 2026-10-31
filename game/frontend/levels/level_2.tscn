@@ -1,0 +1,156 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="PackedScene" path="res://frontend/levels/level_base.tscn" id="1_base"]
+[ext_resource type="PackedScene" path="res://frontend/levels/blocks/placeholder_platform.tscn" id="2_platform"]
+[ext_resource type="PackedScene" path="res://frontend/levels/blocks/placeholder_wall.tscn" id="3_wall"]
+[ext_resource type="PackedScene" path="res://frontend/levels/blocks/arena_gate.tscn" id="4_gate"]
+[ext_resource type="PackedScene" path="res://backend/progression/checkpoint.tscn" id="5_checkpoint"]
+[ext_resource type="PackedScene" path="res://backend/combat/kill_zone.tscn" id="6_killzone"]
+[ext_resource type="PackedScene" path="res://backend/enemies/melee_enemy.tscn" id="7_melee"]
+[ext_resource type="PackedScene" path="res://backend/enemies/fast_enemy.tscn" id="8_fast"]
+[ext_resource type="PackedScene" path="res://backend/enemies/ranged_enemy.tscn" id="9_ranged"]
+[ext_resource type="PackedScene" path="res://backend/bosses/boss_two.tscn" id="10_boss"]
+[ext_resource type="PackedScene" path="res://backend/bosses/boss_encounter.tscn" id="11_encounter"]
+[ext_resource type="Script" path="res://backend/decisions/soul_fragment_drop.gd" id="12_drop"]
+[ext_resource type="PackedScene" path="res://backend/decisions/soul_fragment.tscn" id="13_fragment"]
+[ext_resource type="Resource" path="res://backend/decisions/data/fragment_level_2.tres" id="14_data"]
+
+[node name="Level2" instance=ExtResource("1_base") node_paths=PackedStringArray("boss", "encounter", "fragment_drop", "arena_gates")]
+level_number = 2
+level_id = &"level_2"
+start_checkpoint_id = "level_2_start"
+next_scene_id = "level_3"
+show_game_over = true
+camera_limits = Rect2i(0, 0, 5620, 720)
+boss = NodePath("Content/Boss")
+encounter = NodePath("Content/Encounter")
+fragment_drop = NodePath("SoulFragmentDrop")
+arena_gates = [NodePath("Content/ArenaGate")]
+background_color = Color(0.07, 0.13, 0.11, 1)
+intro_lines = {"mercy": "El pantano guarda silencio... aun queda algo que salvar. (texto provisional)", "mercy_hopeful": "Entre la niebla del pantano brilla una esperanza. (texto provisional)", "balanced": "El pantano te observa, sin juzgar. (texto provisional)", "burden": "El agua turbia pesa como las almas que cargas. (texto provisional)", "burden_bitter": "El pantano huele a rencor, y es tuyo. (texto provisional)"}
+intro_duration = 4.0
+variant_groups = {"calm": [], "corrupted": [NodePath("Content/ExtraFast"), NodePath("Content/ExtraMelee")], "standard": []}
+
+[node name="WallLeft" parent="Content" index="0" instance=ExtResource("3_wall")]
+position = Vector2(-20, 400)
+size = Vector2(40, 1000)
+
+[node name="FloorA" parent="Content" index="1" instance=ExtResource("2_platform")]
+position = Vector2(750.0, 620)
+size = Vector2(1500, 40)
+color = Color(0.2, 0.32, 0.26, 1)
+
+[node name="FloorB" parent="Content" index="2" instance=ExtResource("2_platform")]
+position = Vector2(2285.0, 620)
+size = Vector2(1230, 40)
+color = Color(0.2, 0.32, 0.26, 1)
+
+[node name="FloorC" parent="Content" index="3" instance=ExtResource("2_platform")]
+position = Vector2(3542.5, 620)
+size = Vector2(715, 40)
+color = Color(0.2, 0.32, 0.26, 1)
+
+[node name="FloorD" parent="Content" index="4" instance=ExtResource("2_platform")]
+position = Vector2(4892.5, 620)
+size = Vector2(1415, 40)
+color = Color(0.2, 0.32, 0.26, 1)
+
+[node name="StepOne" parent="Content" index="5" instance=ExtResource("2_platform")]
+position = Vector2(2150, 532)
+size = Vector2(140, 24)
+color = Color(0.28, 0.42, 0.32, 1)
+
+[node name="StepTwo" parent="Content" index="6" instance=ExtResource("2_platform")]
+position = Vector2(2350, 452)
+size = Vector2(140, 24)
+color = Color(0.28, 0.42, 0.32, 1)
+
+[node name="StepThree" parent="Content" index="7" instance=ExtResource("2_platform")]
+position = Vector2(2550, 372)
+size = Vector2(140, 24)
+color = Color(0.28, 0.42, 0.32, 1)
+
+[node name="CheckpointStart" parent="Content" index="8" instance=ExtResource("5_checkpoint")]
+position = Vector2(200, 600)
+checkpoint_id = &"level_2_start"
+
+[node name="CheckpointMid1" parent="Content" index="9" instance=ExtResource("5_checkpoint")]
+position = Vector2(1760, 600)
+checkpoint_id = &"level_2_mid_1"
+order = 1
+
+[node name="CheckpointMid2" parent="Content" index="10" instance=ExtResource("5_checkpoint")]
+position = Vector2(2830, 600)
+checkpoint_id = &"level_2_mid_2"
+order = 2
+
+[node name="CheckpointArena" parent="Content" index="11" instance=ExtResource("5_checkpoint")]
+position = Vector2(4350, 600)
+checkpoint_id = &"level_2_arena"
+order = 3
+
+[node name="Melee1" parent="Content" index="12" instance=ExtResource("7_melee")]
+position = Vector2(900, 576)
+
+[node name="Ranged1" parent="Content" index="13" instance=ExtResource("9_ranged")]
+position = Vector2(1300, 576)
+
+[node name="Fast1" parent="Content" index="14" instance=ExtResource("8_fast")]
+position = Vector2(1850, 576)
+
+[node name="Ranged2" parent="Content" index="15" instance=ExtResource("9_ranged")]
+position = Vector2(2350, 416)
+
+[node name="Ranged3" parent="Content" index="16" instance=ExtResource("9_ranged")]
+position = Vector2(2550, 336)
+
+[node name="Melee2" parent="Content" index="17" instance=ExtResource("7_melee")]
+position = Vector2(2650, 576)
+
+[node name="Melee3" parent="Content" index="18" instance=ExtResource("7_melee")]
+position = Vector2(3500, 576)
+
+[node name="Fast2" parent="Content" index="19" instance=ExtResource("8_fast")]
+position = Vector2(3750, 576)
+
+[node name="ExtraFast" parent="Content" index="20" instance=ExtResource("8_fast")]
+position = Vector2(1200, 576)
+
+[node name="ExtraMelee" parent="Content" index="21" instance=ExtResource("7_melee")]
+position = Vector2(2060, 576)
+
+[node name="KillZone" parent="Content" index="22" instance=ExtResource("6_killzone")]
+position = Vector2(2800, 1000)
+size = Vector2(6000, 100)
+
+[node name="ArenaGate" parent="Content" index="23" instance=ExtResource("4_gate")]
+position = Vector2(4600, 380)
+size = Vector2(40, 440)
+
+[node name="ArenaCeiling" parent="Content" index="24" instance=ExtResource("2_platform")]
+position = Vector2(5075, 140)
+size = Vector2(1050, 40)
+color = Color(0.2, 0.32, 0.26, 1)
+
+[node name="WallRight" parent="Content" index="25" instance=ExtResource("3_wall")]
+position = Vector2(5570, 360)
+size = Vector2(40, 520)
+
+[node name="Encounter" parent="Content" index="26" instance=ExtResource("11_encounter") node_paths=PackedStringArray("boss")]
+position = Vector2(4720, 410)
+boss = NodePath("../Boss")
+
+[node name="Boss" parent="Content" index="27" instance=ExtResource("10_boss")]
+position = Vector2(5250, 556)
+
+[node name="SpawnPoint" parent="." index="1"]
+position = Vector2(120, 570)
+
+[node name="DecisionFlow" parent="." index="7" node_paths=PackedStringArray("drop")]
+drop = NodePath("../SoulFragmentDrop")
+
+[node name="SoulFragmentDrop" type="Node" parent="." index="14" node_paths=PackedStringArray("boss")]
+script = ExtResource("12_drop")
+boss = NodePath("../Content/Boss")
+fragment_data = ExtResource("14_data")
+fragment_scene = ExtResource("13_fragment")
