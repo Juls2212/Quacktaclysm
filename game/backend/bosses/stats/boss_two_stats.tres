@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="BossStats" format=3]
+
+[ext_resource type="Script" path="res://backend/bosses/boss_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+; Second guardian (placeholder name). Reasoning: 60 HP is 1.5x the first boss (40) so the fight
+; lasts longer than level 1 while damage per hit stays the same; phase 2 starts a little earlier
+; (55%) and speeds the patterns by 1.35x with shorter gaps, which makes the charge (the signature
+; pattern of this boss) come back quickly.
+boss_id = &"boss_two"
+display_name = "Guardian del Pantano (placeholder)"
+max_health = 60
+phase_2_health_ratio = 0.55
+phase_transition_time = 1.5
+phase_2_speed_multiplier = 1.35
+phase_2_pattern_gap_multiplier = 0.55
+pattern_gap_time = 1.1
