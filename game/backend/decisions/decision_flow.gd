@@ -9,6 +9,8 @@ signal decision_made(fragment_id: String, choice: String)
 @export var panel: DecisionPanel
 ## Optional: asks the AI service to refine the profile after the local result. Never blocks.
 @export var refiner: AdaptiveRefiner
+## Evaluation point sent to the refiner after a decision (the last level uses AdaptiveInput.POINT_ENDING).
+@export var refinement_point: String = AdaptiveInput.POINT_AFTER_DECISION
 
 var _active: SoulFragment = null
 var _resolving: bool = false
@@ -52,7 +54,7 @@ func _on_choice_selected(choice: String) -> void:
 			fragment.resolve(choice)
 			decision_made.emit(data.fragment_id, choice)
 			if refiner != null:
-				refiner.request_refinement()
+				refiner.request_refinement(refinement_point)
 		else:
 			fragment.dismiss()
 	_resolving = false
