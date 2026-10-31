@@ -51,6 +51,19 @@ El resultado aceptado tiene `source = "remote"`. Nunca lanza errores por entrada
 
 Solo puede elegir un perfil (a distancia limitada del local) y una variante narrativa de la lista permitida. Variante de encuentro, final y `boss_aggression` salen SIEMPRE de la tabla del perfil validado; un `boss_aggression`, `encounter_variant` o texto extra enviado por el remoto no tiene efecto.
 
+## Cómo se consumen los parámetros en el juego
+
+El resultado (`GameState.get_adaptive_result()`) se lee **una sola vez** por escena y nunca se cambia en caliente:
+
+| Campo | Quién lo consume | Efecto |
+| --- | --- | --- |
+| `boss_aggression` | `LevelBase` → `BossBase.set_aggression()` al cargar el nivel | Multiplica la velocidad efectiva de los patrones y divide la pausa entre patrones (0.9 / 1.0 / 1.15; se limita a 0.5–2.0). Se ignora si el jefe ya está en un patrón. |
+| `encounter_variant` | `LevelBase.variant_groups` al cargar el nivel | Se eliminan los nodos de los grupos que no coinciden (`calm`, `standard`, `corrupted`). Los nodos fuera de grupos son la base del nivel. |
+| `narrative_variant` | `LevelBase.intro_lines` | Línea corta de introducción durante `intro_duration` segundos, si existe una entrada. |
+| `ending_variant` | Escena `ending` | Texto del final (`ending_compassionate` / `ending_neutral` / `ending_corrupt`); una variante desconocida usa el neutral. |
+
+Reglas: el remoto sigue sin fijar valores numéricos; `refinement_point` del `DecisionFlow` es `after_decision` salvo en el último nivel (`ending`). Un perfil o variante desconocidos nunca producen errores: los grupos de variante se eliminan todos y no se muestra introducción. Una partida completada se marca con `checkpoint = "ending"` (sin claves nuevas en el guardado).
+
 ## Orden en el flujo de decisión
 
 `record_decision` → `refresh_adaptive_profile(POINT_AFTER_DECISION)` → `autosave()`. Una decisión rechazada no refresca ni guarda. El refinamiento remoto futuro será asíncrono, posterior a este resultado local inmediato, y nunca bloqueará el flujo.
