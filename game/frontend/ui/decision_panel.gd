@@ -31,9 +31,7 @@ func _exit_tree() -> void:
 	# Never leave the game paused if the panel disappears while open (scene change/reload).
 	if _paused_by_panel:
 		_paused_by_panel = false
-		var tree := get_tree()
-		if tree:
-			tree.paused = false
+		PauseLock.release(self, get_tree())
 
 
 func is_open() -> bool:
@@ -51,7 +49,7 @@ func open(data: SoulFragmentData) -> void:
 	root.visible = true
 	if not get_tree().paused:
 		_paused_by_panel = true
-		get_tree().paused = true
+		PauseLock.request(self, get_tree())
 	release_button.grab_focus()
 
 
@@ -59,7 +57,7 @@ func close() -> void:
 	root.visible = false
 	_choice_locked = true
 	_paused_by_panel = false
-	get_tree().paused = false
+	PauseLock.release(self, get_tree())
 
 
 func _on_choice_pressed(choice: String) -> void:
