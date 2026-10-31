@@ -43,6 +43,13 @@ func get_respawn_position() -> Vector2:
 	return global_position + respawn_offset
 
 
+## Marks this checkpoint as already reached WITHOUT emitting `activated`, saving, or touching
+## GameState or the player's respawn point. Used when a saved game is restored.
+func mark_activated_silently() -> void:
+	is_activated = true
+	visual.color = active_color
+
+
 func _on_body_entered(body: Node2D) -> void:
 	if is_activated or not body.has_method("set_respawn_point"):
 		return
