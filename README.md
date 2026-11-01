@@ -2,7 +2,7 @@
 
 Videojuego 2D de acción en vista lateral con combate con espada (cuerpo a cuerpo y una onda a distancia), enemigos y jefes, hecho con Godot 4 y GDScript para escritorio (prioridad Windows, compatible con macOS). El nombre oficial es Quacktaclysm (`config/name` en Project Settings). El jugador recorre un tutorial y tres niveles; tras cada jefe decide **Liberar** o **Conservar** un fragmento de alma, y esas decisiones cambian la dificultad de los jefes, los enemigos extra, la potencia de la onda y el final. Un servicio de IA opcional puede refinar ese perfil.
 
-> **Estado:** todo el contenido jugable existe. El héroe y los enemigos son patos dibujados y animados por código (`DuckRig`); jefes, escenarios e interfaz siguen con arte provisional (rectángulos de colores). Nadie lo ha jugado con ventana todavía: ver `docs/KNOWN_ISSUES.md`.
+> **Estado:** todo el contenido jugable existe. El héroe, los enemigos y los jefes son patos dibujados y animados por código (`DuckRig`) que caen como ragdoll al morir; escenarios, proyectiles e interfaz siguen con arte provisional (rectángulos de colores). Nadie lo ha jugado con ventana todavía: ver `docs/KNOWN_ISSUES.md`.
 
 ## Requisitos
 
@@ -56,6 +56,8 @@ En cada nivel: recorrer, llegar al checkpoint de la arena, derrotar al jefe (las
 - **Game Over:** "Has caído" con Reintentar (reaparece en el último checkpoint) y Menú principal; el tutorial reaparece solo.
 
 **Vida y daño por contacto:** el jugador tiene **8 corazones** (`max_health` en `PlayerStats`). Tocar a un enemigo vivo o a un jefe en combate hace daño (1 por defecto, con empuje y un intervalo de repetición); el dash, la invulnerabilidad tras un golpe y la de reaparecer protegen igual que contra un ataque. Un enemigo en estado de daño, muerto, un jefe sin activar, en la transición de fase o derrotado no hacen daño. Los valores están en `EnemyStats` / `BossStats` (grupo "Contact damage").
+
+**Orbes de salud:** cada enemigo derrotado suelta orbes (1 por defecto, 2 el bruto acorazado) y cada jefe suelta 2 al entrar en la fase 2 y 4 al ser derrotado. Los orbes saltan, rebotan en el suelo y vuelan hacia el jugador si está cerca **y le falta vida**; cada uno cura 1 corazón. Con la vida llena se quedan en el suelo y desaparecen a los 12 s (parpadean antes). Se ajustan en `default_health_orb_stats.tres` y en los grupos "Drops" de `EnemyStats` / `BossStats`.
 
 **Movimientos de espada nuevos** (disponibles desde el inicio, sin desbloqueo ni guardado):
 - **Golpe pesado** (I / clic central): preparación visible (el cuerpo se tiñe y se aplasta), golpe ancho de 3 de daño, recuperación larga en la que el jugador es vulnerable y recarga. No se puede cancelar con otras acciones (solo el daño o la muerte lo interrumpen; si te golpean en la preparación no hay golpe ni recarga).

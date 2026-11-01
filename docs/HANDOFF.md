@@ -7,9 +7,9 @@ Para quien reemplazará los marcadores de posición por arte, audio y contenido 
 | Elemento | Estado |
 | --- | --- |
 | Lógica de movimiento, combate, jefes, decisiones, guardado, perfil adaptativo, servicio de IA | Definitivo (se puede reajustar con datos) |
-| Gráficos de jugador y enemigos | **Dibujados** por código con `DuckRig` (`game/frontend/animations/duck_rig.gd`): patos con tinta gruesa y animación procedural |
-| Gráficos de jefes, proyectiles, puertas, plataformas, HUD y menús | **Marcador** (polígonos y `ColorRect`) |
-| Animaciones del jugador y los enemigos | Procedurales en `DuckRig` (correr, saltar, dash, tajo, golpe pesado, tajo de dash, onda, daño, muerte). Sprites, audio y música no existen todavía |
+| Gráficos de jugador, enemigos y jefes | **Dibujados** por código con `DuckRig` (`game/frontend/animations/duck_rig.gd`): patos con tinta gruesa y animación procedural. Al morir se desarman en un ragdoll (`duck_ragdoll.gd`) |
+| Gráficos de proyectiles, puertas, plataformas, HUD y menús | **Marcador** (polígonos y `ColorRect`) |
+| Animaciones del jugador, enemigos y jefes | Procedurales en `DuckRig` (correr, saltar, dash, tajo, golpe pesado, tajo de dash, onda, zarpazo, embestida, ráfaga, furia de fase 2, daño, muerte con ragdoll). Sprites, audio y música no existen todavía |
 | Textos (introducciones de nivel, finales, tutorial, abuelo, menús) | **Marcador** en español, marcados como "texto provisional" |
 | Nombres de jefes y fragmentos | **Marcador** (`BossStats.display_name`, `SoulFragmentData`) |
 | Geometría de los niveles 1–3 y del tutorial | Maqueta con `PlaceholderPlatform`; las medidas están calculadas con el salto real (ver sección 4) |
@@ -21,7 +21,7 @@ Cada personaje separa lo visual de lo físico:
 
 - **Jugador** (`game/backend/player/player.tscn`): el nodo `Visual` (script `player_visual.gd`) contiene `Rig`, un `DuckRig` con el aspecto `HERO` (kimono, pelo largo suelto, katana). `player_visual.gd` lee el estado del jugador y le pasa la pose cada fotograma (fase de cada ataque según los tiempos de `PlayerStats`). Se voltea con `scale.x` según la orientación. Para cambiar el dibujo edita `duck_rig.gd`; para usar sprites, sustituye `Rig` por un `AnimatedSprite2D` y lee las mismas señales.
 - **Enemigos** (`game/backend/enemies/*.tscn`, base `enemy_base.tscn`): nodo `Visual` (script `enemy_visual.gd`) con un `Rig`. El export `look` elige el pato (Bruto, Bandido, Hondero) y `tough_look` se usa cuando `max_health` llega a `tough_health` (Bruto acorazado). Para revisar todos los patos y poses abre `game/frontend/scenes/test/duck_showcase.tscn` (F6); `duck_arena_preview.tscn` los muestra en juego con un piloto automático.
-- **Jefes** (`game/backend/bosses/boss_base.tscn`): nodo `Visual` (script `boss_visual.gd`, reacciona a `phase_changed` de los patrones para el aviso de ataque).
+- **Jefes** (`game/backend/bosses/boss_base.tscn`): nodo `Visual` (script `boss_visual.gd`) con un `Rig`; el export `look` elige el guardián (Capataz en `placeholder_boss`, Pantano en `boss_two`, Tormenta en `boss_three`). Anima zarpazo, embestida y ráfaga según la fase del patrón en curso (`BossPattern.get_phase_progress()`), muestra la furia en la fase 2 y se desarma en un ragdoll al ser derrotado.
 - **Proyectiles:** `projectile.tscn` (enemigos y jefes) y `sword_wave_projectile.tscn` (onda del jugador) tienen un nodo `Visual`. `ProjectileStats.size_scale` y `tint` se aplican a ese nodo.
 - **Plataformas, muros y puertas:** `PlaceholderPlatform`, `placeholder_wall.tscn`, `ArenaGate` (`game/frontend/levels/blocks/`) tienen un `Polygon2D` llamado `Visual`. Sustitúyelo o añade tiles; la colisión es una `CollisionShape2D` aparte que sigue a `size`.
 
@@ -39,6 +39,8 @@ El daño por contacto lo hace un `ContactHitbox` (hijo de cada enemigo y jefe) c
 | Onda de espada (niveles, daño, alcance, recarga, reglas de mejora) | `game/backend/player/default_sword_wave_config.tres` (`SwordWaveConfig`) |
 | Vida, velocidad y ataques de enemigos | `game/backend/enemies/stats/*.tres` (`EnemyStats`, `FastEnemyStats`, `RangedEnemyStats`) y `game/backend/combat/stats/enemy_projectile_stats.tres` |
 | Vida y fases de cada jefe | `game/backend/bosses/stats/*.tres` (`BossStats`) |
+| Orbes de salud (curación, ráfaga, imán, duración) | `game/backend/combat/default_health_orb_stats.tres` (`HealthOrbStats`); cuántos suelta cada enemigo: `health_orb_count` (grupo "Drops") de `EnemyStats`; cada jefe: `health_orbs_on_phase_2` y `health_orbs_on_defeat` de `BossStats` |
+| Ragdoll de muerte (duración) | Export `ragdoll_lifetime` de `enemy_visual.gd` y `boss_visual.gd`; el del jugador dura hasta que reaparece |
 | Patrones de cada jefe (pesos, tiempos, distancias, ráfagas) | Exports de los nodos bajo `Patterns` en `placeholder_boss.tscn`, `boss_two.tscn`, `boss_three.tscn` |
 | Perfiles adaptativos (agresividad, variantes de encuentro/narrativa/final, umbrales) | `game/backend/ai/default_adaptive_config.tres` (`AdaptiveConfig`) |
 | Conexión al servicio de IA | `game/backend/ai/default_ai_service_config.tres` (o `QUACKTACLYSM_AI_URL`) |

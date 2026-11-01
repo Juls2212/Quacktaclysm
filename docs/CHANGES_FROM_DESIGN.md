@@ -17,6 +17,8 @@ Lista para actualizar los documentos de diseño del proyecto. Solo recoge lo que
 - **Dos movimientos de espada nuevos (extensión del diseño):** golpe pesado (acción `heavy_attack`: I / clic central) y tajo de dash (ataque durante el dash). Disponibles desde el inicio, sin desbloqueos.
 - **Daño por contacto:** enemigos y jefes hacen daño al tocarlos (antes solo atacaban con golpes). El entrenador del tutorial no.
 - **Vida máxima del jugador: 8** (antes 5).
+- **Orbes de salud (extensión del diseño):** los enemigos derrotados y los jefes (al entrar en la fase 2 y al ser derrotados) sueltan orbes que curan 1 corazón al jugador herido. Datos en `HealthOrbStats` y en el grupo "Drops" de `EnemyStats` / `BossStats`.
+- **Muerte con ragdoll:** jugador, enemigos y jefes se desarman en cuerpo, cabeza y arma con física al morir (solo visual; no afecta a la lógica ni a los tiempos de muerte).
 
 ## Arquitectura
 
