@@ -32,6 +32,8 @@ signal level_completed(level_number: int)
 @export_group("Look and narrative")
 ## Placeholder palette. A fully transparent color (default) leaves the engine clear color untouched.
 @export var background_color: Color = Color(0.0, 0.0, 0.0, 0.0)
+## Sky, parallax layers, ground skin and particles of the level (drawn under the play field).
+@export var biome: Biome
 ## Narrative variant (String) -> short line shown for `intro_duration` seconds at level start.
 @export var intro_lines: Dictionary = {}
 @export var intro_duration: float = 4.0

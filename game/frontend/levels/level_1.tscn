@@ -14,8 +14,10 @@
 [ext_resource type="Script" path="res://backend/decisions/soul_fragment_drop.gd" id="12_drop"]
 [ext_resource type="PackedScene" path="res://backend/decisions/soul_fragment.tscn" id="13_fragment"]
 [ext_resource type="Resource" path="res://backend/decisions/data/fragment_level_1.tres" id="14_data"]
+[ext_resource type="Resource" path="res://frontend/levels/biome/forest_biome.tres" id="90_biome"]
 
 [node name="Level1" instance=ExtResource("1_base") node_paths=PackedStringArray("boss", "encounter", "fragment_drop", "arena_gates")]
+biome = ExtResource("90_biome")
 level_number = 1
 level_id = &"level_1"
 start_checkpoint_id = "level_1_start"

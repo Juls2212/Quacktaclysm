@@ -7,11 +7,13 @@
 [ext_resource type="PackedScene" path="res://backend/progression/checkpoint.tscn" id="5_checkpoint"]
 [ext_resource type="PackedScene" path="res://backend/combat/kill_zone.tscn" id="6_killzone"]
 [ext_resource type="Script" path="res://backend/progression/tutorial_controller.gd" id="7_tutorial"]
+[ext_resource type="Resource" path="res://frontend/levels/biome/meadow_biome.tres" id="90_biome"]
 
 [sub_resource type="RectangleShape2D" id="Shape_exit"]
 size = Vector2(60, 220)
 
 [node name="Tutorial" instance=ExtResource("1_base")]
+biome = ExtResource("90_biome")
 level_number = 0
 level_id = &"tutorial"
 next_scene_id = "level_1"
