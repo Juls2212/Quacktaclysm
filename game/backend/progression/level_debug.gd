@@ -55,6 +55,8 @@ func _process(_delta: float) -> void:
 		lines.append("boss: %s phase %d" % [BossBase.State.keys()[_level.boss.state], _level.boss.current_phase])
 	lines.append("level %d  checkpoint %s  profile %s  souls %d/%d" % [GameState.current_level, GameState.checkpoint,
 		GameState.adaptive_profile, GameState.souls_released, GameState.souls_kept])
+	if player.wave_caster != null:
+		lines.append("wave tier %d" % player.wave_caster.get_effective_tier())
 	lines.append("pause holders: %d" % PauseLock.holder_count())
 	_label.text = "\n".join(lines)
 
