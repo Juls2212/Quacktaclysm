@@ -44,13 +44,39 @@ extends Resource
 @export_range(0.0, 1.0, 0.05) var attack_move_speed_multiplier: float = 0.4
 @export var can_attack_in_air: bool = true
 
+@export_group("Heavy attack")
+@export_range(1, 99, 1) var heavy_damage: int = 3
+@export_range(0.0, 2.0, 0.01, "suffix:s") var heavy_startup_time: float = 0.35
+@export_range(0.0, 2.0, 0.01, "suffix:s") var heavy_active_time: float = 0.15
+@export_range(0.0, 2.0, 0.01, "suffix:s") var heavy_recovery_time: float = 0.4
+## Delay after the recovery before the next heavy attack can start.
+@export_range(0.0, 3.0, 0.01, "suffix:s") var heavy_cooldown: float = 0.4
+@export var heavy_knockback: Vector2 = Vector2(420.0, -180.0)
+## Hitbox width relative to the light attack (the near edge stays where it is).
+@export_range(1.0, 4.0, 0.05) var heavy_width_multiplier: float = 1.6
+## Horizontal speed factor during the whole move.
+@export_range(0.0, 1.0, 0.05) var heavy_move_speed_multiplier: float = 0.15
+@export var heavy_can_use_in_air: bool = true
+@export_range(0.0, 0.5, 0.01, "suffix:s") var heavy_input_buffer_time: float = 0.12
+
+@export_group("Dash slash")
+@export_range(1, 99, 1) var dash_slash_damage: int = 2
+@export var dash_slash_knockback: Vector2 = Vector2(360.0, -140.0)
+@export_range(1.0, 4.0, 0.05) var dash_slash_width_multiplier: float = 1.3
+## Attack pressed up to this long before (or during) a dash converts it into a slash.
+@export_range(0.0, 0.5, 0.01, "suffix:s") var dash_slash_input_buffer_time: float = 0.1
+## The hitbox stays active this long after the dash ends.
+@export_range(0.0, 0.5, 0.01, "suffix:s") var dash_slash_extra_active_time: float = 0.06
+## After the slash the player cannot attack or heavy-attack for this long (no free chain).
+@export_range(0.0, 1.0, 0.01, "suffix:s") var dash_slash_extra_recovery_time: float = 0.12
+
 @export_group("Respawn")
 @export_range(0.0, 10.0, 0.1, "suffix:s") var respawn_delay: float = 1.0
 @export_range(0.0, 10.0, 0.1, "suffix:s") var respawn_invulnerability_time: float = 1.5
 @export var auto_respawn: bool = true
 
 @export_group("Health")
-@export_range(1, 99, 1) var max_health: int = 5
+@export_range(1, 99, 1) var max_health: int = 8
 ## Invulnerability after taking damage.
 @export_range(0.0, 5.0, 0.05, "suffix:s") var hurt_invulnerability_time: float = 1.0
 ## Time the player cannot act after being hit.
