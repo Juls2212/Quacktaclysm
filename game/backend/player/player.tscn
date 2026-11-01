@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://backend/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://backend/combat/health_component.gd" id="2_health"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://backend/player/player_visual.gd" id="4_visual"]
 [ext_resource type="Script" path="res://backend/combat/hitbox.gd" id="5_hitbox"]
 [ext_resource type="Script" path="res://backend/player/sword_wave_caster.gd" id="6_caster"]
+[ext_resource type="Script" path="res://frontend/animations/duck_rig.gd" id="7_rig"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
 size = Vector2(28, 52)
@@ -46,36 +47,14 @@ owner_body = NodePath("../..")
 position = Vector2(42, 0)
 shape = SubResource("RectangleShape2D_sword")
 
-[node name="Visual" type="Node2D" parent="." node_paths=PackedStringArray("health", "attack_hitbox", "sword", "heavy_sword", "dash_trail")]
+[node name="Visual" type="Node2D" parent="." node_paths=PackedStringArray("health", "attack_hitbox", "rig")]
 script = ExtResource("4_visual")
 health = NodePath("../Health")
 attack_hitbox = NodePath("../AttackPivot/Hitbox")
-sword = NodePath("SwordVisual")
-heavy_sword = NodePath("HeavySlashVisual")
-dash_trail = NodePath("DashSlashTrail")
+rig = NodePath("Rig")
 
-[node name="SwordVisual" type="Polygon2D" parent="Visual"]
-visible = false
-color = Color(0.9, 0.9, 1, 1)
-polygon = PackedVector2Array(16, -6, 64, -6, 64, 6, 16, 6)
-
-[node name="HeavySlashVisual" type="Polygon2D" parent="Visual"]
-visible = false
-color = Color(1, 0.6, 0.2, 1)
-polygon = PackedVector2Array(16, -16, 104, -16, 104, 16, 16, 16)
-
-[node name="DashSlashTrail" type="Polygon2D" parent="Visual"]
-visible = false
-color = Color(0.4, 0.95, 1, 0.7)
-polygon = PackedVector2Array(-90, -12, 70, -12, 70, 12, -90, 12)
-
-[node name="Body" type="Polygon2D" parent="Visual"]
-color = Color(0.25, 0.6, 0.95, 1)
-polygon = PackedVector2Array(-14, -26, 14, -26, 14, 26, -14, 26)
-
-[node name="FacingMarker" type="Polygon2D" parent="Visual"]
-color = Color(1, 0.85, 0.2, 1)
-polygon = PackedVector2Array(4, -18, 18, -18, 18, -8, 4, -8)
+[node name="Rig" type="Node2D" parent="Visual"]
+script = ExtResource("7_rig")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 

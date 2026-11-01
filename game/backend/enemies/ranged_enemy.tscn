@@ -7,3 +7,7 @@
 [node name="RangedEnemy" instance=ExtResource("1_base")]
 script = ExtResource("2_script")
 stats = ExtResource("3_stats")
+
+[node name="Visual" parent="."]
+look = 4
+tough_look = 4
