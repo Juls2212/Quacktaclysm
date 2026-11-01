@@ -25,6 +25,12 @@ extends Resource
 @export_range(0.0, 10.0, 0.05, "suffix:s") var pattern_gap_time: float = 1.2
 @export var avoid_immediate_repeat: bool = true
 
+@export_group("Contact damage")
+## Damage dealt by touching the boss while it is fighting. 0 disables contact damage.
+@export_range(0, 99, 1) var contact_damage: int = 1
+@export var contact_knockback: Vector2 = Vector2(260.0, -140.0)
+@export_range(0.05, 10.0, 0.05, "suffix:s") var contact_rehit_interval: float = 0.8
+
 @export_group("Death and feedback")
 @export_range(0.0, 10.0, 0.05, "suffix:s") var death_fade_time: float = 1.0
 ## Visual hit flash only.
