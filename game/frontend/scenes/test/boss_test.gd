@@ -79,6 +79,8 @@ func _process(_delta: float) -> void:
 		lines.append("boss: defeated")
 	lines.append("souls released %d  kept %d  decisions %d  last: %s" % [
 		GameState.souls_released, GameState.souls_kept, GameState.decisions.size(), _last_decision_text()])
+	if player.wave_caster != null:
+		lines.append("wave [RMB/U]: tier %d  cooldown %.2f/%.2f" % [player.wave_caster.get_effective_tier(), player.wave_caster.get_cooldown_remaining(), player.wave_caster.get_cooldown_total()])
 	lines.append("save file: %s  last io: %s" % ["yes" if SaveSystem.has_save() else "no", _last_io_text])
 	lines.append("pause holders: %d  transitioning: %s  save exists: %s  [Esc/P] pause" % [
 		PauseLock.holder_count(), SceneManager.is_transitioning(), "yes" if SaveSystem.has_save() else "no"])
