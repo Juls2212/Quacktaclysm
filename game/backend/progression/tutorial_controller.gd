@@ -15,6 +15,9 @@ const KIND_JUMP: String = "jump"
 const KIND_DASH: String = "dash"
 const KIND_ATTACK: String = "attack"
 const KIND_HIT_DUMMY: String = "hit_dummy"
+const KIND_WAVE: String = "wave"
+const KIND_HEAVY: String = "heavy"
+const KIND_DASH_SLASH: String = "dash_slash"
 
 @export var player: Player
 @export var dummy: TrainingDummy
@@ -53,6 +56,9 @@ func _ready() -> void:
 	player.state_changed.connect(_on_state_changed)
 	player.dash_started.connect(_on_action.bind(KIND_DASH))
 	player.attack_started.connect(_on_action.bind(KIND_ATTACK))
+	player.wave_cast.connect(func(_tier: int) -> void: _on_action(KIND_WAVE))
+	player.heavy_attack_started.connect(_on_action.bind(KIND_HEAVY))
+	player.dash_slash_started.connect(_on_action.bind(KIND_DASH_SLASH))
 	if dummy != null:
 		dummy.health.damaged.connect(_on_dummy_damaged)
 	if exit_area != null:
