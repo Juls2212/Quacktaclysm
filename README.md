@@ -1,113 +1,84 @@
 # Quacktaclysm
 
-Videojuego 2D de acción en vista lateral con combate con espada, enemigos y jefes, hecho con Godot 4 y GDScript para escritorio (prioridad Windows, compatible con macOS). El nombre oficial es Quacktaclysm (`config/name` en Project Settings).
+Videojuego 2D de acción en vista lateral con combate con espada (cuerpo a cuerpo y una onda a distancia), enemigos y jefes, hecho con Godot 4 y GDScript para escritorio (prioridad Windows, compatible con macOS). El nombre oficial es Quacktaclysm (`config/name` en Project Settings). El jugador recorre un tutorial y tres niveles; tras cada jefe decide **Liberar** o **Conservar** un fragmento de alma, y esas decisiones cambian la dificultad de los jefes, los enemigos extra, la potencia de la onda y el final. Un servicio de IA opcional puede refinar ese perfil.
 
-## Estructura de carpetas
+> **Estado:** todo el contenido jugable existe con arte provisional (rectángulos de colores). Nadie lo ha jugado con ventana todavía: ver `docs/KNOWN_ISSUES.md`.
+
+## Requisitos
+
+- **Godot 4.7.x** (desarrollado con 4.7.2 stable). Versiones detectadas en `docs/ENVIRONMENT.md`.
+- **Python 3.11** solo para el servicio de IA (`ai-service/`) y el ejecutor de pruebas (`tools/run_all_tests.py`, solo biblioteca estándar).
+
+## Estructura del repositorio
 
 ```
 game/             Proyecto de Godot (raíz: game/project.godot)
-  frontend/       Escenas, UI, animaciones, sprites, audio y niveles
+  frontend/       Escenas, UI, niveles, animaciones, sprites y audio
   backend/        Lógica del juego (player, combat, enemies, bosses,
                   decisions, ai, persistence, progression)
-ai-service/       Servicio de IA externo
-  app/
-docs/             Documentación
+ai-service/       Servicio de IA externo (FastAPI) y sus pruebas
+docs/             Documentación (ver la lista al final)
+tools/            Utilidades (ejecutor de pruebas)
+builds/           Salida de la exportación (ignorada por Git)
 ```
 
-- **frontend** = escenas, UI, arte, audio y niveles.
-- **backend** = lógica del juego.
-- **ai-service** = servicio de IA externo.
+- **frontend** = escenas, UI, arte, audio y niveles. **backend** = lógica del juego. **ai-service** = servicio de IA externo.
 
-## Cómo abrir el proyecto
+## Abrir y ejecutar el proyecto
 
-1. Instalar Godot 4.7.2 (stable).
-2. En el gestor de proyectos de Godot, importar `game/project.godot`.
-3. Ejecutar (F5). Debe mostrarse la escena de prueba `base_check.tscn` con el texto "Project base OK — Godot 4.7.2".
+1. Instala Godot 4.7.x.
+2. En el gestor de proyectos importa `game/project.godot`.
+3. Pulsa F5: se abre el menú principal (`game/frontend/ui/main_menu.tscn`).
+
+## Controles
+
+| Acción | Teclas |
+| --- | --- |
+| Mover | A / D o flechas izquierda / derecha |
+| Saltar | Espacio o flecha arriba |
+| Dash | Shift o K |
+| Ataque de espada | J, X o clic izquierdo |
+| Onda de espada (a distancia) | **clic derecho o U** |
+| Golpe pesado | **I o clic central** |
+| Tajo de dash | pulsar **ataque durante el dash** (sin tecla propia) |
+| Pausa | Esc o P |
+
+La pausa no se abre si otro sistema ya tiene el juego pausado (panel de decisión, Game Over), durante una transición o con el jugador muerto. "Menú principal" **no guarda**: se pierde el progreso posterior al último guardado automático. En un build de depuración además: `K` mata al jefe (¡coincide con el dash!, ver `docs/KNOWN_ISSUES.md`), `H` le quita el 10 %, `F2` te lleva al checkpoint de la arena y `F3` muestra datos de depuración; las escenas de pruebas (`boss_test`, etc.) tienen sus propias teclas.
+
+## Flujo del juego
+
+menú principal → **tutorial** (mover, saltar, esquivar, atacar, golpear al muñeco, lanzar la onda) → **Nivel 1** → **Nivel 2** → **Nivel 3** → **final** → menú principal.
+
+En cada nivel: recorrer, llegar al checkpoint de la arena, derrotar al jefe (las puertas se cierran durante el combate), recoger el fragmento de alma y decidir. Tras la decisión el nivel avanza solo. Al completar el Nivel 3 se guarda `checkpoint = "ending"` y se abre el final.
+
+- **Nueva partida:** reinicia el estado y abre el tutorial. Si ya hay partida guardada pide confirmación; el archivo no se borra, se reemplaza en el próximo guardado automático.
+- **Continuar:** carga el archivo y abre el nivel guardado; si la partida está **completada** (`checkpoint = "ending"`) reabre el final. Si el archivo está dañado o es de una versión más nueva, muestra un mensaje y no cambia nada (la copia `.bak` se usa automáticamente si existe).
+- **Game Over:** "Has caído" con Reintentar (reaparece en el último checkpoint) y Menú principal; el tutorial reaparece solo.
+
+**Vida y daño por contacto:** el jugador tiene **8 corazones** (`max_health` en `PlayerStats`). Tocar a un enemigo vivo o a un jefe en combate hace daño (1 por defecto, con empuje y un intervalo de repetición); el dash, la invulnerabilidad tras un golpe y la de reaparecer protegen igual que contra un ataque. Un enemigo en estado de daño, muerto, un jefe sin activar, en la transición de fase o derrotado no hacen daño. Los valores están en `EnemyStats` / `BossStats` (grupo "Contact damage").
+
+**Movimientos de espada nuevos** (disponibles desde el inicio, sin desbloqueo ni guardado):
+- **Golpe pesado** (I / clic central): preparación visible (el cuerpo se tiñe y se aplasta), golpe ancho de 3 de daño, recuperación larga en la que el jugador es vulnerable y recarga. No se puede cancelar con otras acciones (solo el daño o la muerte lo interrumpen; si te golpean en la preparación no hay golpe ni recarga).
+- **Tajo de dash**: pulsa atacar durante el dash. El dash sigue y lleva un golpe delantero de 2 de daño; una vez por dash, con la recarga del dash y una recuperación extra de 0,12 s en la que no se puede atacar.
+- Todo se ajusta en los grupos "Heavy attack" y "Dash slash" de `PlayerStats` (`default_player_stats.tres`). Por diseño su daño sostenido por segundo está entre 1,0× y 1,5× el de la espada (la onda sigue por debajo).
+
+**Onda de espada:** ataque a distancia disponible desde el inicio. Su potencia (nivel 0, 1 o 2) sale de las decisiones: por defecto cada fragmento de los niveles 1 y 2 que se **conserva** sube un nivel. Se ajusta en `game/backend/player/default_sword_wave_config.tres` (niveles, recargas, `upgrade_rules`). Por diseño su daño sostenido por segundo queda por debajo del de la espada. *Este ataque amplía el diseño original (que solo documenta la katana): ver `docs/CHANGES_FROM_DESIGN.md`.*
+
+**Parámetros adaptativos:** solo se aplican al cargar un nivel (agresividad del jefe, enemigos extra de la variante "corrupted", texto de introducción) y en el final. Detalle en `docs/ADAPTIVE_CONTRACT.md`.
 
 ## Partida guardada
 
-El juego guarda su progreso en un único archivo JSON, `save_game.json`, dentro de la carpeta `user://` del proyecto (Godot la crea con el nombre del proyecto, `Quacktaclysm`). Junto a él puede haber `save_game.json.bak` (versión anterior), y `save_game.json.corrupt` (archivo ilegible puesto en cuarentena). Ubicación según el sistema:
+El juego guarda su progreso en un único archivo JSON con **exactamente siete claves**, `save_game.json`, dentro de la carpeta `user://` del proyecto (Godot la crea con el nombre del proyecto, `Quacktaclysm`). Junto a él puede haber `save_game.json.bak` (versión anterior) y `save_game.json.corrupt` (archivo ilegible puesto en cuarentena). Ubicación:
 
-- Windows: `%APPDATA%\Godotpp_userdata\Quacktaclysm\`
+- Windows: `%APPDATA%\Godot\app_userdata\Quacktaclysm\`
 - macOS: `~/Library/Application Support/Godot/app_userdata/Quacktaclysm/`
 - Linux: `~/.local/share/godot/app_userdata/Quacktaclysm/`
 
-Para borrar la partida basta con eliminar esos archivos con el juego cerrado (o usar la tecla 3 de la escena de pruebas `boss_test`). Estos archivos viven fuera del repositorio y nunca se suben a Git.
-
-## Flujo del juego y menús
-
-El juego arranca en el **menú principal** (`game/frontend/ui/main_menu.tscn`) y de ahí pasa a la partida. Las escenas de prueba siguen pudiendo abrirse directamente desde el editor (F6).
-
-- **Nueva partida:** reinicia el estado en memoria (`GameState.start_new_game()`) y abre la escena `tutorial`. Si ya existe una partida guardada (o una guardada de versión más nueva que bloquea el guardado), pide confirmación; **no se borra el archivo**: se reemplaza en el próximo guardado automático.
-- **Continuar:** solo está activo si hay partida guardada. Carga el archivo y abre la escena del nivel guardado (si la partida ya está **completada**, es decir `checkpoint = "ending"`, reabre el final; si esa escena falla, vuelve al último nivel y lo indica). Si el archivo está dañado, es de una versión más nueva o no es válido, muestra un mensaje en el menú y no cambia nada (la copia de seguridad se usa automáticamente si existe).
-- **Salir:** cierra el juego.
-
-**Controles:** movimiento, salto, dash y ataque como hasta ahora; **Esc o P** abren y cierran el menú de pausa (Continuar / Menú principal). La pausa no se abre si otro sistema ya tiene el juego pausado (panel de decisión, Game Over), durante una transición de escena o con el jugador muerto. "Menú principal" **no guarda**: se pierde el progreso posterior al último guardado automático.
-
-**Game Over:** al morir el jugador aparece "Has caído" con Reintentar (reaparece en el último checkpoint con la vida completa) y Menú principal.
-
-**Pausa central:** `PauseLock` (`game/backend/progression/pause_lock.gd`) cuenta quién pausó el árbol; solo se reanuda cuando el último lo libera. `SceneManager` (autoload) hace los cambios de escena con fundido y limpia cualquier pausa.
-
-**Registro de escenas:** `game/backend/progression/default_scene_registry.tres` (ids → rutas, ids de nuevo juego/menú/niveles y tiempos del fundido). `tutorial` y `level_1` apuntan a las escenas reales (`game/frontend/levels/`). `level_2`, `level_3` y `ending` (final, fuera de `level_scene_ids`) también son escenas reales. La escena de pruebas `boss_test.tscn` ya no está en el flujo.
-
-## Niveles
-
-Recorrido actual: menú → **tutorial** (aprender mover, saltar, esquivar, atacar y golpear al muñeco; al completarlo se abre la salida) → **Nivel 1** (combate, un hueco que exige salto + dash, enemigos a distancia, sala del jefe con puertas que se cierran, fragmento de alma y decisión) → **Nivel 2** (pantano) → **Nivel 3** (tormenta) → **final**. El tutorial no guarda partida; los niveles guardan al llegar, en cada checkpoint y al decidir.
-
-**Plantilla (`LevelBase`):** `game/backend/progression/level_base.gd` + `game/frontend/levels/level_base.tscn` contienen los servicios comunes (jugador con cámara, HUD, barra de jefe, panel de decisión, `DecisionFlow`, `AdaptiveRefiner`, menú de pausa, Game Over, ayudas de depuración). Para crear un nivel nuevo:
-
-1. Crea una escena heredada de `level_base.tscn`.
-2. Ajusta los exports de la raíz: `level_number`, `level_id`, `start_checkpoint_id` (`level_N_start`), `next_scene_id`, `show_game_over`, `camera_limits`, y si hay jefe: `boss`, `encounter`, `fragment_drop`, `arena_gates`.
-3. Coloca geometría, enemigos, checkpoints y jefe dentro del nodo `Content`, y mueve el nodo `SpawnPoint`.
-4. Si hay fragmento: añade un `SoulFragmentDrop` y asigna su ruta en el export `drop` del nodo `DecisionFlow`.
-5. Registra la escena en `default_scene_registry.tres`.
-
-**Convenciones de checkpoints:** `level_N_start` (`order` 0, junto al `SpawnPoint`) y `level_N_arena` (`order` mayor), este último justo ANTES de la arena y **fuera** del área del `BossEncounter`, para que al reaparecer no se reactive el jefe. "Continuar" restaura al jugador en el checkpoint guardado si pertenece al nivel.
-
-**Bloques de maqueta:** `PlaceholderPlatform` (`game/frontend/levels/blocks/`, `@tool`: rectángulo con colisión cuyo `size`, `one_way` y `color` se ven en el editor), `placeholder_wall.tscn` (la misma plataforma como muro) y `ArenaGate` (puerta que se cierra al empezar el combate y se abre al reiniciarse o morir el jefe).
-
-**Teclas de depuración de niveles (solo builds de depuración):** `K` mata al jefe, `H` le quita el 10 %, `F2` te lleva al checkpoint de la arena, `F3` muestra/oculta datos de depuración. (La escena `boss_test` mantiene sus propias teclas.)
-
-### Flujo provisional completo
-
-menú principal → tutorial → Nivel 1 → Nivel 2 → Nivel 3 → final → menú principal. En cada nivel: recorrer, llegar al checkpoint `level_N_arena`, entrar a la arena (las puertas se cierran), derrotar al jefe, recoger el fragmento de alma y decidir (Liberar / Conservar). Tras la decisión el nivel avanza solo (espera a que acabe un posible refinamiento remoto, con tiempo máximo). Nivel 2: tres huecos (uno de salto simple y dos que exigen salto + dash), una zona de plataformas verticales y 8 enemigos (más ranged que el Nivel 1). Nivel 3: dos huecos de dash y uno de salto simple, grupos de enemigos en dos alturas y 9 enemigos. Jefes: `boss_two.tscn` (60 vida, embestida y barrido ancho) y `boss_three.tscn` (80 vida, los tres patrones y una ráfaga pesada en la fase 2).
-
-### Cómo se consumen los parámetros adaptativos
-
-Solo **al cargar el nivel** (`LevelBase._ready`, una única vez; nada cambia en caliente):
-
-1. **Agresividad del jefe:** `boss.set_aggression(result.boss_aggression)` (0.9 compasivo, 1.0 neutral, 1.15 corrupto; se limita a 0.5–2.0). Multiplica la velocidad efectiva de los patrones (junto con el multiplicador de fase 2) y divide la pausa entre patrones. Con 1.0 el comportamiento es idéntico al anterior. Una llamada en mitad de un patrón se ignora.
-2. **Grupos de variante:** el export `variant_groups` (`Dictionary`: id de variante de encuentro → lista de `NodePath` relativos al nivel) lista nodos opcionales (p. ej. enemigos extra) que solo existen en esa variante. Los grupos que NO coinciden con `encounter_variant` se eliminan del árbol al cargar (`calm` y `standard` están vacíos; `corrupted` añade 2 enemigos en el Nivel 2 y 3 en el Nivel 3). Los nodos que no están en ningún grupo son la base. Una variante desconocida elimina todos los grupos. Una ruta inválida solo da un aviso.
-3. **Texto de introducción:** `intro_lines` (`Dictionary`: variante narrativa → línea corta) e `intro_duration`. Se muestra si hay entrada para la variante narrativa actual; si no, nada.
-4. **Final:** la escena `ending` lee `ending_variant` una vez (`ending_compassionate`, `ending_neutral`, `ending_corrupt`; una variante desconocida usa el texto neutral).
-
-El `DecisionFlow` del Nivel 3 usa `refinement_point = "ending"` (el resto, `after_decision`).
-
-### Marcador del final
-
-Al completar el último nivel (cuyo `next_scene_id` no está en `level_scene_ids`) `LevelBase` escribe `checkpoint = "ending"` (`GameState.CHECKPOINT_ENDING`), mantiene `current_level`, guarda y abre la escena `ending`. No hay claves nuevas: el archivo sigue teniendo exactamente siete. `GameState.is_game_completed()` indica el estado. **Nueva partida** empieza de cero; **Continuar** reabre el final tras completar el juego. Entrar a un nivel con la partida completada (solo desde el editor o depuración) no la restaura ni reescribe: el autoguardado se suspende mientras el nivel esté cargado para no pisar el marcador.
-
-### Crear un jefe desde datos
-
-1. Crea un `BossStats` (`game/backend/bosses/stats/`): id, nombre, vida, ratio y multiplicadores de la fase 2, pausa entre patrones.
-2. Crea una escena heredada de `boss_base.tscn`, asigna `stats` y añade nodos `SwipePattern` / `ChargePattern` / `ProjectileVolleyPattern` bajo `Patterns` (sus hitboxes bajo `AttackPivot`). Todo se ajusta con exports; no hace falta código. Ver `boss_two.tscn` y `boss_three.tscn`.
-3. En el nivel: asigna el jefe al export `boss`, al `BossEncounter` y al `SoulFragmentDrop`, y usa un `SoulFragmentData` cuyo `boss_id` coincida con el de los stats.
-
-### Cómo dimensionar huecos y escalones
-
-Alcances medidos con el `Player` real (salto sin soltar, a máxima velocidad): salto solo ≈ 220 px, altura máxima ≈ 112 px, salto + dash (dash 0.3 s después de saltar) ≈ 328 px (hasta ≈ 388 px con el dash en el mejor momento). Reglas usadas: hueco de salto simple ≤ 85 % del salto (≈ 187 px); hueco de dash entre el 110 % del salto y el 90 % del salto + dash (≈ 242–295 px; los de los niveles 2 y 3 miden 285 px, más que el límite pegado al borde con coyote time, 278 px); escalón vertical ≤ 85 % de la altura máxima (≈ 95 px, se usan 80 px). La prueba `level_phase12b_smoke_test` lo vuelve a medir y comprueba cada nivel.
-
-### Pendiente / marcadores de posición que reemplazará la siguiente fase
-
-Gráficos y animaciones (todo son rectángulos de colores), audio, textos finales y de introducción (marcados "texto provisional"), nombres de los jefes, ajuste de dificultad tras jugar, el ataque a distancia de la espada, cinemáticas/diálogos y un menú de ajustes. El pantano y la tormenta solo se distinguen por el color de fondo.
-
-### Pruebas de Fase 12b
-
-`level_phase12b_smoke_test` (agresividad, jefes 2 y 3, variantes, final, menú, escena final, análisis de alcanzabilidad con medidas reales y cruces físicos de cada hueco) y `level_phase12b_playthrough_test` (tres partidas completas con cambios de escena reales y el servicio de IA desactivado). Ambas usan rutas de guardado de prueba.
+Para borrar la partida basta con eliminar esos archivos con el juego cerrado (o usar la tecla 3 de la escena `boss_test`). Viven fuera del repositorio y nunca se suben a Git. Las pruebas usan archivos `test_save_*.json` y no tocan el real.
 
 ## Servicio de IA
 
-**Para qué sirve:** un servicio local (FastAPI) que, tras cada decisión Liberar/Conservar, puede *refinar* el perfil adaptativo (`compassionate` / `neutral` / `corrupt`) y elegir una variante narrativa consultando a OpenAI. El resultado local (`LocalProfileClassifier`) se aplica siempre primero; el servicio es opcional. **El juego funciona igual sin él**: si no está disponible, el resultado local se mantiene y no se muestra ningún error al jugador.
+**Para qué sirve:** un servicio local (FastAPI) que, tras cada decisión Liberar/Conservar, puede *refinar* el perfil adaptativo (`compassionate` / `neutral` / `corrupt`) y elegir una variante narrativa consultando a OpenAI. El resultado local (`LocalProfileClassifier`) se aplica siempre primero; el servicio es opcional. **El juego funciona igual sin él**: si no está disponible, se mantiene el resultado local y no se muestra ningún error al jugador. La IA nunca controla el combate.
 
 **Preparar el entorno** (desde la raíz del repositorio; las dependencias se instalan SOLO dentro del venv):
 
@@ -130,9 +101,9 @@ set AI_SERVICE_MODE=openai && .venv\Scripts\python run_dev.py   # modo openai (P
 
 Comprobación rápida: `http://127.0.0.1:8000/health` devuelve `{"status":"ok","mode":"mock",...}`. En modo `openai` sin clave o sin modelo, el servicio arranca igualmente (`/health` funciona) y el endpoint de perfil responde 503.
 
-**URL del servicio en el juego:** por defecto `http://127.0.0.1:8000` (recurso `game/backend/ai/default_ai_service_config.tres`). Para usar otra URL, define la variable de entorno `QUACKTACLYSM_AI_URL` antes de abrir Godot, o edita el recurso. En la escena `boss_test`, la tecla `7` pide un refinamiento y la etiqueta de depuración muestra el estado.
+**URL del servicio en el juego:** por defecto `http://127.0.0.1:8000` (recurso `game/backend/ai/default_ai_service_config.tres`). Para usar otra URL, define la variable de entorno `QUACKTACLYSM_AI_URL` antes de abrir Godot o del juego exportado, o edita el recurso. En la escena `boss_test`, la tecla `7` pide un refinamiento. **Sin el servicio** (por ejemplo, en el `.exe` exportado sin nada escuchando), el juego usa el clasificador local.
 
-**Pruebas de Python** (sin red y sin clave real):
+**Pruebas de Python** (sin red y sin clave real; solo hace falta ejecutarlas si se toca `ai-service/`):
 
 ```
 cd ai-service
@@ -147,8 +118,43 @@ ai-service\.venv\Scripts\python ai-service\scripts\integration_mock.py --godot <
 
 > **Advertencia:** nunca subas `.env` al repositorio ni pegues claves de API en issues, chats o capturas. Solo `.env.example` (con valores vacíos) está versionado.
 
-**Antes de publicar el servicio en internet:** este servicio NO tiene autenticación ni límite de peticiones. Hace falta añadir autenticación (p. ej. una clave de cliente o token), rate limiting por IP/usuario, HTTPS (proxy inverso) y revisar los límites de coste en OpenAI. El juego ya admite una URL configurable (`QUACKTACLYSM_AI_URL` o el recurso de configuración).
+**Antes de publicar el servicio en internet:** este servicio NO tiene autenticación ni límite de peticiones. Hace falta añadir autenticación, rate limiting, HTTPS (proxy inverso) y revisar los límites de coste en OpenAI.
 
-## Git
+## Ejecutar todas las pruebas
 
-Nunca subir al repositorio archivos `.env` ni claves de API.
+```
+python tools/run_all_tests.py                 # todo el lote
+python tools/run_all_tests.py --list          # lista las pruebas
+python tools/run_all_tests.py --only boss     # solo las que contienen "boss"
+python tools/run_all_tests.py --godot <ejecutable> --timeout 300
+```
+
+El ejecutor busca el ejecutable de Godot en `--godot`, luego en la variable de entorno `GODOT_BIN` y luego en `godot` / `godot4` del PATH. Descubre `*_smoke_test`, `*_e2e_test`, `*_playthrough_test`, `*_soak_test` y `*_leak_test` en `game/frontend/scenes/test/` (excluye `ai_phase10_integration_test`, que necesita un servicio real), cuenta líneas `PASS`/`FAIL`/`ERROR`, imprime una tabla y termina con código distinto de cero si algo falla. También comprueba que el `save_game.json` real no cambió durante el lote (si no puede resolver la carpeta de usuario de forma segura, omite esa comprobación y lo dice). **Ejecútalo antes de cada fusión.** El bot de resistencia y la prueba de fugas se ejecutan con `--fixed-fps 60` (el ejecutor lo añade solo); a mano: `godot --headless --fixed-fps 60 --path game res://frontend/scenes/test/bot_phase13_soak_test.tscn -- --seed=123` (opciones: `--seed=N`, `--frames=N`, `--only=level_1`).
+
+## Exportar (Windows)
+
+El preset "Windows Desktop" está en `game/export_presets.cfg` (un solo `.exe` con el PCK incrustado, 64 bits, sin credenciales ni certificados; excluye las escenas y scripts de prueba salvo `training_dummy`, que usa el tutorial). Requiere las **plantillas de exportación** de la misma versión de Godot:
+
+1. En el editor: menú *Editor* → *Administrar plantillas de exportación* → descargar para la versión instalada.
+2. *Proyecto* → *Exportar…* → "Windows Desktop" → *Exportar proyecto*, o por terminal desde la raíz del repositorio:
+
+```
+godot --headless --path game --export-release "Windows Desktop" ../builds/Quacktaclysm.exe
+```
+
+La salida queda en `builds/` (ignorada por Git; créala si no existe). Una build de lanzamiento no incluye las ayudas de depuración (`OS.is_debug_build()` es falso). Para apuntar el juego exportado a otro servicio de IA, define `QUACKTACLYSM_AI_URL` antes de ejecutarlo; sin servicio usa el clasificador local.
+
+## Convenciones de Git
+
+- Mensajes de commit en inglés, en imperativo y descriptivos (por ejemplo, "Add boss aggression multiplier"). Un cambio coherente por commit.
+- **Nunca** se sube `.env` ni claves de API (`.gitignore` ya lo cubre; solo se versiona `.env.example`).
+- Etiqueta prevista para la primera versión jugable completa: `core-gameplay-v1` (aún no creada).
+- Ejecutar `python tools/run_all_tests.py` antes de fusionar.
+
+## Documentación
+
+- `docs/HANDOFF.md` — guía para quien sustituya los marcadores de posición por arte y contenido.
+- `docs/ADAPTIVE_CONTRACT.md` — contrato del perfil adaptativo y del servicio de IA.
+- `docs/CHANGES_FROM_DESIGN.md` — diferencias entre el diseño original y la implementación.
+- `docs/KNOWN_ISSUES.md` — límites conocidos y todo lo que falta por verificar jugando.
+- `docs/ENVIRONMENT.md` — versiones y entorno detectados.
