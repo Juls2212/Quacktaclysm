@@ -1,0 +1,61 @@
+[gd_resource type="Resource" script_class="SwordWaveConfig" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://backend/player/sword_wave_config.gd" id="1_config"]
+[ext_resource type="Script" path="res://backend/player/sword_wave_tier.gd" id="2_tier"]
+[ext_resource type="PackedScene" path="res://backend/combat/sword_wave_projectile.tscn" id="3_projectile"]
+
+; PLACEHOLDER values, easy to retune here. Rationale: the wave is a safe-distance tool, so every
+; tier's sustained damage per second (damage / max(cooldown, startup + recovery)) stays BELOW the
+; sword's (1 / 0.45 = 2.22 dps): tier 0 = 1.00, tier 1 = 1.11, tier 2 = 1.67 dps. Higher tiers
+; mostly add reach, width and piercing instead of raw damage.
+
+[sub_resource type="Resource" id="Resource_tier0"]
+script = ExtResource("2_tier")
+damage = 1
+speed = 520.0
+lifetime = 0.9
+size_scale = 1.0
+pierce_count = 0
+knockback = Vector2(180, -60)
+cooldown = 1.0
+tint = Color(0.55, 0.8, 1, 1)
+
+[sub_resource type="Resource" id="Resource_tier1"]
+script = ExtResource("2_tier")
+damage = 1
+speed = 580.0
+lifetime = 1.1
+size_scale = 1.35
+pierce_count = 1
+knockback = Vector2(220, -70)
+cooldown = 0.9
+tint = Color(0.2, 0.95, 1, 1)
+
+[sub_resource type="Resource" id="Resource_tier2"]
+script = ExtResource("2_tier")
+damage = 2
+speed = 640.0
+lifetime = 1.3
+size_scale = 1.7
+pierce_count = 2
+knockback = Vector2(260, -80)
+cooldown = 1.2
+tint = Color(0.7, 0.4, 1, 1)
+
+[resource]
+script = ExtResource("1_config")
+tiers = Array[ExtResource("2_tier")]([SubResource("Resource_tier0"), SubResource("Resource_tier1"), SubResource("Resource_tier2")])
+startup_time = 0.12
+recovery_time = 0.2
+horizontal_speed_multiplier = 0.4
+can_cast_in_air = true
+input_buffer_time = 0.12
+spawn_offset = Vector2(28, -4)
+projectile_scene = ExtResource("3_projectile")
+; fragment id -> choice that upgrades the wave one tier. The Level 3 fragment is decided after the
+; last boss, so it has no gameplay effect. To make "released" fragments the upgrade instead, change
+; the values below to "released".
+upgrade_rules = {
+"fragment_level_1": "kept",
+"fragment_level_2": "kept"
+}
