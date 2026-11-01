@@ -127,6 +127,8 @@ func _make_boss(patterns: Array, stat_overrides: Dictionary, x: float) -> BossBa
 	stats.pattern_gap_time = 0.3
 	stats.death_fade_time = 0.3
 	stats.phase_transition_time = 0.5
+	# Phase 13c: these tests measure the patterns, not body contact.
+	stats.contact_damage = 0
 	_configure(stats, stat_overrides)
 	boss.stats = stats
 	boss.rng_seed = SEED
