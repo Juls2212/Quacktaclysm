@@ -252,7 +252,7 @@ func _test_fast_stats_and_lunge() -> void:
 		"hp=%d speed=%.0f" % [fast.health.max_health, FAST_STATS.move_speed])
 	await _remove(fast)
 
-	var stats: FastEnemyStats = _copy(FAST_STATS, {"patrol_enabled": false}) as FastEnemyStats
+	var stats: FastEnemyStats = _copy(FAST_STATS, {"patrol_enabled": false, "contact_damage": 0}) as FastEnemyStats
 	var enemy := _spawn_enemy(FAST_SCENE, PLAYER_START.x + 150.0, ENEMY_FLOOR_Y, stats)
 	var max_hp: int = player.health.max_health
 	var log: Array[Dictionary] = []
