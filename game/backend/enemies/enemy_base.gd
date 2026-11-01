@@ -28,6 +28,8 @@ enum State { IDLE, PATROL, CHASE, ATTACK, HURT, DEAD }
 enum AttackPhase { STARTUP, ACTIVE, RECOVERY }
 
 @export var stats: EnemyStats
+## The contact hitbox is the body shape shrunk by this many pixels per side (grazing a corner is safe).
+@export var contact_shape_inset: float = 4.0
 
 var state: State = State.IDLE
 var target: Node2D = null
@@ -51,6 +53,8 @@ var _wall_target: Vector2 = Vector2.ZERO
 @onready var visual: Node2D = $Visual
 @onready var attack_pivot: Node2D = $AttackPivot
 @onready var attack_hitbox: Hitbox = $AttackPivot/Hitbox
+@onready var contact_hitbox: ContactHitbox = $ContactHitbox
+@onready var body_shape: CollisionShape2D = $CollisionShape2D
 @onready var detection_area: Area2D = $DetectionArea
 @onready var detection_shape: CollisionShape2D = $DetectionArea/CollisionShape2D
 @onready var ledge_check: RayCast2D = $LedgeCheck
@@ -69,6 +73,7 @@ func _ready() -> void:
 
 	attack_hitbox.damage = stats.attack_damage
 	attack_hitbox.knockback = stats.attack_knockback
+	contact_hitbox.configure(self, body_shape.shape, contact_shape_inset, stats.contact_damage, stats.contact_knockback, stats.contact_rehit_interval)
 
 	var detection_circle := CircleShape2D.new()
 	detection_circle.radius = stats.detection_range
@@ -78,6 +83,7 @@ func _ready() -> void:
 	_wall_target = wall_check.target_position
 	_apply_facing()
 	_state_time_left = stats.patrol_wait_time
+	_update_contact_active()
 
 
 func face_towards(world_x: float) -> void:
@@ -360,6 +366,7 @@ func _on_damaged(info: DamageInfo) -> void:
 
 func _on_health_died() -> void:
 	_cancel_attack()
+	contact_hitbox.set_contact_active(false)
 	hurtbox.set_enabled(false)
 	detection_area.set_deferred("monitoring", false)
 	velocity.x = 0.0
@@ -377,6 +384,7 @@ func _set_state(new_state: State) -> void:
 		return
 	var old_state: State = state
 	state = new_state
+	_update_contact_active()
 	_enter_state(new_state)
 	state_changed.emit(old_state, new_state)
 
@@ -390,3 +398,9 @@ func _apply_facing() -> void:
 	wall_check.target_position.x = absf(_wall_target.x) * facing_direction
 	ledge_check.force_raycast_update()
 	wall_check.force_raycast_update()
+
+
+## Contact damage is on in every living state except HURT (unless `contact_active_while_hurt`).
+func _update_contact_active() -> void:
+	var wanted: bool = state != State.DEAD and not health.is_dead and (state != State.HURT or stats.contact_active_while_hurt)
+	contact_hitbox.set_contact_active(wanted)
