@@ -36,8 +36,8 @@ position = Vector2(1200, 620)
 size = Vector2(2400, 40)
 
 [node name="FloorEnd" parent="Content" index="2" instance=ExtResource("2_platform")]
-position = Vector2(4050, 620)
-size = Vector2(2700, 40)
+position = Vector2(4042.5, 620)
+size = Vector2(2715, 40)
 
 [node name="PlatformStart1" parent="Content" index="3" instance=ExtResource("2_platform")]
 position = Vector2(600, 520)
