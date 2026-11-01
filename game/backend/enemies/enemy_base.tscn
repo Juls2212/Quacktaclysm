@@ -5,12 +5,16 @@
 [ext_resource type="Script" path="res://backend/combat/hurtbox.gd" id="3_hurtbox"]
 [ext_resource type="Script" path="res://backend/combat/hitbox.gd" id="4_hitbox"]
 [ext_resource type="Script" path="res://backend/enemies/enemy_visual.gd" id="5_visual"]
+[ext_resource type="Script" path="res://backend/combat/contact_hitbox.gd" id="6_contact"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
 size = Vector2(28, 48)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_attack"]
 size = Vector2(40, 36)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_contact"]
+size = Vector2(20, 40)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_detection"]
 radius = 260.0
@@ -74,3 +78,10 @@ collision_mask = 1
 position = Vector2(0, 8)
 target_position = Vector2(24, 0)
 collision_mask = 1
+
+[node name="ContactHitbox" type="Area2D" parent="."]
+script = ExtResource("6_contact")
+team = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ContactHitbox"]
+shape = SubResource("RectangleShape2D_contact")
