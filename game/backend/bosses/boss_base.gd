@@ -26,6 +26,8 @@ const MAX_AGGRESSION: float = 2.0
 @export var stats: BossStats
 ## 0 seeds the pattern selection randomly. Any other value makes it deterministic.
 @export var rng_seed: int = 0
+## The contact hitbox is the body shape shrunk by this many pixels per side.
+@export var contact_shape_inset: float = 6.0
 
 var state: State = State.INACTIVE
 var current_phase: int = 1
@@ -59,6 +61,8 @@ var _ledge_origin: Vector2 = Vector2.ZERO
 var _wall_target: Vector2 = Vector2.ZERO
 
 @onready var health: HealthComponent = $Health
+@onready var contact_hitbox: ContactHitbox = $ContactHitbox
+@onready var body_shape: CollisionShape2D = $CollisionShape2D
 @onready var hurtbox: Hurtbox = $Hurtbox
 @onready var visual: Node2D = $Visual
 @onready var attack_pivot: Node2D = $AttackPivot
@@ -83,6 +87,7 @@ func _ready() -> void:
 	for child in attack_pivot.get_children():
 		if child is Hitbox:
 			(child as Hitbox).owner_body = self
+	contact_hitbox.configure(self, body_shape.shape, contact_shape_inset, stats.contact_damage, stats.contact_knockback, stats.contact_rehit_interval)
 	_ledge_origin = ledge_check.position
 	_wall_target = wall_check.target_position
 	_apply_facing()
@@ -187,6 +192,7 @@ func is_ledge_ahead() -> bool:
 
 
 func _physics_process(delta: float) -> void:
+	_update_contact_active()
 	match state:
 		State.INACTIVE:
 			velocity.x = 0.0
@@ -360,6 +366,7 @@ func _set_state(new_state: State) -> void:
 		return
 	var old_state: State = state
 	state = new_state
+	_update_contact_active()
 	state_changed.emit(old_state, new_state)
 
 
@@ -372,3 +379,10 @@ func _apply_facing() -> void:
 	wall_check.target_position.x = absf(_wall_target.x) * facing_direction
 	ledge_check.force_raycast_update()
 	wall_check.force_raycast_update()
+
+
+## Contact damage only while the boss is fighting (IDLE or PATTERN) against a living target:
+## never when inactive, in the phase transition, defeated or when the target is dead.
+func _update_contact_active() -> void:
+	var fighting: bool = state == State.IDLE or state == State.PATTERN
+	contact_hitbox.set_contact_active(fighting and is_target_valid())
