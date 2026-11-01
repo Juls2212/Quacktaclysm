@@ -22,9 +22,9 @@ const AGGRESSION: Dictionary = {"compassionate": 0.9, "neutral": 1.0, "corrupt":
 const EXTRAS_IN_CORRUPT: Dictionary = {2: 2, 3: 3}
 const BASELINE_ENEMIES: Dictionary = {1: 6, 2: 8, 3: 9}
 const RUNS: Array[Dictionary] = [
-	{"name": "(a) always released", "choices": ["released", "released", "released"], "after_second": "compassionate", "final": "compassionate", "ending": "ending_compassionate"},
-	{"name": "(b) always kept", "choices": ["kept", "kept", "kept"], "after_second": "corrupt", "final": "corrupt", "ending": "ending_corrupt"},
-	{"name": "(c) released, kept, released", "choices": ["released", "kept", "released"], "after_second": "neutral", "final": "neutral", "ending": "ending_neutral"},
+	{"name": "(a) always released", "choices": ["released", "released", "released"], "tiers": [0, 0, 0], "after_second": "compassionate", "final": "compassionate", "ending": "ending_compassionate"},
+	{"name": "(b) always kept", "choices": ["kept", "kept", "kept"], "tiers": [0, 1, 2], "after_second": "corrupt", "final": "corrupt", "ending": "ending_corrupt"},
+	{"name": "(c) released, kept, released", "choices": ["released", "kept", "released"], "tiers": [0, 0, 1], "after_second": "neutral", "final": "neutral", "ending": "ending_neutral"},
 ]
 
 var failures: int = 0
@@ -142,6 +142,8 @@ func _play(run: Dictionary) -> void:
 		var released_before: int = choices.slice(0, done_before).count("released")
 		_assert_state("%s: arrival" % step, number, "level_%d_start" % number, released_before, done_before - released_before, done_before)
 		_check("%s: player free and level running" % step, not level.player.is_input_locked() and not level.player.is_dead)
+		var wave_tier: int = level.player.wave_caster.get_effective_tier()
+		_check("%s: sword wave tier %d at the start of the level (Phase 12c)" % [step, run["tiers"][number - 1]], wave_tier == run["tiers"][number - 1], "tier %d" % wave_tier)
 		_check("%s: AI service disabled in the level's refiner" % step, level.refiner.config != null and not level.refiner.config.enabled)
 		var applied: AdaptiveResult = level.get_applied_adaptive_result()
 		var expected_profile: String = GameState.adaptive_profile
