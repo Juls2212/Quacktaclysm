@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://backend/bosses/boss_base.gd" id="1_boss"]
 [ext_resource type="Script" path="res://backend/combat/health_component.gd" id="2_health"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://backend/combat/hitbox.gd" id="4_hitbox"]
 [ext_resource type="Script" path="res://backend/bosses/boss_visual.gd" id="5_visual"]
 [ext_resource type="Script" path="res://backend/combat/contact_hitbox.gd" id="6_contact"]
+[ext_resource type="Script" path="res://frontend/animations/duck_rig.gd" id="7_rig"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
 size = Vector2(56, 88)
@@ -35,17 +36,14 @@ health = NodePath("../Health")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
 shape = SubResource("RectangleShape2D_body")
 
-[node name="Visual" type="Node2D" parent="." node_paths=PackedStringArray("health")]
+[node name="Visual" type="Node2D" parent="." node_paths=PackedStringArray("health", "rig")]
 script = ExtResource("5_visual")
 health = NodePath("../Health")
+rig = NodePath("Rig")
 
-[node name="Body" type="Polygon2D" parent="Visual"]
-color = Color(0.55, 0.2, 0.6, 1)
-polygon = PackedVector2Array(-28, -44, 28, -44, 28, 44, -28, 44)
-
-[node name="FacingMarker" type="Polygon2D" parent="Visual"]
-color = Color(1, 0.9, 0.3, 1)
-polygon = PackedVector2Array(8, -30, 28, -30, 28, -16, 8, -16)
+[node name="Rig" type="Node2D" parent="Visual"]
+script = ExtResource("7_rig")
+foot_y = 44.0
 
 [node name="AttackPivot" type="Node2D" parent="."]
 

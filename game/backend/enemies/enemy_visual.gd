@@ -1,6 +1,6 @@
 extends Node2D
 ## Drives an enemy's DuckRig (walk, attack windup/strike/recover, hurt, death) and adds the
-## attack telegraph tint, hit flash and death fade.
+## attack telegraph tint and hit flash; on death the duck falls apart as a ragdoll.
 ## Visual only; it reads signals and never changes gameplay state.
 
 @export var health: HealthComponent
@@ -14,13 +14,13 @@ extends Node2D
 @export_range(0.0, 1.0, 0.01, "suffix:s") var flash_time: float = 0.1
 ## Tint shown while the enemy winds up an attack (startup phase); the rig also crouches.
 @export var telegraph_color: Color = Color(1.0, 0.95, 0.35, 1.0)
+## Seconds the death ragdoll stays before fading out.
+@export_range(0.0, 30.0, 0.5, "suffix:s") var ragdoll_lifetime: float = 3.0
 
 var _base_modulate: Color = Color.WHITE
 var _rest_modulate: Color = Color.WHITE
 var _flash_left: float = 0.0
-var _fade_total: float = 0.0
-var _fade_left: float = 0.0
-var _fading: bool = false
+var _last_knockback: Vector2 = Vector2.ZERO
 var _enemy: EnemyBase
 var _phase: EnemyBase.AttackPhase = EnemyBase.AttackPhase.STARTUP
 var _phase_time: float = 0.0
@@ -44,11 +44,6 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_phase_time += delta
 	_update_rig()
-	if _fading:
-		_fade_left = maxf(_fade_left - delta, 0.0)
-		var alpha: float = _fade_left / _fade_total if _fade_total > 0.0 else 0.0
-		modulate = Color(_base_modulate.r, _base_modulate.g, _base_modulate.b, _base_modulate.a * alpha)
-		return
 	if _flash_left > 0.0:
 		_flash_left -= delta
 		if _flash_left <= 0.0:
@@ -99,16 +94,26 @@ func _on_attack_phase_changed(phase: EnemyBase.AttackPhase) -> void:
 
 func _set_telegraph(active: bool) -> void:
 	_rest_modulate = telegraph_color if active else _base_modulate
-	if _flash_left <= 0.0 and not _fading:
+	if _flash_left <= 0.0:
 		modulate = _rest_modulate
 
 
-func _on_damaged(_info: DamageInfo) -> void:
+func _on_damaged(info: DamageInfo) -> void:
+	_last_knockback = info.knockback
 	_flash_left = flash_time
 	modulate = flash_color
 
 
+## The duck comes apart with the killing blow; the enemy node itself is freed by EnemyBase.
+## Deferred: the hit arrives inside a physics callback, where new bodies can't be added.
 func _on_died() -> void:
-	_fading = true
-	_fade_total = _enemy.stats.death_fade_time
-	_fade_left = _fade_total
+	modulate = _base_modulate
+	if rig != null and _enemy != null:
+		_spawn_ragdoll.call_deferred(_last_knockback + Vector2(0, -120), _enemy.velocity)
+
+
+func _spawn_ragdoll(push: Vector2, inherited: Vector2) -> void:
+	if not is_inside_tree():
+		return
+	if DuckRagdoll.spawn(rig, _enemy.get_parent(), push, inherited, ragdoll_lifetime) != null:
+		rig.visible = false

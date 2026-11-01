@@ -1,6 +1,6 @@
 extends Node2D
 ## Drives the hero's DuckRig from the player state: run cycle, jump, dash, the three sword
-## moves, the wave cast, hurt and death, plus the hurt flicker.
+## moves, the wave cast and hurt, the hurt flicker, and a ragdoll while the player is dead.
 ## Visual only; it reads state and never changes gameplay.
 
 @export var health: HealthComponent
@@ -16,6 +16,8 @@ var _player: Player
 var _state_time: float = 0.0
 ## Seconds since the dash slash started, or -1 when none is playing.
 var _slash_time: float = -1.0
+var _last_knockback: Vector2 = Vector2.ZERO
+var _ragdoll: DuckRagdoll
 
 
 func _ready() -> void:
@@ -23,15 +25,21 @@ func _ready() -> void:
 	if health:
 		health.invulnerability_started.connect(_set_blinking.bind(true))
 		health.invulnerability_ended.connect(_set_blinking.bind(false))
+		health.damaged.connect(func(info: DamageInfo) -> void: _last_knockback = info.knockback)
 	if _player:
 		_player.state_changed.connect(_on_state_changed)
 		_player.dash_slash_started.connect(func() -> void: _slash_time = 0.0)
+		_player.died.connect(_on_died)
+		_player.respawned.connect(_on_respawned)
 
 
 func _process(delta: float) -> void:
 	_state_time += delta
 	if _slash_time >= 0.0:
 		_slash_time += delta
+	# revive() brings the player back without `respawned`; drop the ragdoll either way.
+	if _ragdoll != null and _player != null and not _player.is_dead:
+		_on_respawned()
 	_update_rig()
 	if not _blinking:
 		return
@@ -113,3 +121,34 @@ func _set_timed(action: DuckRig.Action, windup: float, strike: float, recover: f
 	else:
 		rig.phase = DuckRig.Phase.RECOVER
 		rig.phase_t = clampf((t - windup - strike) / maxf(recover, 0.001), 0.0, 1.0)
+
+
+## The hero tumbles as a ragdoll; it stays until respawn. Deferred: deaths arrive in physics callbacks.
+func _on_died() -> void:
+	if rig != null:
+		_spawn_ragdoll.call_deferred(_last_knockback + Vector2(0, -160), _player.velocity)
+
+
+func _spawn_ragdoll(push: Vector2, inherited: Vector2) -> void:
+	if not is_inside_tree() or not _player.is_dead:
+		return
+	_free_ragdoll()
+	_ragdoll = DuckRagdoll.spawn(rig, _player.get_parent(), push, inherited, 0.0)
+	if _ragdoll != null:
+		rig.visible = false
+
+
+func _on_respawned() -> void:
+	_free_ragdoll()
+	if rig != null:
+		rig.visible = true
+
+
+func _free_ragdoll() -> void:
+	if is_instance_valid(_ragdoll):
+		_ragdoll.queue_free()
+	_ragdoll = null
+
+
+func _exit_tree() -> void:
+	_free_ragdoll()

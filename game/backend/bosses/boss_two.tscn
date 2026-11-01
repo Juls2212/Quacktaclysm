@@ -67,3 +67,6 @@ recovery_time = 0.9
 projectile_count = 3
 spread_angle_degrees = 24.0
 shot_interval = 0.18
+
+[node name="Visual" parent="."]
+look = 6

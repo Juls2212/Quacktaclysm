@@ -43,6 +43,14 @@ var _finished: bool = true
 var _phase_left: float = 0.0
 
 
+## 0..1 progress through the current phase (read by the boss visual to time its animation).
+func get_phase_progress() -> float:
+	var duration: float = _phase_duration(phase_name)
+	if duration <= 0.0:
+		return 1.0
+	return clampf(1.0 - _phase_left / duration, 0.0, 1.0)
+
+
 func tick_cooldown(delta: float) -> void:
 	cooldown_left = maxf(cooldown_left - delta, 0.0)
 
