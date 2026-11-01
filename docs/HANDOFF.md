@@ -8,7 +8,9 @@ Para quien reemplazará los marcadores de posición por arte, audio y contenido 
 | --- | --- |
 | Lógica de movimiento, combate, jefes, decisiones, guardado, perfil adaptativo, servicio de IA | Definitivo (se puede reajustar con datos) |
 | Gráficos de jugador, enemigos y jefes | **Dibujados** por código con `DuckRig` (`game/frontend/animations/duck_rig.gd`): patos con tinta gruesa y animación procedural. Al morir se desarman en un ragdoll (`duck_ragdoll.gd`) |
-| Gráficos de proyectiles, puertas, plataformas, HUD y menús | **Marcador** (polígonos y `ColorRect`) |
+| Escenarios (cielo, capas de parallax, pisos, partículas) | **Dibujados** por código por bioma (`game/frontend/levels/biome/`, `backdrop/`, `terrain/`): pradera (tutorial), bosque (nivel 1), pantano (nivel 2), tormenta (nivel 3) |
+| Menú principal y tipografía de títulos | **Dibujados**: escena animada (`menu_stage.gd`), carteles (`sign_button.gd`) y la letra "Pato Tinta" (`game/frontend/ui/type/ink_type.gd`) |
+| Gráficos de proyectiles, puertas, HUD, pausa y Game Over | **Marcador** (polígonos, `ColorRect` y fuente por defecto) |
 | Animaciones del jugador, enemigos y jefes | Procedurales en `DuckRig` (correr, saltar, dash, tajo, golpe pesado, tajo de dash, onda, zarpazo, embestida, ráfaga, furia de fase 2, daño, muerte con ragdoll). Sprites, audio y música no existen todavía |
 | Textos (introducciones de nivel, finales, tutorial, abuelo, menús) | **Marcador** en español, marcados como "texto provisional" |
 | Nombres de jefes y fragmentos | **Marcador** (`BossStats.display_name`, `SoulFragmentData`) |
@@ -23,7 +25,9 @@ Cada personaje separa lo visual de lo físico:
 - **Enemigos** (`game/backend/enemies/*.tscn`, base `enemy_base.tscn`): nodo `Visual` (script `enemy_visual.gd`) con un `Rig`. El export `look` elige el pato (Bruto, Bandido, Hondero) y `tough_look` se usa cuando `max_health` llega a `tough_health` (Bruto acorazado). Para revisar todos los patos y poses abre `game/frontend/scenes/test/duck_showcase.tscn` (F6); `duck_arena_preview.tscn` los muestra en juego con un piloto automático.
 - **Jefes** (`game/backend/bosses/boss_base.tscn`): nodo `Visual` (script `boss_visual.gd`) con un `Rig`; el export `look` elige el guardián (Capataz en `placeholder_boss`, Pantano en `boss_two`, Tormenta en `boss_three`). Anima zarpazo, embestida y ráfaga según la fase del patrón en curso (`BossPattern.get_phase_progress()`), muestra la furia en la fase 2 y se desarma en un ragdoll al ser derrotado.
 - **Proyectiles:** `projectile.tscn` (enemigos y jefes) y `sword_wave_projectile.tscn` (onda del jugador) tienen un nodo `Visual`. `ProjectileStats.size_scale` y `tint` se aplican a ese nodo.
-- **Plataformas, muros y puertas:** `PlaceholderPlatform`, `placeholder_wall.tscn`, `ArenaGate` (`game/frontend/levels/blocks/`) tienen un `Polygon2D` llamado `Visual`. Sustitúyelo o añade tiles; la colisión es una `CollisionShape2D` aparte que sigue a `size`.
+- **Plataformas y muros:** `PlaceholderPlatform` y `placeholder_wall.tscn` (`game/frontend/levels/blocks/`) se dibujan con un `TerrainSkin` en el bioma del nivel. El export `skin` elige la forma (AUTO: los altos son muros de roca, los anchos altos son techos con estalactitas, los anchos bajos son suelo que sigue bajo la pantalla, el resto son islas flotantes con raíces; los `one_way` son tablones). `show_placeholder` vuelve al rectángulo plano (`Visual`). La colisión es una `CollisionShape2D` aparte que sigue a `size`; el labio de pasto sobresale unos píxeles por arriba a propósito.
+- **Fondo de cada nivel:** el nodo `Backdrop` de `level_base.tscn` pinta el cielo (capa -5, encima del `BackgroundLayer` plano), cuatro capas `Parallax2D` detrás del juego (lejos → cerca, con bruma), una capa de siluetas delante (z 40) y partículas. Todo sale del `Biome` asignado en la raíz del nivel (`biome`); paletas en `game/frontend/levels/biome/*.tres`.
+- **Puertas:** `ArenaGate` sigue con su `Polygon2D` llamado `Visual`.
 
 El daño por contacto lo hace un `ContactHitbox` (hijo de cada enemigo y jefe) cuya forma se copia del cuerpo; no lo muevas ni lo reemplaces por un sprite.
 
@@ -47,6 +51,8 @@ El daño por contacto lo hace un `ContactHitbox` (hijo de cada enemigo y jefe) c
 | Escenas, nuevo juego, orden de niveles y fundidos | `game/backend/progression/default_scene_registry.tres` (`SceneRegistry`) |
 | Fragmentos de alma | `game/backend/decisions/data/*.tres` (`SoulFragmentData`) |
 | Cada nivel (límites de cámara, fondo, introducciones, variantes, siguiente escena) | Exports de la raíz del nivel (`LevelBase`) |
+| Bioma de cada nivel (cielo, capas, colores del suelo, partículas) | `biome` en la raíz del nivel y los recursos `game/frontend/levels/biome/*.tres` (`Biome`) |
+| Opciones del jugador (pantalla completa, volumen) | `user://settings.cfg` vía `GameSettings` (`game/frontend/ui/game_settings.gd`); nunca en la partida guardada |
 | Textos del final y del menú | Exports de `ending_controller.gd` (en `ending.tscn`) y de `main_menu.gd` / `pause_menu.gd` / `game_over_panel.gd` |
 
 Ningún valor de juego está escrito en el código: si encuentras uno, es un error y debe pasar a un recurso.

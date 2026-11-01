@@ -2,7 +2,7 @@
 
 Videojuego 2D de acción en vista lateral con combate con espada (cuerpo a cuerpo y una onda a distancia), enemigos y jefes, hecho con Godot 4 y GDScript para escritorio (prioridad Windows, compatible con macOS). El nombre oficial es Quacktaclysm (`config/name` en Project Settings). El jugador recorre un tutorial y tres niveles; tras cada jefe decide **Liberar** o **Conservar** un fragmento de alma, y esas decisiones cambian la dificultad de los jefes, los enemigos extra, la potencia de la onda y el final. Un servicio de IA opcional puede refinar ese perfil.
 
-> **Estado:** todo el contenido jugable existe. El héroe, los enemigos y los jefes son patos dibujados y animados por código (`DuckRig`) que caen como ragdoll al morir; escenarios, proyectiles e interfaz siguen con arte provisional (rectángulos de colores). Nadie lo ha jugado con ventana todavía: ver `docs/KNOWN_ISSUES.md`.
+> **Estado:** todo el contenido jugable existe. Héroe, enemigos y jefes son patos dibujados y animados por código (`DuckRig`) que caen como ragdoll al morir; los niveles tienen cielo, parallax y pisos orgánicos por bioma, y el menú principal es una escena animada con letra propia ("Pato Tinta"). Proyectiles, puertas, HUD, pausa y Game Over siguen con arte provisional. Nadie lo ha jugado con ventana todavía: ver `docs/KNOWN_ISSUES.md`.
 
 ## Requisitos
 
@@ -53,6 +53,7 @@ En cada nivel: recorrer, llegar al checkpoint de la arena, derrotar al jefe (las
 
 - **Nueva partida:** reinicia el estado y abre el tutorial. Si ya hay partida guardada pide confirmación; el archivo no se borra, se reemplaza en el próximo guardado automático.
 - **Continuar:** carga el archivo y abre el nivel guardado; si la partida está **completada** (`checkpoint = "ending"`) reabre el final. Si el archivo está dañado o es de una versión más nueva, muestra un mensaje y no cambia nada (la copia `.bak` se usa automáticamente si existe).
+- **Opciones:** pantalla completa y volumen general; se guardan al instante en `user://settings.cfg` (aparte de la partida). **Créditos:** texto provisional. Esc cierra el panel abierto.
 - **Game Over:** "Has caído" con Reintentar (reaparece en el último checkpoint) y Menú principal; el tutorial reaparece solo.
 
 **Vida y daño por contacto:** el jugador tiene **8 corazones** (`max_health` en `PlayerStats`). Tocar a un enemigo vivo o a un jefe en combate hace daño (1 por defecto, con empuje y un intervalo de repetición); el dash, la invulnerabilidad tras un golpe y la de reaparecer protegen igual que contra un ataque. Un enemigo en estado de daño, muerto, un jefe sin activar, en la transición de fase o derrotado no hacen daño. Los valores están en `EnemyStats` / `BossStats` (grupo "Contact damage").
