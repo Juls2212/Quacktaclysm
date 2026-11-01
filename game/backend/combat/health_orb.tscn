@@ -1,0 +1,46 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://backend/combat/health_orb.gd" id="1_orb"]
+[ext_resource type="Resource" path="res://backend/combat/default_health_orb_stats.tres" id="2_stats"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_orb"]
+friction = 0.6
+bounce = 0.45
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_body"]
+radius = 7.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_pickup"]
+radius = 14.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_magnet"]
+radius = 120.0
+
+[node name="HealthOrb" type="RigidBody2D"]
+collision_layer = 0
+collision_mask = 1
+mass = 0.2
+physics_material_override = SubResource("PhysicsMaterial_orb")
+freeze_mode = 1
+linear_damp = 0.3
+script = ExtResource("1_orb")
+stats = ExtResource("2_stats")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_body")
+
+[node name="Pickup" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Pickup"]
+shape = SubResource("CircleShape2D_pickup")
+
+[node name="Magnet" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Magnet"]
+shape = SubResource("CircleShape2D_magnet")

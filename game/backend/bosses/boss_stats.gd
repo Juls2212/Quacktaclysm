@@ -35,3 +35,8 @@ extends Resource
 @export_range(0.0, 10.0, 0.05, "suffix:s") var death_fade_time: float = 1.0
 ## Visual hit flash only.
 @export_range(0.0, 1.0, 0.01, "suffix:s") var hit_flash_time: float = 0.08
+@export_group("Drops")
+## Health orbs popped out when phase 2 starts and when the boss is defeated
+## (orb behavior: backend/combat/default_health_orb_stats.tres).
+@export_range(0, 20, 1) var health_orbs_on_phase_2: int = 2
+@export_range(0, 20, 1) var health_orbs_on_defeat: int = 4

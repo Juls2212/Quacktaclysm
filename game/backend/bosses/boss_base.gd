@@ -347,6 +347,7 @@ func _on_damaged(_info: DamageInfo) -> void:
 	_deactivate_all_hitboxes()
 	_transition_left = stats.phase_transition_time
 	health.grant_invulnerability(stats.phase_transition_time)
+	_drop_health_orbs.call_deferred(stats.health_orbs_on_phase_2)
 	_set_state(State.PHASE_TRANSITION)
 
 
@@ -357,6 +358,7 @@ func _on_health_died() -> void:
 	velocity.x = 0.0
 	_fade_left = stats.death_fade_time
 	_set_state(State.DEAD)
+	_drop_health_orbs.call_deferred(stats.health_orbs_on_defeat)
 	defeated.emit(self)
 
 
@@ -386,3 +388,9 @@ func _apply_facing() -> void:
 func _update_contact_active() -> void:
 	var fighting: bool = state == State.IDLE or state == State.PATTERN
 	contact_hitbox.set_contact_active(fighting and is_target_valid())
+
+
+## Deferred from the death / phase change: those arrive inside physics callbacks, where new
+## bodies can't be added. Bound to this node, so it is skipped if the node is gone by then.
+func _drop_health_orbs(count: int) -> void:
+	HealthOrbDrop.burst(get_parent(), global_position, count)

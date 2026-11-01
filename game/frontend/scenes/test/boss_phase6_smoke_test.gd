@@ -510,8 +510,9 @@ func _test_death() -> void:
 		var starts_at_death: int = log["started"].size()
 		await _frames(int(ceil(boss.stats.death_fade_time * 60.0)) + 10)
 		_check("death (%s): boss freed after the fade" % moment, not is_instance_valid(boss))
+		# Health may only go up afterwards: the defeat drops health orbs that heal the player.
 		_check("death (%s): dead boss never attacks again" % moment, log["started"].size() == starts_at_death
-			and log["defeated"] == 1 and player.health.current_health == hp_at_kill and hp_at_kill <= max_hp)
+			and log["defeated"] == 1 and player.health.current_health >= hp_at_kill and hp_at_kill <= max_hp)
 
 
 func _test_reset() -> void:

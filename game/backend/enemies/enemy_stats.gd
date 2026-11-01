@@ -54,3 +54,7 @@ extends Resource
 @export_range(0.0, 3.0, 0.05) var knockback_multiplier: float = 1.0
 @export_range(0.0, 3.0, 0.01, "suffix:s") var hurt_invulnerability_time: float = 0.0
 @export_range(0.0, 5.0, 0.05, "suffix:s") var death_fade_time: float = 0.5
+
+@export_group("Drops")
+## Health orbs popped out on death (orb behavior: backend/combat/default_health_orb_stats.tres).
+@export_range(0, 20, 1) var health_orb_count: int = 1

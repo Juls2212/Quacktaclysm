@@ -369,6 +369,7 @@ func _on_health_died() -> void:
 	contact_hitbox.set_contact_active(false)
 	hurtbox.set_enabled(false)
 	detection_area.set_deferred("monitoring", false)
+	_drop_health_orbs.call_deferred(stats.health_orb_count)
 	velocity.x = 0.0
 	_state_time_left = stats.death_fade_time
 	target = null
@@ -404,3 +405,9 @@ func _apply_facing() -> void:
 func _update_contact_active() -> void:
 	var wanted: bool = state != State.DEAD and not health.is_dead and (state != State.HURT or stats.contact_active_while_hurt)
 	contact_hitbox.set_contact_active(wanted)
+
+
+## Deferred from the death / phase change: those arrive inside physics callbacks, where new
+## bodies can't be added. Bound to this node, so it is skipped if the node is gone by then.
+func _drop_health_orbs(count: int) -> void:
+	HealthOrbDrop.burst(get_parent(), global_position, count)
