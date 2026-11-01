@@ -38,6 +38,16 @@ extends Resource
 ## Delay after a swing ends before the next one can start.
 @export_range(0.0, 10.0, 0.05, "suffix:s") var attack_cooldown: float = 0.8
 
+@export_group("Contact damage")
+## Damage dealt by touching the enemy while it is alive. 0 disables contact damage.
+@export_range(0, 99, 1) var contact_damage: int = 1
+## x: push away from the enemy. y: vertical impulse (negative is up).
+@export var contact_knockback: Vector2 = Vector2(200.0, -120.0)
+## A player that stays in contact is hit again after this many seconds (when not invulnerable).
+@export_range(0.05, 10.0, 0.05, "suffix:s") var contact_rehit_interval: float = 0.6
+## true keeps the contact hitbox active while the enemy is in its HURT state.
+@export var contact_active_while_hurt: bool = false
+
 @export_group("Hurt and death")
 @export_range(0.0, 3.0, 0.01, "suffix:s") var hurt_stun_time: float = 0.3
 ## 1.0 applies the incoming knockback in full.
