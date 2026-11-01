@@ -7,8 +7,9 @@ Para quien reemplazará los marcadores de posición por arte, audio y contenido 
 | Elemento | Estado |
 | --- | --- |
 | Lógica de movimiento, combate, jefes, decisiones, guardado, perfil adaptativo, servicio de IA | Definitivo (se puede reajustar con datos) |
-| Gráficos de jugador, enemigos, jefes, proyectiles, puertas, plataformas, HUD y menús | **Marcador** (polígonos y `ColorRect`) |
-| Animaciones, sprites, audio, música | No existen (carpetas `frontend/animations`, `frontend/sprites`, `frontend/audio` vacías) |
+| Gráficos de jugador y enemigos | **Dibujados** por código con `DuckRig` (`game/frontend/animations/duck_rig.gd`): patos con tinta gruesa y animación procedural |
+| Gráficos de jefes, proyectiles, puertas, plataformas, HUD y menús | **Marcador** (polígonos y `ColorRect`) |
+| Animaciones del jugador y los enemigos | Procedurales en `DuckRig` (correr, saltar, dash, tajo, golpe pesado, tajo de dash, onda, daño, muerte). Sprites, audio y música no existen todavía |
 | Textos (introducciones de nivel, finales, tutorial, abuelo, menús) | **Marcador** en español, marcados como "texto provisional" |
 | Nombres de jefes y fragmentos | **Marcador** (`BossStats.display_name`, `SoulFragmentData`) |
 | Geometría de los niveles 1–3 y del tutorial | Maqueta con `PlaceholderPlatform`; las medidas están calculadas con el salto real (ver sección 4) |
@@ -18,8 +19,8 @@ Para quien reemplazará los marcadores de posición por arte, audio y contenido 
 
 Cada personaje separa lo visual de lo físico:
 
-- **Jugador** (`game/backend/player/player.tscn`): el nodo `Visual` (script `player_visual.gd`) contiene `Body`, `FacingMarker` y `SwordVisual` (se muestra mientras el hitbox del ataque está activo). Se voltea con `scale.x` según la orientación. Puedes sustituir esos `Polygon2D` por `Sprite2D`/`AnimatedSprite2D` dentro de `Visual`.
-- **Enemigos** (`game/backend/enemies/*.tscn`, base `enemy_base.tscn`): nodo `Visual` (script `enemy_visual.gd`).
+- **Jugador** (`game/backend/player/player.tscn`): el nodo `Visual` (script `player_visual.gd`) contiene `Rig`, un `DuckRig` con el aspecto `HERO` (kimono, pelo largo suelto, katana). `player_visual.gd` lee el estado del jugador y le pasa la pose cada fotograma (fase de cada ataque según los tiempos de `PlayerStats`). Se voltea con `scale.x` según la orientación. Para cambiar el dibujo edita `duck_rig.gd`; para usar sprites, sustituye `Rig` por un `AnimatedSprite2D` y lee las mismas señales.
+- **Enemigos** (`game/backend/enemies/*.tscn`, base `enemy_base.tscn`): nodo `Visual` (script `enemy_visual.gd`) con un `Rig`. El export `look` elige el pato (Bruto, Bandido, Hondero) y `tough_look` se usa cuando `max_health` llega a `tough_health` (Bruto acorazado). Para revisar todos los patos y poses abre `game/frontend/scenes/test/duck_showcase.tscn` (F6); `duck_arena_preview.tscn` los muestra en juego con un piloto automático.
 - **Jefes** (`game/backend/bosses/boss_base.tscn`): nodo `Visual` (script `boss_visual.gd`, reacciona a `phase_changed` de los patrones para el aviso de ataque).
 - **Proyectiles:** `projectile.tscn` (enemigos y jefes) y `sword_wave_projectile.tscn` (onda del jugador) tienen un nodo `Visual`. `ProjectileStats.size_scale` y `tint` se aplican a ese nodo.
 - **Plataformas, muros y puertas:** `PlaceholderPlatform`, `placeholder_wall.tscn`, `ArenaGate` (`game/frontend/levels/blocks/`) tienen un `Polygon2D` llamado `Visual`. Sustitúyelo o añade tiles; la colisión es una `CollisionShape2D` aparte que sigue a `size`.
@@ -77,7 +78,7 @@ Conecta señales; no añadas llamadas de audio en los scripts de lógica. Un nod
 
 ## 8. Señales útiles para efectos y audio (verificadas en el código)
 
-- **Jugador** (`player.gd`): `state_changed(old, new)`, `dash_started`, `dash_finished`, `attack_started`, `attack_finished`, `heavy_attack_started`, `dash_slash_started`, `wave_cast(tier)`, `died`, `respawned`. `Player.current_sword_kind` (LIGHT / HEAVY / DASH_SLASH) indica a qué movimiento pertenece el golpe activo; cada movimiento tiene su propio marcador visual (`SwordVisual`, `HeavySlashVisual`, `DashSlashTrail`) para poder sustituirlos por separado. `HealthComponent` (nodo `Health`): `health_changed`, `damaged(info)`, `invulnerability_started/ended`, `died`.
+- **Jugador** (`player.gd`): `state_changed(old, new)`, `dash_started`, `dash_finished`, `attack_started`, `attack_finished`, `heavy_attack_started`, `dash_slash_started`, `wave_cast(tier)`, `died`, `respawned`. `Player.current_sword_kind` (LIGHT / HEAVY / DASH_SLASH) indica a qué movimiento pertenece el golpe activo; el `DuckRig` dibuja una estela distinta para cada movimiento (`slash_color`, `heavy_color`, `dash_slash_color`). `HealthComponent` (nodo `Health`): `health_changed`, `damaged(info)`, `invulnerability_started/ended`, `died`.
 - **Onda de espada** (`sword_wave_caster.gd`): `tier_changed(tier)`, `wave_cooldown_changed(remaining, total)`. `Projectile`: `despawned(reason)` con `hit`, `world` o `lifetime`.
 - **Combate:** `Hitbox.hit_landed(hurtbox, info)`, `Hurtbox.hit_received(info, applied)`.
 - **Enemigos** (`enemy_base.gd`): `target_acquired`, `target_lost`, `died(enemy)`, `state_changed`, `attack_phase_changed`, `attack_ended`.

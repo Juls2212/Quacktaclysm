@@ -2,7 +2,7 @@
 
 Videojuego 2D de acción en vista lateral con combate con espada (cuerpo a cuerpo y una onda a distancia), enemigos y jefes, hecho con Godot 4 y GDScript para escritorio (prioridad Windows, compatible con macOS). El nombre oficial es Quacktaclysm (`config/name` en Project Settings). El jugador recorre un tutorial y tres niveles; tras cada jefe decide **Liberar** o **Conservar** un fragmento de alma, y esas decisiones cambian la dificultad de los jefes, los enemigos extra, la potencia de la onda y el final. Un servicio de IA opcional puede refinar ese perfil.
 
-> **Estado:** todo el contenido jugable existe con arte provisional (rectángulos de colores). Nadie lo ha jugado con ventana todavía: ver `docs/KNOWN_ISSUES.md`.
+> **Estado:** todo el contenido jugable existe. El héroe y los enemigos son patos dibujados y animados por código (`DuckRig`); jefes, escenarios e interfaz siguen con arte provisional (rectángulos de colores). Nadie lo ha jugado con ventana todavía: ver `docs/KNOWN_ISSUES.md`.
 
 ## Requisitos
 
