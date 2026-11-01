@@ -120,4 +120,16 @@ steps = Array[Dictionary]([{
 "id": "hit_dummy",
 "kind": "hit_dummy",
 "text": "Golpea al muñeco de entrenamiento"
+}, {
+"id": "wave",
+"kind": "wave",
+"text": "Lanza la onda de espada con clic derecho o {wave}"
+}, {
+"id": "heavy",
+"kind": "heavy",
+"text": "Golpe pesado con clic central o {heavy_attack}"
+}, {
+"id": "dash_slash",
+"kind": "dash_slash",
+"text": "Pulsa atacar ({attack}) durante el dash ({dash}) para el tajo de dash"
 }])
