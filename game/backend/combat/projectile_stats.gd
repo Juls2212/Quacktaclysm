@@ -11,3 +11,9 @@ extends Resource
 @export_range(0.0, 5.0, 0.05) var gravity_scale: float = 0.0
 @export var destroy_on_hit: bool = true
 @export var destroy_on_world: bool = true
+## Enemies it can pass through before despawning. 0 = despawns on the first hit.
+@export_range(0, 20, 1) var pierce_count: int = 0
+## Scales the visual and the collision/hit shapes once, at launch.
+@export_range(0.25, 4.0, 0.05) var size_scale: float = 1.0
+## Visual tint. Transparent (default) keeps the scene's own color.
+@export var tint: Color = Color(1.0, 1.0, 1.0, 0.0)
