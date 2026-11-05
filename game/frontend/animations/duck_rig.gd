@@ -67,6 +67,7 @@ const TOOTH := Color(0.93, 0.9, 0.76)
 @export var heavy_color: Color = Color(1.0, 0.65, 0.25, 0.92)
 @export var dash_slash_color: Color = Color(0.4, 0.95, 1.0, 0.85)
 ## Grandfather pose: idle (slow breathing), talk, point with the cane, hold a lit torch.
+## The hero also uses HOLD_TORCH: torch raised in the sword hand, katana sheathed at the waist.
 @export var gesture: Gesture = Gesture.IDLE
 ## Intensity of the wear layer (dust, soot, eye bags, ruffled feathers): 0 clean, 1 the look's own.
 @export_range(0.0, 1.5, 0.05) var wear: float = 1.0
@@ -667,6 +668,9 @@ func _draw_hero() -> void:
 	_shape(PackedVector2Array([Vector2(-15, -14), Vector2(-21, -8 + flutter), Vector2(-17, -8.5 + flutter)]), obi, 1.8)
 	_shape(PackedVector2Array([Vector2(-15, -14), Vector2(-24, -11 + flutter), Vector2(-20, -9 + flutter)]), obi, 1.8)
 	_shape(_ellipse(Vector2(-15.5, -14.8), 3.6, 2.8), obi, 2.0)
+	if gesture == Gesture.HOLD_TORCH:
+		_draw_sheathed_katana()
+		_cur = Part.BODY
 	# The loose hair falls over the back of the kimono, then the head covers its roots.
 	draw_set_transform_matrix(Transform2D.IDENTITY)
 	_draw_strands()
@@ -725,6 +729,9 @@ func _draw_sleeve_and_katana(shoulder: Vector2, arm: Vector2) -> void:
 	var dir := Vector2.from_angle(arm.x)
 	var hand: Vector2 = shoulder + dir * _arm_length()
 	var side: Vector2 = dir.orthogonal()
+	if gesture == Gesture.HOLD_TORCH and action == Action.NONE and not dead and not hurt:
+		_draw_torch_sleeve(shoulder, hand, dir, side, arm.y)
+		return
 	# Wide kimono sleeve: always droops toward the floor, whatever the arm angle (hull keeps it valid).
 	var sleeve := Geometry2D.convex_hull(PackedVector2Array([
 		shoulder - side * 5.0, hand - side * 4.5, hand + side * 5.5,
@@ -744,6 +751,20 @@ func _draw_sleeve_and_katana(shoulder: Vector2, arm: Vector2) -> void:
 	# Dirty bandage wrapped round the wrist, one loose end.
 	_draw_bandage(hand - dir * 2.6, hand + dir * 0.4, 3.4)
 	_line(hand - dir * 2.0 + side * 2.0, hand - dir * 4.5 + side * 4.5 + Vector2(0, sin(_time * 4.0) * 0.6), BANDAGE.darkened(0.1), 1.4, true)
+
+
+## The hero's sleeve with a torch raised instead of the katana.
+func _draw_torch_sleeve(shoulder: Vector2, hand: Vector2, dir: Vector2, side: Vector2, angle: float) -> void:
+	_draw_torch(hand, angle)
+	_cur = Part.BODY
+	var sleeve := Geometry2D.convex_hull(PackedVector2Array([
+		shoulder - side * 5.0, hand - side * 4.5, hand + side * 5.5,
+		shoulder.lerp(hand, 0.6) + Vector2(0, 10), shoulder + side * 6.0 + Vector2(0, 5)]))
+	sleeve.remove_at(sleeve.size() - 1)
+	_shape(sleeve, HERO_KIMONO)
+	_line(hand - side * 4.5, hand + side * 5.5, Color(0.84, 0.8, 0.68), 2.0, true)
+	_shape(_ellipse(hand, 3.4, 3.0), FEATHER_HERO, 2.2)
+	_draw_bandage(hand - dir * 2.6, hand + dir * 0.4, 3.4)
 
 
 func _draw_katana(hand: Vector2, angle: float, length: float) -> void:
@@ -2165,6 +2186,9 @@ func _idle_weapon_pose(animated: bool = true) -> Vector2:
 	var running: bool = animated and grounded and ground_speed > 5.0
 	match look:
 		Look.HERO:
+			if gesture == Gesture.HOLD_TORCH:
+				var bob: float = sin(_run_phase) * 0.06 if running else 0.0
+				return _deg(-58, -94) + Vector2(sway * 0.5 + bob, sway * 0.3)
 			if animated and dashing:
 				return _deg(150, 172)
 			if animated and not grounded:
