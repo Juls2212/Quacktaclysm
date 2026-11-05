@@ -140,7 +140,7 @@ static func keys_text(actions: Array) -> String:
 			var key := ev as InputEventKey
 			if key != null:
 				var code: Key = key.physical_keycode if key.keycode == KEY_NONE else key.keycode
-				names.append(OS.get_keycode_string(code))
+				names.append(key_name(OS.get_keycode_string(code)))
 				continue
 			var mouse := ev as InputEventMouseButton
 			if mouse != null:
@@ -154,6 +154,16 @@ static func keys_text(actions: Array) -> String:
 		if not names.is_empty():
 			parts.append(" o ".join(names.slice(0, 2)))
 	return " / ".join(parts) if not parts.is_empty() else "—"
+
+
+## Spanish name of a key as Godot spells it ("Left" -> "Izquierda").
+static func key_name(godot_name: String) -> String:
+	var names: Dictionary = {
+		"Left": "Izquierda", "Right": "Derecha", "Up": "Arriba", "Down": "Abajo", "Space": "Espacio",
+		"Shift": "Mayús", "Escape": "Esc", "Enter": "Intro", "Kp Enter": "Intro", "Tab": "Tab",
+		"Backspace": "Retroceso", "Ctrl": "Ctrl", "Alt": "Alt", "Delete": "Supr",
+	}
+	return String(names.get(godot_name, godot_name))
 
 
 func _slider_row(box: VBoxContainer, label_text: String) -> HSlider:
