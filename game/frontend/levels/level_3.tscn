@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="PackedScene" path="res://frontend/levels/level_base.tscn" id="1_base"]
 [ext_resource type="PackedScene" path="res://frontend/levels/blocks/placeholder_platform.tscn" id="2_platform"]
@@ -14,7 +14,9 @@
 [ext_resource type="Script" path="res://backend/decisions/soul_fragment_drop.gd" id="12_drop"]
 [ext_resource type="PackedScene" path="res://backend/decisions/soul_fragment.tscn" id="13_fragment"]
 [ext_resource type="Resource" path="res://backend/decisions/data/fragment_level_3.tres" id="14_data"]
-[ext_resource type="Resource" path="res://frontend/levels/biome/storm_biome.tres" id="90_biome"]
+[ext_resource type="Resource" path="res://frontend/levels/biome/industrial_biome.tres" id="90_biome"]
+[ext_resource type="PackedScene" path="res://frontend/levels/blocks/biome_zone.tscn" id="91_zone"]
+[ext_resource type="Resource" path="res://frontend/levels/biome/storm_biome.tres" id="92_zone_b"]
 
 [node name="Level3" instance=ExtResource("1_base") node_paths=PackedStringArray("boss", "encounter", "fragment_drop", "arena_gates")]
 biome = ExtResource("90_biome")
@@ -173,3 +175,7 @@ script = ExtResource("12_drop")
 boss = NodePath("../Content/Boss")
 fragment_data = ExtResource("14_data")
 fragment_scene = ExtResource("13_fragment")
+
+[node name="BiomeZone" parent="." instance=ExtResource("91_zone")]
+position = Vector2(2787.5, 360)
+biome = ExtResource("92_zone_b")

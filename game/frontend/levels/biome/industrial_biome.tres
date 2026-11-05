@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="Biome" format=3]
+
+[ext_resource type="Script" path="res://frontend/levels/biome/biome.gd" id="1_biome"]
+
+[resource]
+script = ExtResource("1_biome")
+kind = 6
+scenery_seed = 71
+sky_top = Color(0.32, 0.26, 0.18, 1)
+sky_bottom = Color(0.74, 0.5, 0.26, 1)
+haze = Color(0.7, 0.52, 0.32, 1)
+sun = Color(1, 0.7, 0.35, 1)
+sun_position = Vector2(0.8, 0.3)
+smog = 0.85
+far_color = Color(0.48, 0.38, 0.28, 1)
+mid_color = Color(0.3, 0.25, 0.2, 1)
+near_color = Color(0.17, 0.14, 0.12, 1)
+foreground_color = Color(0.06, 0.05, 0.04, 1)
+haze_amount = Vector3(0.5, 0.28, 0.1)
+backdrop_dim = 0.2
+backdrop_desaturation = 0.25
+grass = Color(0.58, 0.49, 0.28, 1)
+grass_dark = Color(0.39, 0.32, 0.18, 1)
+soil = Color(0.42, 0.31, 0.22, 1)
+soil_dark = Color(0.24, 0.17, 0.12, 1)
+rock = Color(0.48, 0.44, 0.4, 1)
+rock_dark = Color(0.31, 0.28, 0.26, 1)
+accent = Color(1, 0.55, 0.18, 1)
+dry_ground = true
+rubble = 0.55
+particles = 7
+particle_color = Color(1, 0.6, 0.25, 1)
+particle_count = 40
+smoke_columns = true
+smoke_color = Color(0.2, 0.18, 0.16, 1)
+ash = true
+ash_color = Color(0.5, 0.46, 0.42, 1)
+vignette = true
+vignette_strength = 0.5

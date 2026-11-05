@@ -1,7 +1,8 @@
 @tool
 class_name TerrainSkin
 extends Node2D
-## Organic look for a level block, drawn in code with the same thick ink as the ducks.
+## Organic look for a level block, drawn in code with the same thick ink as the ducks. Parched
+## biomes crack the earth, wither the tufts and scatter junk from the old world (Biome.rubble).
 ## GROUND is a slab of earth that keeps going below the screen, ISLAND a floating clod with a
 ## tapered underside and hanging roots, WALL a rock pillar, CEILING a rock overhang, PLANK a bridge.
 ## The collision box (`size`, centered) is the walkable top: grass lips overhang it a little.
@@ -213,15 +214,20 @@ func _draw_earth(b: Biome, body: PackedVector2Array, top: float, bottom: float) 
 			draw_colored_polygon(poly, Color(b.soil_dark, 0.16))
 	for poly in Geometry2D.intersect_polygons(body, _rect(Vector2(-half.x - 30, top), Vector2(half.x + 30, top + 16))):
 		draw_colored_polygon(poly, Color(b.soil_dark, 0.35))
-	# Buried stones.
+	# Buried stones (with rubble, some of them are bricks and broken pipes from the old world).
 	var stones: int = maxi(int(size.x / 85.0), 1)
 	for i in stones:
 		var c := Vector2(lerpf(-half.x + 18, half.x - 18, _rand(i * 5 + 200)), top + 26.0 + _rand(i * 5 + 201) * minf(110.0, bottom - top - 40.0))
 		var r := Vector2(5.0 + _rand(i * 5 + 202) * 10.0, 4.0 + _rand(i * 5 + 203) * 7.0)
+		if _rand(i * 5 + 204) < b.rubble * 0.6:
+			_draw_brick(c, r.x + 3.0, (_rand(i * 5 + 205) - 0.5) * 0.8, b)
+			continue
 		var stone := _blob(c, r, 10, i + 300)
 		draw_colored_polygon(stone, b.rock)
-		draw_line(c + Vector2(-r.x * 0.5, -r.y * 0.4), c + Vector2(r.x * 0.2, -r.y * 0.6), Color(1, 1, 1, 0.35), 1.6, true)
+		draw_line(c + Vector2(-r.x * 0.5, -r.y * 0.4), c + Vector2(r.x * 0.2, -r.y * 0.6), Color(1, 1, 1, 0.25), 1.6, true)
 		_outline(stone, 2.0)
+	if b.dry_ground:
+		_draw_cracks(b, top, bottom)
 	# Rootlets near the top.
 	for i in maxi(int(size.x / 120.0), 1):
 		var x: float = lerpf(-half.x + 20, half.x - 20, _rand(i * 3 + 400))
@@ -269,14 +275,24 @@ func _draw_grass_lip(b: Biome, left: float, right: float, top: float) -> void:
 		highlight.append(p + Vector2(0, 2.5))
 	draw_polyline(highlight, b.grass.lightened(0.3), 2.0, true)
 	_outline(lip)
-	# Tufts and the odd flower.
+	# Junk lying on the walkable top: drawn first so the tufts grow over it.
+	if b.rubble > 0.0:
+		var junk: int = int((r - l) / 110.0 * b.rubble * 1.6)
+		for i in junk:
+			var x: float = lerpf(l + 14, r - 14, (float(i) + _rand(i + 700)) / float(maxi(junk, 1)))
+			_draw_junk(Vector2(x, top - 3.0), b, i)
+	# Tufts and the odd flower (on parched ground, a shard of a fallen star instead).
 	var tufts: int = int((r - l) / 26.0)
 	for i in tufts:
 		var x: float = lerpf(l + 10, r - 10, (float(i) + _rand(i + 500)) / float(maxi(tufts, 1)))
 		var h: float = 5.0 + _rand(i + 520) * 9.0
 		_tuft(Vector2(x, top - 4.0), h, b, i)
 		if _rand(i + 540) > 0.82:
-			_flower(Vector2(x + 6.0, top - 6.0 - h * 0.6), b.accent)
+			if b.dry_ground:
+				if _rand(i + 560) > 0.5:
+					_shard(Vector2(x + 6.0, top - 4.0), b.accent)
+			else:
+				_flower(Vector2(x + 6.0, top - 6.0 - h * 0.6), b.accent)
 
 
 func _draw_roots(b: Biome, body: PackedVector2Array, under_y: float) -> void:
@@ -309,6 +325,76 @@ func _tuft(at: Vector2, h: float, b: Biome, salt: int) -> void:
 				at + Vector2(1.6 + k * 2.2, 1)])
 		draw_colored_polygon(blade, b.grass_dark if k == 1 else b.grass)
 		draw_polyline(PackedVector2Array([blade[0], blade[1], blade[2]]), INK, 1.6, true)
+		if b.dry_ground and k != 1:
+			# Withered: the tip has given up and folds over.
+			var fold: float = -1.0 if k == 0 else 1.0
+			var tip: Vector2 = blade[1]
+			var droop := PackedVector2Array([tip, tip + Vector2(fold * h * 0.35, h * 0.12), tip + Vector2(fold * h * 0.5, h * 0.38)])
+			draw_polyline(droop, INK, 3.2, true)
+			draw_polyline(droop, b.grass_dark, 1.4, true)
+
+
+## Glowing sliver of a fallen star stuck in the ground.
+func _shard(at: Vector2, color: Color) -> void:
+	draw_circle(at + Vector2(0, -4), 7.0, Color(color, 0.18))
+	var pts := PackedVector2Array([at + Vector2(-2.6, 1), at + Vector2(-0.6, -9), at + Vector2(2.8, -3.5), at + Vector2(2.2, 1)])
+	draw_colored_polygon(pts, color)
+	draw_line(at + Vector2(-0.4, -6.5), at + Vector2(0.8, -2.5), Color(1, 0.95, 0.8, 0.9), 1.2, true)
+	_outline(pts, 1.6)
+
+
+## Dry earth splitting: a few branching ink cracks running down from under the turf.
+func _draw_cracks(b: Biome, top: float, bottom: float) -> void:
+	var half: Vector2 = size * 0.5
+	var count: int = maxi(int(size.x / 90.0), 1)
+	for i in count:
+		var x: float = lerpf(-half.x + 22, half.x - 22, (float(i) + _rand(i + 800)) / float(count))
+		var p := Vector2(x, top + 18.0)
+		var pts := PackedVector2Array([p])
+		var steps: int = 3 + int(_rand(i + 810) * 3.0)
+		for j in steps:
+			p += Vector2((_rand(i * 7 + j + 820) - 0.5) * 12.0, 7.0 + _rand(i * 7 + j + 830) * 6.0)
+			if p.y > bottom - 6.0:
+				break
+			pts.append(p)
+		if pts.size() < 2:
+			continue
+		draw_polyline(pts, Color(INK, 0.7), 1.8, true)
+		# One short split off the middle.
+		var mid: Vector2 = pts[int(pts.size() * 0.5)]
+		draw_line(mid, mid + Vector2((_rand(i + 840) - 0.5) * 16.0, 8.0), Color(INK, 0.55), 1.3, true)
+		draw_line(pts[0] + Vector2(1.5, 0), pts[1] + Vector2(1.5, 0), Color(b.soil.lightened(0.2), 0.5), 1.0, true)
+
+
+## Brick or concrete chunk buried in the earth.
+func _draw_brick(c: Vector2, w: float, rot: float, b: Biome) -> void:
+	var brick: Color = b.soil.lerp(Color(0.62, 0.3, 0.2), 0.45) if _rand(int(c.x) + 3) > 0.4 else b.rock
+	var pts := PackedVector2Array()
+	for p in [Vector2(-w, -w * 0.45), Vector2(w, -w * 0.45), Vector2(w, w * 0.45), Vector2(-w, w * 0.45)]:
+		pts.append(c + (p as Vector2).rotated(rot))
+	draw_colored_polygon(pts, brick)
+	draw_line(c + Vector2(-w * 0.2, -w * 0.45).rotated(rot), c + Vector2(-w * 0.2, w * 0.45).rotated(rot), Color(INK, 0.45), 1.2, true)
+	_outline(pts, 2.0)
+
+
+## Small junk on the walkable top: a brick, a concrete lump, a rusty can or a bent rod.
+func _draw_junk(at: Vector2, b: Biome, salt: int) -> void:
+	match int(_rand(salt + 720) * 4.0):
+		0:
+			_draw_brick(at + Vector2(0, -2.5), 5.5, (_rand(salt + 730) - 0.5) * 0.5, b)
+		1:
+			var lump := _blob(at + Vector2(0, -3.0), Vector2(7.0, 4.5), 9, salt + 740)
+			draw_colored_polygon(lump, b.rock)
+			_outline(lump, 2.0)
+		2:
+			var can := PackedVector2Array([at + Vector2(-3.5, 0.5), at + Vector2(-3.5, -9.0), at + Vector2(3.5, -9.0), at + Vector2(3.5, 0.5)])
+			draw_colored_polygon(can, b.rock_dark.lerp(Color(0.55, 0.32, 0.18), 0.5))
+			draw_line(at + Vector2(-3.5, -6.0), at + Vector2(3.5, -6.0), Color(INK, 0.5), 1.0, true)
+			_outline(can, 1.8)
+		_:
+			var rod := PackedVector2Array([at + Vector2(-8.0, 0.0), at + Vector2(2.0, -3.0), at + Vector2(7.0, -10.0)])
+			draw_polyline(rod, INK, 3.4, true)
+			draw_polyline(rod, b.rock_dark, 1.6, true)
 
 
 func _flower(at: Vector2, color: Color) -> void:
