@@ -10,9 +10,12 @@ extends Control
 ## NEWSPAPER  column rules, halftone and stains of an end-of-the-world newspaper.
 ## TITLE_BOARD a weathered painted board behind the game title, nailed on crooked.
 ## TITLE_CRACK the crack across the title, glowing like a fallen star.
+## STAR_BIRTH a speck of light rising from a fallen duck, growing into a star that stays shining
+##            (`play_star()`): when a duck dies, a star is born.
+## SHADOW_EDGE deformed shadow ducks with glowing eyes creeping in from the screen edges.
 ## Visual only: never takes mouse input, never blocks a button or delays any logic.
 
-enum Mode { INK_WIPE, FEATHERS, SPLAT, CORK, TAPE, NEWSPAPER, TITLE_BOARD, TITLE_CRACK }
+enum Mode { INK_WIPE, FEATHERS, SPLAT, CORK, TAPE, NEWSPAPER, TITLE_BOARD, TITLE_CRACK, STAR_BIRTH, SHADOW_EDGE }
 
 const INK := Color(0.106, 0.098, 0.122)
 const STAR := Color(1.0, 0.42, 0.16)
@@ -35,6 +38,8 @@ var _t: float = 1.0
 var _center: Vector2 = Vector2.ZERO
 var _radius: float = 300.0
 var _feathers: Array[Dictionary] = []
+var _star_from: Vector2 = Vector2.ZERO
+var _star_to: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
@@ -51,10 +56,27 @@ func play(center: Vector2 = Vector2(-1, -1), radius: float = -1.0) -> void:
 	queue_redraw()
 
 
+## STAR_BIRTH: the light rises from `from` (local) up to `to` and becomes a star.
+## SHADOW_EDGE: starts the shadows creeping in.
+func play_star(from: Vector2, to: Vector2) -> void:
+	_star_from = from
+	_star_to = to
+	_t = 0.0
+	queue_redraw()
+
+
 func _process(delta: float) -> void:
 	_time += delta
 	if _t < 1.0:
-		_t = minf(_t + delta / (WIPE_TIME if mode == Mode.INK_WIPE else 0.4), 1.0)
+		var duration: float = 0.4
+		match mode:
+			Mode.INK_WIPE:
+				duration = WIPE_TIME
+			Mode.STAR_BIRTH:
+				duration = 1.35
+			Mode.SHADOW_EDGE:
+				duration = 1.2
+		_t = minf(_t + delta / duration, 1.0)
 	if mode == Mode.FEATHERS:
 		_advance_feathers(delta)
 	if mode == Mode.INK_WIPE and _t >= 1.0:
@@ -81,6 +103,10 @@ func _draw() -> void:
 			_draw_title_board()
 		Mode.TITLE_CRACK:
 			_draw_title_crack()
+		Mode.STAR_BIRTH:
+			_draw_star_birth()
+		Mode.SHADOW_EDGE:
+			_draw_shadow_edge()
 
 
 # =====================================================================================
@@ -255,6 +281,74 @@ func _draw_title_crack() -> void:
 	var branch := PackedVector2Array([crack[2], crack[2] + Vector2(26, 10), crack[2] + Vector2(40, 6)])
 	draw_polyline(branch, INK, 3.4, true)
 	draw_polyline(branch, Color(STAR, 0.8 * pulse), 1.4, true)
+
+
+# =====================================================================================
+# Game over: a star is born, shadows close in
+# =====================================================================================
+
+func _draw_star_birth() -> void:
+	var rise: float = 1.0 - pow(1.0 - minf(_t / 0.8, 1.0), 2.0)
+	var bloom: float = clampf((_t - 0.6) / 0.4, 0.0, 1.0)
+	var p: Vector2 = _star_from.lerp(_star_to, rise) + Vector2(sin(_t * 9.0) * 10.0 * (1.0 - rise), 0.0)
+	var twinkle: float = 0.85 + 0.15 * sin(_time * 3.1)
+	var col := Color(1.0, 0.86, 0.45)
+	# Trail of sparks left on the way up.
+	for k in 6:
+		var q: Vector2 = _star_from.lerp(p, float(k) / 6.0)
+		draw_circle(q, 1.5 + float(k) * 0.4, Color(col, 0.12 + 0.05 * float(k)))
+	var r: float = lerpf(3.0, 9.0, rise) + bloom * 7.0
+	for k in 4:
+		draw_circle(p, r * (2.0 + float(k) * 1.4) * twinkle, Color(col, 0.07))
+	draw_circle(p, r, Color(1.0, 0.95, 0.8))
+	if bloom > 0.0:
+		var outer: float = (14.0 + 10.0 * bloom) * twinkle
+		var pts := PackedVector2Array()
+		for i in 8:
+			var rr: float = outer if i % 2 == 0 else outer * 0.36
+			pts.append(p + Vector2.from_angle(TAU * float(i) / 8.0 - PI * 0.5 + _time * 0.2) * rr)
+		draw_colored_polygon(pts, Color(col, bloom))
+		var closed := PackedVector2Array(pts)
+		closed.append(pts[0])
+		draw_polyline(closed, Color(INK, bloom), 2.0, true)
+		draw_circle(p, 4.0, Color(1, 1, 1, bloom))
+
+
+## Shadow ducks lean in from the left, right and bottom edges, eyes burning, closing like a vignette.
+func _draw_shadow_edge() -> void:
+	var k: float = 1.0 - pow(1.0 - _t, 3.0)
+	var s: Vector2 = size
+	var mass := Color(0.03, 0.02, 0.03, 0.92)
+	var heads: int = 14
+	for i in heads:
+		var side: int = i % 3
+		var u: float = (float(i / 3) + 0.5 + _h(i + 600) * 0.4) / (float(heads) / 3.0)
+		var r: float = 46.0 + _h(i + 610) * 40.0
+		var breath: float = sin(_time * 0.9 + i) * 6.0
+		var c: Vector2
+		var face: Vector2
+		match side:
+			0:
+				c = Vector2(-r * 0.9 + (r * 0.9 + 20.0) * k + breath, u * s.y)
+				face = Vector2.RIGHT
+			1:
+				c = Vector2(s.x + r * 0.9 - (r * 0.9 + 20.0) * k - breath, u * s.y)
+				face = Vector2.LEFT
+			_:
+				c = Vector2(u * s.x, s.y + r * 0.9 - (r * 0.7 + 10.0) * k - breath)
+				face = Vector2.UP
+		draw_circle(c, r, mass)
+		var beak := PackedVector2Array([c + face * r * 0.6 + face.orthogonal() * r * 0.3, c + face * r * 1.4, c + face * r * 0.6 - face.orthogonal() * r * 0.25])
+		draw_colored_polygon(beak, mass)
+		if k > 0.4:
+			var period: float = 2.0 + _h(i + 620) * 3.0
+			var blink: bool = fposmod(_time + _h(i + 630) * period, period) > period - 0.15
+			if not blink:
+				for e in [-1.0, 1.0]:
+					var eye: Vector2 = c + face * r * 0.35 + face.orthogonal() * r * 0.22 * float(e)
+					var gold := Color(1.0, 0.82, 0.3) if i % 2 == 0 else Color(0.95, 0.25, 0.15)
+					draw_circle(eye, 9.0, Color(gold, 0.15 * (k - 0.4) / 0.6))
+					draw_circle(eye, 3.6, Color(gold, (k - 0.4) / 0.6))
 
 
 # =====================================================================================
