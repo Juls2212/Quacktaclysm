@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="PackedScene" path="res://frontend/levels/level_base.tscn" id="1_base"]
 [ext_resource type="PackedScene" path="res://frontend/levels/blocks/placeholder_platform.tscn" id="2_platform"]
@@ -8,6 +8,8 @@
 [ext_resource type="PackedScene" path="res://backend/combat/kill_zone.tscn" id="6_killzone"]
 [ext_resource type="Script" path="res://backend/progression/tutorial_controller.gd" id="7_tutorial"]
 [ext_resource type="Resource" path="res://frontend/levels/biome/meadow_biome.tres" id="90_biome"]
+[ext_resource type="Script" path="res://frontend/animations/duck_rig.gd" id="91_rig"]
+[ext_resource type="Script" path="res://frontend/animations/grandfather_npc.gd" id="92_elder"]
 
 [sub_resource type="RectangleShape2D" id="Shape_exit"]
 size = Vector2(60, 220)
@@ -42,10 +44,13 @@ size = Vector2(200, 24)
 
 [node name="Grandfather" type="Node2D" parent="Content" index="5"]
 position = Vector2(420, 600)
+script = ExtResource("92_elder")
 
-[node name="Visual" type="Polygon2D" parent="Content/Grandfather"]
-color = Color(0.55, 0.45, 0.7, 1)
-polygon = PackedVector2Array(-18, -70, 18, -70, 18, 0, -18, 0)
+[node name="Visual" type="Node2D" parent="Content/Grandfather"]
+position = Vector2(0, -33.8)
+scale = Vector2(-1.3, 1.3)
+script = ExtResource("91_rig")
+look = 8
 
 [node name="Label" type="Label" parent="Content/Grandfather"]
 offset_left = -160.0
