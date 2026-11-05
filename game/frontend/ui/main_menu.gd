@@ -1,12 +1,13 @@
 class_name MainMenu
 extends Control
-## Main menu: a living meadow scene with the title set in the game's lettering and wooden signs
-## for new game, continue, options, credits and quit. Never deletes the save file; a new game
-## only replaces it at the next automatic save. Options live in their own settings file.
-## All texts are exported placeholders.
+## Main menu: the ruined town after the stars fell, the title painted on a cracked board and broken
+## planks nailed to a post for new game, continue, options, credits and quit. Never deletes the save
+## file; a new game only replaces it at the next automatic save. Options live in their own settings
+## file. Panels open with a splash of ink (visual only: buttons and focus change at once).
+## All texts are exported.
 
-@export var title_text: String = "Quacktaclysm"
-@export var tagline_text: String = "Un pato, una katana y tres fragmentos de alma. (texto provisional)"
+@export var title_text: String = "QUACKTACLYSM"
+@export var tagline_text: String = "Las estrellas cayeron. Los muertos volvieron. Solo queda una katana."
 @export var new_game_text: String = "Nueva partida"
 @export var continue_text: String = "Continuar"
 @export var options_text: String = "Opciones"
@@ -14,8 +15,26 @@ extends Control
 @export var quit_text: String = "Salir"
 @export var back_text: String = "Volver"
 @export var fullscreen_text: String = "Pantalla completa"
-@export var volume_text: String = "Volumen"
-@export_multiline var credits_body: String = "Quacktaclysm\nHecho con Godot 4 y GDScript.\nPatos, escenarios y letras dibujados en código.\n\n(texto provisional)"
+@export var volume_text: String = "Volumen general"
+@export var music_text: String = "Música"
+@export var sfx_text: String = "Efectos"
+@export var shake_text: String = "Sacudida de cámara"
+@export var controls_text: String = "Controles"
+@export_group("Credits")
+## Masthead under the credits title, like the front page of the last newspaper.
+@export_multiline var credits_body: String = "EDICIÓN ESPECIAL · ÚLTIMO NÚMERO ANTES DEL FIN"
+@export var credits_title: String = "QUACKTACLYSM"
+@export var credits_dev_line: String = "Desarrollo y sistemas: [NOMBRE INGENIERA 1]"
+@export var credits_art_line: String = "Diseño visual, interfaces y escenarios: [NOMBRE INGENIERA 2]"
+@export var credits_engine_line: String = "Hecho con Godot 4 y GDScript"
+@export var credits_resources_title: String = "Recursos externos"
+## One line per external asset (empty for now).
+@export var credits_resources: PackedStringArray = PackedStringArray()
+@export var credits_thanks_title: String = "Agradecimientos"
+@export_multiline var credits_thanks: String = "A quien juegue hasta el final.\nA los patos que no lo lograron."
+## Pixels per second the credits roll up.
+@export var credits_speed: float = 26.0
+@export_group("")
 @export var version_text: String = "Versión de desarrollo"
 @export var confirm_text: String = "Ya existe una partida guardada. Se reemplazará en el próximo guardado automático."
 @export var confirm_yes_text: String = "Sí, empezar de nuevo"
@@ -51,6 +70,16 @@ extends Control
 @onready var credits_label: Label = $CreditsPanel/Margin/Box/CreditsLabel
 @onready var credits_back_button: Button = $CreditsPanel/Margin/Box/CreditsBackButton
 @onready var version_label: Label = $VersionLabel
+@onready var music_label: Label = $OptionsPanel/Margin/Box/MusicRow/MusicLabel
+@onready var music_slider: HSlider = $OptionsPanel/Margin/Box/MusicRow/MusicSlider
+@onready var sfx_label: Label = $OptionsPanel/Margin/Box/SfxRow/SfxLabel
+@onready var sfx_slider: HSlider = $OptionsPanel/Margin/Box/SfxRow/SfxSlider
+@onready var shake_check: CheckButton = $OptionsPanel/Margin/Box/ShakeCheck
+@onready var controls_title: Label = $OptionsPanel/Margin/Box/ControlsTitle
+@onready var controls_grid: GridContainer = $OptionsPanel/Margin/Box/ControlsGrid
+@onready var credits_scroll: Control = $CreditsPanel/Margin/Box/CreditsScroll
+@onready var credits_roll: VBoxContainer = $CreditsPanel/Margin/Box/CreditsScroll/CreditsRoll
+@onready var ink_wipe: UiFx = $InkWipe
 
 var _settings: Dictionary = {}
 
@@ -72,6 +101,12 @@ func _ready() -> void:
 	credits_back_button.text = back_text
 	credits_label.text = credits_body
 	version_label.text = version_text
+	music_label.text = music_text
+	sfx_label.text = sfx_text
+	shake_check.text = shake_text
+	controls_title.text = controls_text
+	OptionsBoard.fill_controls(controls_grid)
+	_build_credits()
 	new_game_button.pressed.connect(_on_new_game_pressed)
 	continue_button.pressed.connect(_on_continue_pressed)
 	options_button.pressed.connect(_open_panel.bind(options_panel, fullscreen_check))
@@ -84,12 +119,26 @@ func _ready() -> void:
 	_settings = GameSettings.load_settings()
 	fullscreen_check.button_pressed = _settings["fullscreen"]
 	volume_slider.value = _settings["volume"]
+	music_slider.value = _settings["music_volume"]
+	sfx_slider.value = _settings["sfx_volume"]
+	shake_check.button_pressed = _settings["camera_shake"]
 	fullscreen_check.toggled.connect(_on_fullscreen_toggled)
 	volume_slider.value_changed.connect(_on_volume_changed)
+	music_slider.value_changed.connect(_on_setting_changed.bind("music_volume"))
+	sfx_slider.value_changed.connect(_on_setting_changed.bind("sfx_volume"))
+	shake_check.toggled.connect(_on_setting_changed.bind("camera_shake"))
 	GameSettings.apply(_settings)
 	_show_main_buttons()
 	message_label.text = ""
 	_play_intro()
+
+
+func _process(delta: float) -> void:
+	if credits_panel.visible:
+		# The front page scrolls up slowly and starts over once it has gone past.
+		credits_roll.position.y -= credits_speed * delta
+		if credits_roll.position.y < -credits_roll.size.y:
+			credits_roll.position.y = credits_scroll.size.y
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -107,6 +156,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _show_main_buttons() -> void:
+	for panel: Control in [confirm_panel, options_panel, credits_panel]:
+		if panel.visible:
+			_splash(panel)
 	confirm_panel.visible = false
 	options_panel.visible = false
 	credits_panel.visible = false
@@ -141,6 +193,9 @@ func _open_panel(panel: PanelContainer, focus: Control) -> void:
 	signs.visible = false
 	panel.visible = true
 	message_label.text = ""
+	if panel == credits_panel:
+		credits_roll.position.y = credits_scroll.size.y * 0.35
+	_pop_in(panel)
 	focus.grab_focus()
 
 
@@ -161,6 +216,58 @@ func _on_volume_changed(value: float) -> void:
 	GameSettings.save_settings(_settings)
 
 
+func _on_setting_changed(value: Variant, key: String) -> void:
+	_settings[key] = value
+	GameSettings.apply(_settings)
+	GameSettings.save_settings(_settings)
+
+
+## A panel lands with a splash of ink and a small bounce. Purely visual: it is already usable.
+func _pop_in(panel: Control) -> void:
+	_splash(panel)
+	panel.pivot_offset = panel.size * 0.5
+	panel.scale = Vector2(0.9, 0.9)
+	panel.rotation = deg_to_rad(-2.5)
+	var tween := create_tween().set_parallel(true)
+	tween.tween_property(panel, "scale", Vector2.ONE, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(panel, "rotation", 0.0, 0.32).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+
+
+func _splash(panel: Control) -> void:
+	ink_wipe.play(panel.position + panel.size * 0.5, maxf(panel.size.x, panel.size.y) * 0.75)
+
+
+## Front page of the credits: headline, the team, the engine, external resources and thanks.
+func _build_credits() -> void:
+	for child in credits_roll.get_children():
+		child.queue_free()
+	var headline := InkLabel.new()
+	headline.text = credits_title
+	headline.cap_height = 30.0
+	headline.fill = Color(0.2, 0.15, 0.12)
+	headline.extrude = Color(0.6, 0.55, 0.44)
+	credits_roll.add_child(headline)
+	for line in [credits_dev_line, credits_art_line, credits_engine_line]:
+		_credit_line(line, &"")
+	_credit_line(credits_resources_title, &"KeyLabel")
+	for line in credits_resources:
+		_credit_line(line, &"NoteLabel")
+	if credits_resources.is_empty():
+		_credit_line("—", &"NoteLabel")
+	_credit_line(credits_thanks_title, &"KeyLabel")
+	_credit_line(credits_thanks, &"NoteLabel")
+
+
+func _credit_line(text: String, variation: StringName) -> void:
+	var label := Label.new()
+	label.text = text
+	label.theme_type_variation = variation
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.custom_minimum_size = Vector2(credits_scroll.custom_minimum_size.x, 0)
+	credits_roll.add_child(label)
+
+
 func _on_new_game_pressed() -> void:
 	if SceneManager.is_transitioning():
 		return
@@ -168,6 +275,7 @@ func _on_new_game_pressed() -> void:
 		_set_main_buttons_disabled(true)
 		signs.visible = false
 		confirm_panel.visible = true
+		_pop_in(confirm_panel)
 		confirm_yes_button.disabled = false
 		confirm_cancel_button.disabled = false
 		confirm_cancel_button.grab_focus()
