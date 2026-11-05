@@ -94,6 +94,7 @@ func _make_piece(source: DuckRig, piece: DuckRig.Part, xf: Transform2D, facing: 
 	rb.add_child(holder)
 	var rig := DuckRig.new()
 	rig.look = source.look
+	rig.copy_style_from(source)
 	rig.foot_y = source.foot_y
 	rig.part = piece
 	rig.ragdoll = true
