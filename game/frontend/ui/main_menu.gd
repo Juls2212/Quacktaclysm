@@ -24,8 +24,8 @@ extends Control
 ## Masthead under the credits title, like the front page of the last newspaper.
 @export_multiline var credits_body: String = "EDICIÓN ESPECIAL · ÚLTIMO NÚMERO ANTES DEL FIN"
 @export var credits_title: String = "QUACKTACLYSM"
-@export var credits_dev_line: String = "Desarrollo y sistemas: [NOMBRE INGENIERA 1]"
-@export var credits_art_line: String = "Diseño visual, interfaces y escenarios: [NOMBRE INGENIERA 2]"
+@export var credits_dev_line: String = "Desarrollo y sistemas: Juliana Peñafiel"
+@export var credits_art_line: String = "Diseño visual, interfaces y escenarios: Laura Escobar"
 @export var credits_engine_line: String = "Hecho con Godot 4 y GDScript"
 @export var credits_resources_title: String = "Recursos externos"
 ## One line per external asset (empty for now).
@@ -80,6 +80,14 @@ extends Control
 @onready var credits_scroll: Control = $CreditsPanel/Margin/Box/CreditsScroll
 @onready var credits_roll: VBoxContainer = $CreditsPanel/Margin/Box/CreditsScroll/CreditsRoll
 @onready var ink_wipe: UiFx = $InkWipe
+@onready var title_board: Control = $TitleBoard
+@onready var title_crack: Control = $TitleCrack
+
+## Title pieces that step aside while a big panel is open, with their resting positions.
+var _header: Array[Control] = []
+var _header_home: Array[Vector2] = []
+var _header_tween: Tween = null
+var _header_hidden: bool = false
 
 var _settings: Dictionary = {}
 
@@ -107,6 +115,9 @@ func _ready() -> void:
 	controls_title.text = controls_text
 	OptionsBoard.fill_controls(controls_grid)
 	_build_credits()
+	_header = [title_board, title_label, title_crack, tagline_label]
+	for piece in _header:
+		_header_home.append(piece.position)
 	new_game_button.pressed.connect(_on_new_game_pressed)
 	continue_button.pressed.connect(_on_continue_pressed)
 	options_button.pressed.connect(_open_panel.bind(options_panel, fullscreen_check))
@@ -162,6 +173,7 @@ func _show_main_buttons() -> void:
 	confirm_panel.visible = false
 	options_panel.visible = false
 	credits_panel.visible = false
+	_show_header(true)
 	signs.visible = true
 	new_game_button.disabled = false
 	continue_button.disabled = not SaveSystem.has_save()
@@ -195,6 +207,8 @@ func _open_panel(panel: PanelContainer, focus: Control) -> void:
 	message_label.text = ""
 	if panel == credits_panel:
 		credits_roll.position.y = credits_scroll.size.y * 0.35
+	# Options and credits are big: the title and tagline lift away so the panel never cuts them.
+	_show_header(false)
 	_pop_in(panel)
 	focus.grab_focus()
 
@@ -231,6 +245,21 @@ func _pop_in(panel: Control) -> void:
 	var tween := create_tween().set_parallel(true)
 	tween.tween_property(panel, "scale", Vector2.ONE, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.tween_property(panel, "rotation", 0.0, 0.32).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+
+
+## Title, board, crack and tagline rise and fade out (or come back). Short, never blocks input.
+func _show_header(shown: bool) -> void:
+	if _header.is_empty() or shown == not _header_hidden:
+		return
+	_header_hidden = not shown
+	if _header_tween != null and _header_tween.is_valid():
+		_header_tween.kill()
+	_header_tween = create_tween().set_parallel(true)
+	for i in _header.size():
+		var piece: Control = _header[i]
+		var target: Vector2 = _header_home[i] + (Vector2.ZERO if shown else Vector2(0, -40))
+		_header_tween.tween_property(piece, "position", target, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		_header_tween.tween_property(piece, "modulate:a", 1.0 if shown else 0.0, 0.18)
 
 
 func _splash(panel: Control) -> void:
