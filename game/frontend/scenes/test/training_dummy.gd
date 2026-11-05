@@ -1,6 +1,6 @@
 class_name TrainingDummy
 extends Node2D
-## Static damage target for testing hitboxes. No AI.
+## Static damage target for testing hitboxes. No AI. Drawn as a straw scarecrow (ScarecrowVisual).
 
 @export var flash_time: float = 0.12
 @export var flash_color: Color = Color(1.0, 0.3, 0.3, 1.0)
@@ -10,7 +10,7 @@ var _flash_left: float = 0.0
 
 @onready var health: HealthComponent = $Health
 @onready var hurtbox: Hurtbox = $Hurtbox
-@onready var visual: Polygon2D = $Visual
+@onready var visual: CanvasItem = $Visual
 @onready var label: Label = $Label
 
 
@@ -34,11 +34,15 @@ func reset_dummy() -> void:
 	hurtbox.set_enabled(true)
 	visual.modulate = Color.WHITE
 	_flash_left = 0.0
+	if visual.has_method("set_broken"):
+		visual.call("set_broken", false)
 
 
 func _on_damaged(_info: DamageInfo) -> void:
 	_flash_left = flash_time
 	visual.modulate = flash_color
+	if visual.has_method("kick"):
+		visual.call("kick")
 
 
 func _on_health_changed(current: int, maximum: int) -> void:
@@ -48,3 +52,5 @@ func _on_health_changed(current: int, maximum: int) -> void:
 func _on_died() -> void:
 	hurtbox.set_enabled(false)
 	label.text = "DEAD"
+	if visual.has_method("set_broken"):
+		visual.call("set_broken", true)
