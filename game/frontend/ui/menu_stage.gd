@@ -1,11 +1,13 @@
 extends Node2D
-## The living picture behind the main menu: the meadow backdrop drifting by, a bank of earth,
-## the hero on a rock with the wind in his hair, two corrupted ducks patrolling in the distance,
-## and the post the menu signs hang from. Visual only.
+## The living picture behind the main menu: the ruined town under a yellow smog, smoke columns,
+## a red omen star burning too bright and corrupted stars falling now and then; the worn-out hero
+## standing on the rubble with his katana, deformed ducks shuffling past in the distance as
+## silhouettes, and the post the menu signs are nailed to. Visual only.
 
-const MEADOW := preload("res://frontend/levels/biome/meadow_biome.tres")
+const RUINS := preload("res://frontend/levels/biome/ruined_city_biome.tres")
 const INK := Color(0.106, 0.098, 0.122)
 const GROUND_Y: float = 612.0
+const SILHOUETTE := Color(0.27, 0.25, 0.21)
 
 ## Screen x of the sign post the menu hangs from.
 @export var post_x: float = 1012.0
@@ -18,39 +20,39 @@ var _next_slash: float = 2.5
 
 
 func _ready() -> void:
+	# A copy of the ruined-city look with the omen star lit and more falling stars (the .tres is untouched).
+	var biome := RUINS.duplicate() as Biome
+	biome.omen_star = true
+	biome.omen_star_position = Vector2(0.6, 0.36)
+	biome.falling_star_rate = 0.7
 	var backdrop := Backdrop.new()
-	backdrop.biome = MEADOW
-	backdrop.auto_scroll = 26.0
+	backdrop.biome = biome
+	backdrop.auto_scroll = 22.0
 	# No foreground silhouettes here: they would sit over the menu text.
 	backdrop.show_foreground = false
 	add_child(backdrop)
 	var ground := TerrainSkin.new()
-	ground.biome = MEADOW
+	ground.biome = biome
 	ground.kind = TerrainSkin.Kind.GROUND
 	ground.size = Vector2(1500, 40)
 	ground.position = Vector2(640, GROUND_Y + 20)
 	add_child(ground)
-	var rock := TerrainSkin.new()
-	rock.biome = MEADOW
-	rock.kind = TerrainSkin.Kind.ISLAND
-	rock.size = Vector2(170, 34)
-	rock.position = Vector2(300, GROUND_Y - 34)
-	rock.z_index = 1
-	add_child(rock)
-	# Distant patrol: smaller and hazed so they sit behind the hero.
-	for spec in [[DuckRig.Look.BRUTE, 560.0, 0.85], [DuckRig.Look.BANDIT, 700.0, 0.75]]:
+	# Mutated ducks shuffling across the far end of the street, dark against the smog.
+	var specs: Array = [[DuckRig.Look.BRUTE, 160.0, 0.62, 1.0], [DuckRig.Look.BANDIT, 520.0, 0.55, -1.0],
+			[DuckRig.Look.SLINGER, 900.0, 0.58, 1.0], [DuckRig.Look.BRUTE_TOUGH, 1180.0, 0.6, -1.0]]
+	for spec in specs:
 		var walker := DuckRig.new()
 		walker.look = spec[0]
-		walker.scale = Vector2.ONE * float(spec[2])
-		walker.modulate = Color(0.82, 0.86, 0.84)
-		walker.position = Vector2(spec[1], GROUND_Y - 24.0 * float(spec[2]))
-		walker.z_index = 0
+		walker.scale = Vector2(float(spec[3]), 1.0) * float(spec[2])
+		walker.modulate = SILHOUETTE
+		walker.wear = 0.4
+		walker.position = Vector2(spec[1], GROUND_Y - 6.0 - 26.0 * float(spec[2]))
 		add_child(walker)
-		_walkers.append({ "rig": walker, "home": float(spec[1]), "dir": 1.0, "speed": 38.0 + float(spec[2]) * 10.0 })
+		_walkers.append({ "rig": walker, "dir": float(spec[3]), "speed": 26.0 + float(spec[2]) * 30.0 })
 	_hero = DuckRig.new()
 	_hero.look = DuckRig.Look.HERO
 	_hero.scale = Vector2.ONE * 2.1
-	_hero.position = Vector2(300, GROUND_Y - 51.0 - 26.0 * 2.1)
+	_hero.position = Vector2(300, GROUND_Y + 2.0 - 26.0 * 2.1)
 	_hero.z_index = 2
 	add_child(_hero)
 
@@ -60,9 +62,11 @@ func _process(delta: float) -> void:
 	for w in _walkers:
 		var rig: DuckRig = w["rig"]
 		rig.position.x += float(w["dir"]) * float(w["speed"]) * delta
-		if absf(rig.position.x - float(w["home"])) > 70.0:
-			w["dir"] = -float(w["dir"])
-		rig.scale.x = absf(rig.scale.x) * float(w["dir"])
+		# Off one edge, back in from the other: an endless trickle of the corrupted.
+		if rig.position.x > 1340.0:
+			rig.position.x = -60.0
+		elif rig.position.x < -60.0:
+			rig.position.x = 1340.0
 		rig.ground_speed = float(w["speed"]) * 2.0
 	# Now and then the hero draws and cuts the air.
 	_next_slash -= delta
