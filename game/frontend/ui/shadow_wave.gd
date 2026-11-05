@@ -65,54 +65,153 @@ func _draw() -> void:
 		body.append(Vector2(edge_x(y), y))
 		y += 18.0
 	draw_colored_polygon(body, MASS)
-	# Piled-up duck silhouettes: rims of heads and backs inside the mass.
-	for i in 26:
-		var hy: float = 20.0 + _h(i * 3) * (ground_y - 40.0)
-		var hx: float = edge_x(hy) - 30.0 - _h(i * 3 + 1) * 230.0
-		var r: float = 20.0 + _h(i * 3 + 2) * 26.0
-		var bob: float = sin(_time * (0.8 + _h(i) * 0.6) + i) * 4.0
-		draw_arc(Vector2(hx, hy + bob), r, PI * 1.05, PI * 1.95, 12, RIM, 2.2, true)
+	# Small heads piled up deep in the mass, half melted into the black.
+	for i in 24:
+		var hy: float = 30.0 + _h(i * 3) * (ground_y - 60.0)
+		var hx: float = edge_x(hy) - 50.0 - _h(i * 3 + 1) * 220.0
+		var r: float = 10.0 + _h(i * 3 + 2) * 10.0
+		var bob: float = sin(_time * (0.7 + _h(i) * 0.7) + i * 1.3) * 5.0
+		_duck_head(Vector2(hx + bob, hy), r, _aim(Vector2(hx, hy), i, 0.35), _gape(i + 50, 0.25), 0.0, i + 50, 0.45, i % 4 == 0)
 	_hatch_mass()
-	# Duck heads bulging out along the front, beaks open on rows of teeth.
-	for i in 9:
-		var hy: float = 60.0 + float(i) * 62.0 + sin(_time * 0.6 + i) * 6.0
-		var hx: float = edge_x(hy) + 6.0
-		var r: float = 26.0 + _h(i + 40) * 16.0
-		_head(Vector2(hx, hy), r, i)
+	# Medium heads crowding the front edge.
+	for i in 8:
+		var hy: float = 40.0 + float(i) * 72.0 + _h(i + 20) * 30.0
+		var hx: float = edge_x(hy) - 18.0 + _peek(i + 20) * 10.0
+		var r: float = 18.0 + _h(i + 21) * 9.0
+		_duck_head(Vector2(hx, hy), r, _aim(Vector2(hx, hy), i + 20, 0.5), _gape(i + 20, 0.45), 0.0, i + 20, 0.75, true)
 	# Wings like claws reaching out between the heads.
 	for i in 5:
 		var cy: float = 110.0 + float(i) * 105.0
 		_claw(Vector2(edge_x(cy) - 4.0, cy), 46.0 + _h(i + 70) * 24.0, -0.2 + sin(_time * 0.9 + i) * 0.25, i)
-	# Eyes scattered all through the mass.
-	for i in 34:
+	# More eyes scattered through the mass (the heads carry their own).
+	for i in 22:
 		var ey: float = 20.0 + _h(i * 5 + 100) * (ground_y - 30.0)
 		var ex: float = edge_x(ey) - 20.0 - _h(i * 5 + 101) * 280.0
 		_eye(Vector2(ex, ey), 3.0 + _h(i * 5 + 102) * 4.0, i * 5 + 103)
+	# A few big heads at the very front: they lean out, duck back, snap their bills.
+	for i in 5:
+		var hy: float = 95.0 + float(i) * 108.0 + _h(i + 90) * 26.0
+		var hx: float = edge_x(hy) + 4.0 + _peek(i + 90) * 18.0
+		var r: float = 30.0 + _h(i + 91) * 13.0
+		# Every fourth one has a crooked, broken bill that never quite shuts.
+		var twist: float = 0.28 if i % 4 == 1 else 0.0
+		_duck_head(Vector2(hx, hy), r, _aim(Vector2(hx, hy), i + 90, 0.55), _gape(i + 90, 0.55), twist, i + 90, 1.0, true)
 	_draw_lunge()
 	_draw_crows()
 
 
-func _head(c: Vector2, r: float, i: int) -> void:
-	draw_circle(c, r, MASS)
-	draw_arc(c, r, -PI * 0.6, PI * 0.4, 14, RIM, 2.4, true)
-	var gape: float = 0.35 + 0.25 * sin(_time * (1.2 + _h(i) * 0.8) + i)
-	var tip := c + Vector2(r * 1.75, r * 0.1)
-	var upper := PackedVector2Array([c + Vector2(r * 0.6, -r * 0.35), tip, c + Vector2(r * 0.7, r * 0.05)])
-	var lower := PackedVector2Array([c + Vector2(r * 0.7, r * 0.2), tip + Vector2(-r * 0.25, r * gape * 1.4), c + Vector2(r * 0.55, r * 0.55)])
-	draw_colored_polygon(upper, MASS)
+## A whole shadow duck: neck sinking into the mass, a lumpy skull and a real duck bill (wide,
+## flat, gently curved, rounded tip) hinged on the face, aimed by `angle`. `gape` opens the bill
+## (radians) on crooked teeth, `twist` bends it out of line. `rim` 0..1 fades the thin edge.
+func _duck_head(c: Vector2, r: float, angle: float, gape: float, twist: float, salt: int, rim: float, eye: bool) -> void:
+	var edge: Color = _rim_color(c, rim)
+	draw_set_transform(c, angle, Vector2.ONE)
+	var neck := PackedVector2Array([Vector2(-r * 1.7, r * 1.6), Vector2(-r * 0.8, -r * 0.15), Vector2(r * 0.25, r * 0.3), Vector2(-r * 0.25, r * 2.0)])
+	draw_colored_polygon(neck, MASS)
+	var squash: float = 0.86 + _h(salt) * 0.16
+	var skull := PackedVector2Array()
+	for k in 16:
+		var a: float = TAU * float(k) / 16.0
+		var bump: float = 1.0 + (_h(salt * 7 + k) - 0.5) * 0.22
+		skull.append(Vector2(cos(a) * 1.06, sin(a) * squash) * r * bump)
+	draw_colored_polygon(skull, MASS)
+	# Thin edge over the crown and forehead, where the torchlight catches it.
+	var crown := PackedVector2Array()
+	for k in [9, 10, 11, 12, 13, 14, 15, 0]:
+		crown.append(skull[k])
+	draw_polyline(crown, edge, 1.6, true)
+	var hinge := Vector2(r * 0.62, r * 0.16)
+	var length: float = r * (0.85 + _h(salt + 3) * 0.25)
+	var upper := _bill_upper(length, r * 0.46, r * 0.44, hinge, twist)
+	var lower := _bill_lower(length * 0.86, r * 0.28, hinge, twist + gape)
+	if gape > 0.06:
+		var mouth := PackedVector2Array([hinge, hinge + Vector2(length * 0.85, r * 0.06).rotated(twist), hinge + Vector2(length * 0.75, r * 0.08).rotated(twist + gape)])
+		draw_colored_polygon(mouth, Color(0.13, 0.02, 0.04))
 	draw_colored_polygon(lower, MASS)
-	_outline(upper, RIM, 2.0)
-	_outline(lower, RIM, 2.0)
-	# Crooked teeth along both jaws.
-	for k in 4:
-		var t: float = 0.15 + 0.2 * float(k)
-		var a: Vector2 = upper[2].lerp(upper[1], t)
-		draw_colored_polygon(PackedVector2Array([a + Vector2(-2.5, 0), a + Vector2(2.5, 0), a + Vector2((_h(i * 9 + k) - 0.5) * 3.0, 6.0 + _h(i * 9 + k + 4) * 4.0)]), TEETH)
-		var b: Vector2 = lower[0].lerp(lower[1], t)
-		draw_colored_polygon(PackedVector2Array([b + Vector2(-2.0, 0), b + Vector2(2.0, 0), b + Vector2(0.5, -5.0)]), TEETH)
-	_eye(c + Vector2(r * 0.25, -r * 0.3), r * 0.2, i * 31 + 7)
-	if i % 3 == 0:
-		_eye(c + Vector2(-r * 0.25, -r * 0.45), r * 0.14, i * 31 + 9)
+	_visible_edge(lower, edge, 1.4)
+	if gape > 0.12:
+		# Crooked teeth, uneven and leaning.
+		for k in 4:
+			var u: float = 0.16 + 0.17 * float(k)
+			var top: Vector2 = hinge + Vector2(length * u, r * 0.06).rotated(twist)
+			var lean: float = (_h(salt * 5 + k) - 0.5) * 0.7
+			var tooth_len: float = r * (0.12 + _h(salt * 5 + k + 9) * 0.12)
+			var down: Vector2 = Vector2(0, 1).rotated(twist + lean)
+			draw_colored_polygon(PackedVector2Array([top - Vector2(r * 0.05, 0).rotated(twist), top + Vector2(r * 0.05, 0).rotated(twist), top + down * tooth_len]), TEETH)
+		for k in 2:
+			var bottom: Vector2 = hinge + Vector2(length * (0.3 + 0.25 * float(k)), r * 0.06).rotated(twist + gape)
+			var up: Vector2 = Vector2(0, -1).rotated(twist + gape + (_h(salt + k + 40) - 0.5) * 0.6)
+			draw_colored_polygon(PackedVector2Array([bottom - Vector2(r * 0.04, 0).rotated(twist + gape), bottom + Vector2(r * 0.04, 0).rotated(twist + gape), bottom + up * r * 0.12]), TEETH)
+	draw_colored_polygon(upper, MASS)
+	_visible_edge(upper, edge, 1.6)
+	if gape <= 0.06:
+		# Closed bill: just the seam between the two halves.
+		draw_line(hinge, hinge + Vector2(length * 0.8, r * 0.1).rotated(twist), Color(edge, edge.a * 0.7), 1.2, true)
+	# Nostril on the bill.
+	draw_circle(hinge + Vector2(length * 0.28, -r * 0.2).rotated(twist), maxf(r * 0.035, 0.8), Color(edge, edge.a * 0.8))
+	if eye:
+		_eye(Vector2(r * 0.25, -r * 0.3), maxf(r * 0.18, 2.4), salt * 31 + 7)
+	draw_set_transform_matrix(Transform2D.IDENTITY)
+
+
+## Upper bill, hinge frame: broad and flat, the ridge dipping a little before the rounded,
+## spoon-wide tip (wider than the middle, like a real duck bill). Its root sits inside the skull.
+func _bill_upper(length: float, root_h: float, tip_h: float, hinge: Vector2, twist: float) -> PackedVector2Array:
+	var pts := PackedVector2Array([Vector2(-length * 0.4, -root_h * 1.1), Vector2(length * 0.1, -root_h * 0.92),
+			Vector2(length * 0.45, -root_h * 0.74), Vector2(length * 0.7, -tip_h * 0.95)])
+	var c := Vector2(length - tip_h * 0.55, -tip_h * 0.42)
+	for k in 7:
+		var a: float = lerpf(-PI * 0.5, PI * 0.5, float(k) / 6.0)
+		pts.append(c + Vector2(cos(a), sin(a)) * tip_h * 0.55)
+	pts.append_array([Vector2(length * 0.62, root_h * 0.14), Vector2(length * 0.25, root_h * 0.1), Vector2(-length * 0.4, root_h * 0.06)])
+	return _place(pts, hinge, twist)
+
+
+## Lower bill, thinner, with a slight smile, hanging from the same hinge.
+func _bill_lower(length: float, h: float, hinge: Vector2, angle: float) -> PackedVector2Array:
+	var pts := PackedVector2Array([Vector2(-length * 0.3, h * 0.1), Vector2(length * 0.4, h * 0.25)])
+	var c := Vector2(length - h * 0.55, h * 0.62)
+	for k in 7:
+		var a: float = lerpf(-PI * 0.5, PI * 0.5, float(k) / 6.0)
+		pts.append(c + Vector2(cos(a), sin(a)) * h * 0.55)
+	pts.append_array([Vector2(length * 0.4, h * 1.15), Vector2(-length * 0.3, h * 1.05)])
+	return _place(pts, hinge, angle)
+
+
+## Edge of a bill without its root (which is buried in the skull), so no line crosses the face.
+func _visible_edge(pts: PackedVector2Array, color: Color, width: float) -> void:
+	draw_polyline(pts.slice(1, pts.size() - 1), color, width, true)
+
+
+func _place(pts: PackedVector2Array, origin: Vector2, angle: float) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for p in pts:
+		out.append(origin + p.rotated(angle))
+	return out
+
+
+## Aim at the hero's torch, with a small personal wobble; never past `limit` radians.
+func _aim(from: Vector2, salt: int, limit: float) -> float:
+	var a: float = (light_center - from).angle()
+	return clampf(a * 0.5, -limit * 0.6, limit * 0.6) + sin(_time * (0.5 + _h(salt + 7) * 0.6) + salt) * 0.07 + (_h(salt + 8) - 0.5) * 0.16
+
+
+## Bill opening (radians) for a head: each opens and snaps shut on its own rhythm.
+func _gape(salt: int, widest: float) -> float:
+	var s: float = sin(_time * (0.6 + _h(salt + 11) * 1.1) + _h(salt + 12) * TAU)
+	return clampf(s * 1.7 - 0.5, 0.0, 1.0) * widest
+
+
+## -1..1: the head ducks back into the mass or leans out, out of step with the others.
+func _peek(salt: int) -> float:
+	return sin(_time * (0.35 + _h(salt + 13) * 0.5) + _h(salt + 14) * TAU)
+
+
+## Thin dark-grey edge, warmed by the torch when the head is close to the light.
+func _rim_color(at: Vector2, strength: float) -> Color:
+	var warm: float = clampf(1.0 - (at.distance_to(light_center) - light_radius) / 260.0, 0.0, 1.0)
+	var c: Color = RIM.lerp(Color(0.78, 0.5, 0.28), warm * 0.55)
+	return Color(c, strength)
 
 
 func _claw(root: Vector2, length: float, angle: float, i: int) -> void:
@@ -162,12 +261,7 @@ func _draw_lunge() -> void:
 			draw_line(reach, tip, MASS, 6.0, true)
 			draw_line(reach, tip, RIM, 1.4, true)
 	else:
-		var jaw := PackedVector2Array([reach - n * 12.0, reach + d.normalized() * 30.0, reach + n * 12.0])
-		draw_colored_polygon(jaw, MASS)
-		for t in [0.3, 0.55, 0.8]:
-			var p: Vector2 = (reach - n * 12.0).lerp(reach + d.normalized() * 30.0, t)
-			draw_colored_polygon(PackedVector2Array([p, p + n * 5.0 + d.normalized() * 2.0, p + d.normalized() * 4.0]), TEETH)
-		_eye(reach - d.normalized() * 10.0, 4.0, 77)
+		_duck_head(reach, 24.0, d.angle(), 0.45 + 0.2 * k, 0.0, 77, 1.0, true)
 
 
 ## Loose feathers flapping off the wave like a flock of crows.
