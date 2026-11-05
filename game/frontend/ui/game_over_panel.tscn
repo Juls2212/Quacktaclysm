@@ -40,6 +40,17 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.2, 0, 0, 0.6)
 
+[node name="Shadows" type="Control" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("4_fx")
+mode = 9
+
 [node name="Feathers" type="Control" parent="Root"]
 layout_mode = 1
 anchors_preset = 15
@@ -50,6 +61,17 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("4_fx")
 mode = 1
+
+[node name="Star" type="Control" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("4_fx")
+mode = 8
 
 [node name="Center" type="CenterContainer" parent="Root"]
 layout_mode = 1
@@ -117,6 +139,12 @@ horizontal_alignment = 1
 [node name="Quip" type="Label" parent="Root/Center/Panel/Margin/Box"]
 layout_mode = 2
 theme_type_variation = &"QuipLabel"
+horizontal_alignment = 1
+
+[node name="Context" type="Label" parent="Root/Center/Panel/Margin/Box"]
+layout_mode = 2
+theme_type_variation = &"SceneLabel"
+theme_override_font_sizes/font_size = 16
 horizontal_alignment = 1
 
 [node name="RetryButton" type="Button" parent="Root/Center/Panel/Margin/Box"]
