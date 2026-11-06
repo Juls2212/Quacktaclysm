@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="PackedScene" path="res://frontend/levels/level_base.tscn" id="1_base"]
 [ext_resource type="PackedScene" path="res://frontend/levels/blocks/placeholder_platform.tscn" id="2_platform"]
@@ -17,6 +17,7 @@
 [ext_resource type="Resource" path="res://frontend/levels/biome/ruined_city_biome.tres" id="90_biome"]
 [ext_resource type="PackedScene" path="res://frontend/levels/blocks/biome_zone.tscn" id="91_zone"]
 [ext_resource type="Resource" path="res://frontend/levels/biome/forest_biome.tres" id="92_zone_b"]
+[ext_resource type="Script" path="res://frontend/levels/blocks/enemy_level_style.gd" id="95_enemy_style"]
 
 [node name="Level1" instance=ExtResource("1_base") node_paths=PackedStringArray("boss", "encounter", "fragment_drop", "arena_gates")]
 biome = ExtResource("90_biome")
@@ -46,22 +47,27 @@ size = Vector2(2715, 40)
 [node name="PlatformStart1" parent="Content" index="3" instance=ExtResource("2_platform")]
 position = Vector2(600, 520)
 size = Vector2(160, 24)
+skin = 9
 
 [node name="PlatformStart2" parent="Content" index="4" instance=ExtResource("2_platform")]
 position = Vector2(800, 440)
 size = Vector2(160, 24)
+skin = 5
 
 [node name="StepLow" parent="Content" index="5" instance=ExtResource("2_platform")]
 position = Vector2(3050, 530)
 size = Vector2(140, 24)
+skin = 9
 
 [node name="StepMid" parent="Content" index="6" instance=ExtResource("2_platform")]
 position = Vector2(3250, 452)
 size = Vector2(140, 24)
+skin = 5
 
 [node name="PlatformRaised" parent="Content" index="7" instance=ExtResource("2_platform")]
 position = Vector2(3500, 372)
 size = Vector2(300, 24)
+skin = 12
 
 [node name="CheckpointStart" parent="Content" index="8" instance=ExtResource("5_checkpoint")]
 position = Vector2(200, 600)
@@ -128,3 +134,49 @@ fragment_scene = ExtResource("13_fragment")
 [node name="BiomeZone" parent="." instance=ExtResource("91_zone")]
 position = Vector2(2542.5, 360)
 biome = ExtResource("92_zone_b")
+
+[node name="CarA" parent="Content" instance=ExtResource("2_platform")]
+position = Vector2(1000, 532)
+size = Vector2(140, 24)
+color = Color(0.3, 0.3, 0.3, 1)
+skin = 9
+
+[node name="BusA" parent="Content" instance=ExtResource("2_platform")]
+position = Vector2(1250, 454)
+size = Vector2(260, 24)
+one_way = true
+color = Color(0.3, 0.3, 0.3, 1)
+skin = 12
+
+[node name="PlankC" parent="Content" instance=ExtResource("2_platform")]
+position = Vector2(1725, 532)
+size = Vector2(110, 24)
+one_way = true
+color = Color(0.3, 0.3, 0.3, 1)
+
+[node name="CarB" parent="Content" instance=ExtResource("2_platform")]
+position = Vector2(2800, 532)
+size = Vector2(120, 24)
+one_way = true
+color = Color(0.3, 0.3, 0.3, 1)
+skin = 9
+
+[node name="RubbleCar" parent="Content" instance=ExtResource("2_platform")]
+position = Vector2(4100, 532)
+size = Vector2(140, 24)
+color = Color(0.3, 0.3, 0.3, 1)
+skin = 9
+
+[node name="PlankB" parent="Content" instance=ExtResource("2_platform")]
+position = Vector2(4295, 454)
+size = Vector2(130, 24)
+one_way = true
+color = Color(0.3, 0.3, 0.3, 1)
+skin = 5
+
+[node name="LevelTitleCard" parent="."]
+level_name = "LA CIUDAD QUE CAYÓ"
+
+[node name="EnemyLevelStyle" type="Node" parent="."]
+script = ExtResource("95_enemy_style")
+style = 1
