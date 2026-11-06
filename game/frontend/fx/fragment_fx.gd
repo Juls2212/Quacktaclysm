@@ -6,8 +6,10 @@ extends Node2D
 ## draws the gem over it (the fragment's own Visual is hidden at run time).
 ## LIBERAR (~2 s): the gem rises turning among dotted rings of light, a beam shoots up to the top
 ## of the screen with rings climbing it, the gem rides it up and a blue four-pointed star is born.
-## CONSERVAR (~1.2 s): the gem turns red, cracks, shakes and darts as a red thread into the
-## player's katana, with a red flash on the blade. Cleans itself up when the fragment goes away.
+## CONSERVAR: a full-screen exorcism cinematic and the card of the absorbed power
+## (ExorcismCutscene, which pauses the game while it plays; skipped in headless runs). The short
+## red-thread effect (State.KEPT) stays available but is no longer started by the choice.
+## Cleans itself up when the fragment goes away.
 
 enum State { IDLE, FLOATING, RELEASED, KEPT }
 
@@ -15,6 +17,7 @@ const SKY := Color("9fe8ff")
 const BLUE := Color("2c7fe0")
 const RED := Color("c2331f")
 const GEM_SIZE: float = 26.0
+const EXORCISM := preload("res://frontend/fx/exorcism_cutscene.tscn")
 
 var _state: State = State.IDLE
 var _fragment: Node2D = null
@@ -51,11 +54,21 @@ func _on_fragment_spawned(fragment: Node2D) -> void:
 		_tint = (data as Resource).get(&"tint")
 
 
-func _on_decision_made(_fragment_id: String, choice: String) -> void:
+func _on_decision_made(fragment_id: String, choice: String) -> void:
 	if is_instance_valid(_fragment):
 		_at = _fragment.global_position
 	_t = 0.0
-	_state = State.RELEASED if choice == "released" else State.KEPT
+	if choice == "released":
+		_state = State.RELEASED
+		return
+	_state = State.IDLE
+	# Automated runs choose Keep too and must not wait for a cinematic.
+	if DisplayServer.get_name() == "headless" or _level == null:
+		return
+	var cut: ExorcismCutscene = EXORCISM.instantiate()
+	cut.fragment_id = fragment_id
+	cut.player = _level.get(&"player")
+	_level.add_child(cut)
 
 
 func _process(delta: float) -> void:
