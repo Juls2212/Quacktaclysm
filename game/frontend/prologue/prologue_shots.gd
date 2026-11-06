@@ -56,8 +56,7 @@ func set_shot(next: Shot) -> void:
 	line = -1
 	match next:
 		Shot.FOREST:
-			_hero = _add_duck(DuckRig.Look.HERO, Vector2(640, 668), 0.9)
-			_hero.modulate = Color(0.02, 0.03, 0.04)
+			pass
 		Shot.COMIC:
 			_build_comic()
 		Shot.CAVE:
@@ -344,48 +343,210 @@ func _draw_fall() -> void:
 # 5. The forest
 # =====================================================================================
 
+## The forest (~11 s): fog and pines, the tiny hero with a torch; a giant duck's eyes open
+## between the trees, small ones join around it, it tilts its head, the torch dies and only the
+## eyes are left burning in the dark until they close one by one.
 func _draw_forest() -> void:
 	draw_rect(Rect2(Vector2(-20, -20), DESIGN + Vector2(40, 40)), Color(0.04, 0.12, 0.13))
 	_brush_strokes(Rect2(0, 0, 1280, 720), Color(0.06, 0.18, 0.19, 0.6), 31)
-	var rows: Array = [[Color(0.06, 0.17, 0.18), 380.0, 0.6, 18], [Color(0.04, 0.11, 0.12), 470.0, 0.85, 13], [Color(0.02, 0.05, 0.06), 600.0, 1.2, 9]]
-	for r in rows.size():
-		var spec: Array = rows[r]
-		for i in int(spec[3]):
-			var px: float = (float(i) + _h(i + r * 40) * 0.6) / float(spec[3]) * 1400.0 - 60.0
-			_pine(Vector2(px, float(spec[1]) + 120.0), (260.0 + _h(i + r * 50) * 160.0) * float(spec[2]), spec[0])
-		# Fog between the rows.
-		var fog_y: float = float(spec[1]) + 60.0
-		draw_polygon(PackedVector2Array([Vector2(-20, fog_y - 60), Vector2(1300, fog_y - 60), Vector2(1300, fog_y + 40), Vector2(-20, fog_y + 40)]),
-				PackedColorArray([Color(0.3, 0.45, 0.45, 0.0), Color(0.3, 0.45, 0.45, 0.0), Color(0.3, 0.45, 0.45, 0.22), Color(0.3, 0.45, 0.45, 0.22)]))
-	draw_rect(Rect2(-20, 670, 1320, 80), Color(0.01, 0.03, 0.03))
-	# Two huge amber eyes open between the trees, then many small ones around them.
-	var open: float = clampf((t - 2.5) / 1.2, 0.0, 1.0)
-	for side in [-1.0, 1.0]:
-		_big_eye(Vector2(640.0 + float(side) * 150.0, 300.0), 70.0, open, float(side))
-	var many: float = clampf((t - 5.5) / 2.5, 0.0, 1.0)
-	for i in 22:
-		if _h(i + 500) > many:
-			continue
-		var p := Vector2(100.0 + _h(i + 510) * 1080.0, 180.0 + _h(i + 520) * 360.0)
-		if p.distance_to(Vector2(640, 300)) < 260.0:
-			continue
-		var blink: bool = fposmod(t + _h(i + 530) * 3.0, 3.0) > 2.85
-		if not blink:
-			for e in [-1.0, 1.0]:
-				draw_colored_polygon(_ellipse(p + Vector2(float(e) * 9.0, 0), 5.0, 3.0, 10), Color(1.0, 0.72, 0.2))
+	var light: float = _torch_light()
+	# Far row, then the small ducks peering out from behind it, then the middle row.
+	_pine_row(Color(0.06, 0.17, 0.18), 500.0, 0.6, 18, 0)
+	_fog_band(440.0, 0.2)
+	for d in _small_ducks():
+		_duck_silhouette(d["head"], d["r"], d["tilt"], Color(0.02, 0.06, 0.065))
+	_fog_band(430.0, 0.34)
+	_fog_band(500.0, 0.3)
+	_pine_row(Color(0.04, 0.11, 0.12), 590.0, 0.85, 13, 1)
+	_fog_band(560.0, 0.22)
+	# The giant duck, peering out between the near pines, right of center.
+	var big_head := Vector2(800, 250)
+	var big_r: float = 150.0
+	var tilt: float = _big_tilt()
+	_duck_silhouette(big_head, big_r, tilt, Color(0.006, 0.008, 0.01))
+	# A veil of fog in front of it: the shape is only guessed at.
+	for k in 5:
+		var grow: float = 1.6 - float(k) * 0.22
+		draw_colored_polygon(_ellipse(big_head + Vector2(0, 40), big_r * grow, big_r * grow * 0.85, 40), Color(0.22, 0.34, 0.35, 0.035))
+	_fog_band(330.0, 0.22)
+	_fog_band(450.0, 0.2)
+	# Near row: a few trunks stand in front of its neck.
+	for spec in [[Vector2(700, 720), 520.0], [Vector2(905, 720), 470.0], [Vector2(560, 720), 380.0], [Vector2(1080, 720), 440.0], [Vector2(240, 720), 400.0], [Vector2(1230, 720), 420.0]]:
+		_pine(spec[0], spec[1], Color(0.02, 0.05, 0.06))
+	_fog_band(660.0, 0.18)
+	draw_rect(Rect2(-20, 668, 1320, 80), Color(0.01, 0.03, 0.03))
+	# Warm torchlight on the ground and the nearest trunks.
+	if light > 0.0:
+		var torch: Vector2 = _hero_torch()
+		for k in 5:
+			draw_circle(torch, 40.0 + k * 34.0, Color(1.0, 0.62, 0.25, 0.05 * light))
+		draw_colored_polygon(_ellipse(Vector2(torch.x, 672), 170.0, 18.0, 24), Color(1.0, 0.6, 0.25, 0.16 * light))
+		for x in [540.0, 610.0]:
+			draw_line(Vector2(x, 670), Vector2(x, 540), Color(1.0, 0.6, 0.3, 0.12 * light), 6.0, true)
+	_draw_hero_with_torch(light)
+	# When the torch dies the world sinks into black; only the eyes are left.
+	var dark: float = 0.93 * smoothstep(7.35, 8.1, t)
+	if dark > 0.0:
+		draw_rect(Rect2(Vector2(-20, -20), DESIGN + Vector2(40, 40)), Color(0, 0, 0, dark))
+	# Eyes last, so they burn above the darkness.
+	for i in _small_ducks().size():
+		var d: Dictionary = _small_ducks()[i]
+		var appear: float = clampf((t - float(d["start"])) / 0.6, 0.0, 1.0)
+		var close_at: float = 9.3 + float(i) * 0.1
+		var open: float = appear * (1.0 - clampf((t - close_at) / 0.25, 0.0, 1.0))
+		var period: float = 2.2 + _h(i + 700) * 2.0
+		if fposmod(t + _h(i + 710) * period, period) > period - 0.16:
+			open *= 0.1
+		_duck_eyes(d["head"], d["r"], d["tilt"], open, float(d["fade"]))
+	var big_open: float = smoothstep(2.0, 3.6, t)
+	if t > 6.35 and t < 7.05:
+		big_open *= 1.0 - sin((t - 6.35) / 0.7 * PI)
+	big_open *= 1.0 - smoothstep(10.2, 10.6, t)
+	_duck_eyes(big_head, big_r, tilt, big_open, 1.0)
 
 
-func _big_eye(c: Vector2, r: float, open: float, side: float) -> void:
-	if open <= 0.0:
-		return
-	draw_colored_polygon(_ellipse(c, r * 2.2, r * 1.6, 24), Color(1.0, 0.6, 0.1, 0.08 * open))
+## Torch light: steady, then it trembles, shrinks with a couple of sparks and goes out.
+func _torch_light() -> float:
+	if t < 7.2:
+		return 0.9 + 0.1 * sin(t * 11.0) * sin(t * 7.3)
+	var dying: float = 1.0 - smoothstep(7.2, 7.9, t)
+	return maxf(dying * (0.6 + 0.4 * sin(t * 47.0)), 0.0)
+
+
+func _big_tilt() -> float:
+	# Leaning in with curiosity, then a little more toward the hero.
+	return deg_to_rad(-12.0 - 7.0 * smoothstep(5.2, 6.4, t))
+
+
+## The small ducks behind the far trunks: where, how big, when their eyes show, how fogged.
+func _small_ducks() -> Array:
+	var out: Array = []
+	for i in 8:
+		var depth: float = _h(i + 800)
+		out.append({
+			"head": Vector2(130.0 + float(i) * 140.0 + _h(i + 810) * 50.0, 360.0 + depth * 120.0),
+			"r": 22.0 + depth * 22.0,
+			"tilt": deg_to_rad((_h(i + 820) - 0.5) * 30.0),
+			"start": 3.8 + _h(i + 830) * 2.4,
+			"fade": 0.35 + depth * 0.5,
+		})
+	return out
+
+
+## A duck head and its long wide neck as one smooth black shape (head center `c`, radius `r`).
+func _duck_silhouette(c: Vector2, r: float, tilt: float, color: Color) -> void:
 	var pts := PackedVector2Array()
+	# Skull: from the lower left, over the top, to the lower right.
+	for k in 33:
+		var a: float = deg_to_rad(lerpf(150.0, 390.0, float(k) / 32.0))
+		pts.append(Vector2(cos(a) * r * 1.02, sin(a) * r * 0.96))
+	# Right side of the neck: it pinches in under the head, then widens as it goes down.
+	for k in range(1, 13):
+		var u: float = float(k) / 12.0
+		var x: float = lerpf(r * 0.93, r * 0.88, u) - sin(u * PI) * r * 0.22
+		pts.append(Vector2(x, lerpf(r * 0.4, r * 4.8, u)))
+	for k in range(12, 0, -1):
+		var u: float = float(k) / 12.0
+		var x: float = -lerpf(r * 0.87, r * 0.9, u) + sin(u * PI) * r * 0.22
+		pts.append(Vector2(x, lerpf(r * 0.5, r * 4.8, u)))
+	var shape := PackedVector2Array()
+	for p in pts:
+		shape.append(c + p.rotated(tilt))
+	draw_colored_polygon(shape, color)
+	# The short, wide, rounded bill seen from the front, under the eyes: a broad drop.
+	var bill := PackedVector2Array()
 	for k in 24:
 		var a: float = TAU * float(k) / 24.0
-		pts.append(c + Vector2(cos(a) * r, sin(a) * r * 0.62 * open - side * cos(a) * 10.0 * open))
-	draw_colored_polygon(pts, Color(1.0, 0.68, 0.12))
-	draw_colored_polygon(_ellipse(c, r * 0.14, r * 0.55 * open, 12), INK)
-	_ink_outline(pts, 5.0)
+		var w: float = r * 0.34 * (1.0 - 0.35 * maxf(-sin(a), 0.0))
+		bill.append(c + Vector2(cos(a) * w, r * 0.36 + sin(a) * r * 0.26).rotated(tilt))
+	draw_colored_polygon(bill, color)
+	# Barely there: fog catching the top of the skull and the bill's lower edge.
+	var rim := PackedVector2Array()
+	for k in range(8, 25):
+		rim.append(shape[k])
+	draw_polyline(rim, Color(0.3, 0.42, 0.42, 0.12), 3.0, true)
+	var bill_edge := PackedVector2Array()
+	for k in range(2, 11):
+		bill_edge.append(bill[k])
+	draw_polyline(bill_edge, Color(0.3, 0.42, 0.42, 0.1), 2.0, true)
+
+
+## Two small amber eyes above the bill; `open` lifts them from the bottom like lids.
+func _duck_eyes(c: Vector2, r: float, tilt: float, open: float, strength: float) -> void:
+	if open <= 0.12 or strength <= 0.0:
+		return
+	var eye_r: float = clampf(r * 0.105, 3.0, 17.0)
+	for side in [-1.0, 1.0]:
+		var e: Vector2 = c + Vector2(float(side) * r * 0.3, r * 0.04).rotated(tilt)
+		var amber := Color(1.0, 0.66, 0.14, strength)
+		for k in 3:
+			draw_circle(e, eye_r * (2.2 + float(k) * 1.2), Color(1.0, 0.55, 0.1, 0.06 * strength * open))
+		var cut: float = e.y + eye_r - 2.0 * eye_r * open
+		var lid := PackedVector2Array()
+		for k in 40:
+			var a: float = TAU * float(k) / 40.0
+			var p: Vector2 = e + Vector2(cos(a) * eye_r, sin(a) * eye_r * 0.86)
+			lid.append(Vector2(p.x, maxf(p.y, cut)))
+		draw_colored_polygon(lid, amber)
+		if open > 0.5:
+			draw_circle(e + Vector2(0, eye_r * 0.1), eye_r * 0.38, Color(1.0, 0.93, 0.62, strength))
+
+
+## The hero, tiny and black at the bottom, holding up a torch.
+func _draw_hero_with_torch(light: float) -> void:
+	var feet := Vector2(600, 670)
+	var col := Color(0.01, 0.015, 0.02)
+	draw_colored_polygon(_ellipse(feet + Vector2(0, -16), 15.0, 12.0, 20), col)
+	draw_circle(feet + Vector2(7, -36), 10.0, col)
+	draw_colored_polygon(PackedVector2Array([feet + Vector2(14, -38), feet + Vector2(25, -35), feet + Vector2(14, -32)]), col)
+	draw_line(feet + Vector2(-4, -6), feet + Vector2(-5, 0), col, 3.0, true)
+	draw_line(feet + Vector2(5, -6), feet + Vector2(6, 0), col, 3.0, true)
+	for k in 4:
+		draw_line(feet + Vector2(-2, -38), feet + Vector2(-14.0 - float(k) * 2.0, -30.0 + float(k) * 4.0), col, 3.0, true)
+	var hand: Vector2 = feet + Vector2(16, -30)
+	draw_line(feet + Vector2(6, -24), hand, col, 4.0, true)
+	var top: Vector2 = _hero_torch()
+	draw_line(hand + Vector2(0, 8), top, Color(0.12, 0.08, 0.05), 3.0, true)
+	if light <= 0.08:
+		# A last thread of smoke from the dead torch.
+		if t < 9.5:
+			for k in 4:
+				var u: float = fposmod(t * 0.6 + float(k) * 0.25, 1.0)
+				draw_circle(top + Vector2(sin(u * 6.0) * 4.0, -u * 30.0), 2.0 + u * 3.0, Color(0.3, 0.32, 0.32, 0.25 * (1.0 - u)))
+		return
+	var h: float = (16.0 + sin(t * 13.0) * 2.0) * light
+	var sway: float = sin(t * 9.0) * 2.0
+	var flame := PackedVector2Array()
+	for k in 10:
+		var a: float = PI * float(k) / 9.0
+		flame.append(top + Vector2(cos(a) * 5.0 * light, sin(a) * 3.0 * light))
+	flame.append(top + Vector2(-4.0 * light, -h * 0.4))
+	flame.append(top + Vector2(sway, -h))
+	flame.append(top + Vector2(4.0 * light, -h * 0.4))
+	draw_colored_polygon(flame, Color(1.0, 0.55, 0.15))
+	draw_colored_polygon(_ellipse(top + Vector2(0, -h * 0.3), 2.2 * light, h * 0.3 + 0.5, 12), Color(1.0, 0.9, 0.55))
+	# Sparks as it dies.
+	if t > 7.2 and t < 7.9:
+		for k in 5:
+			var u: float = fposmod((t - 7.2) * 3.0 + float(k) * 0.2, 1.0)
+			draw_circle(top + Vector2((_h(k + 900) - 0.5) * 40.0 * u, -u * 34.0), 1.6, Color(1.0, 0.75, 0.3, 1.0 - u))
+
+
+func _hero_torch() -> Vector2:
+	return Vector2(616, 618)
+
+
+func _pine_row(color: Color, base_y: float, scale_k: float, count: int, row: int) -> void:
+	for i in count:
+		var px: float = (float(i) + _h(i + row * 40) * 0.6) / float(count) * 1400.0 - 60.0
+		_pine(Vector2(px, base_y), (260.0 + _h(i + row * 50) * 160.0) * scale_k, color)
+
+
+func _fog_band(y: float, alpha: float) -> void:
+	var fog := Color(0.3, 0.45, 0.45)
+	var drift: float = sin(t * 0.3 + y) * 30.0
+	draw_polygon(PackedVector2Array([Vector2(-20 + drift, y - 70), Vector2(1300 + drift, y - 70), Vector2(1300 + drift, y + 40), Vector2(-20 + drift, y + 40)]),
+			PackedColorArray([Color(fog, 0.0), Color(fog, 0.0), Color(fog, alpha), Color(fog, alpha)]))
 
 
 func _pine(base: Vector2, h: float, color: Color) -> void:
