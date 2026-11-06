@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://backend/progression/level_base.gd" id="1_level"]
 [ext_resource type="PackedScene" path="res://backend/player/player.tscn" id="2_player"]
@@ -13,6 +13,7 @@
 [ext_resource type="Script" path="res://backend/progression/game_over_controller.gd" id="11_controller"]
 [ext_resource type="Script" path="res://backend/progression/level_debug.gd" id="12_debug"]
 [ext_resource type="Script" path="res://frontend/levels/backdrop/backdrop.gd" id="13_backdrop"]
+[ext_resource type="PackedScene" path="res://frontend/fx/fragment_fx.tscn" id="14_fragment_fx"]
 
 [node name="LevelBase" type="Node2D"]
 script = ExtResource("1_level")
@@ -83,3 +84,4 @@ grow_horizontal = 2
 horizontal_alignment = 1
 autowrap_mode = 3
 
+[node name="FragmentFx" parent="." instance=ExtResource("14_fragment_fx")]
