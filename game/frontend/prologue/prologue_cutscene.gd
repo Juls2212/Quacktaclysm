@@ -1,6 +1,6 @@
 class_name PrologueCutscene
 extends Node
-## Opening cinematic of a new game, played over the tutorial when it loads (~92 s unskipped):
+## Opening cinematic of a new game, played over the tutorial when it loads (~95 s unskipped):
 ## presenters' card, title, the hero's eye, the stars falling on the city, eyes in the forest, the
 ## grandfather's comic page and the prophecy in the cave, then a fade into the tutorial.
 ## Draws on its own canvas layers above the level (shots below, cinema bars / subtitles / skip on
@@ -19,9 +19,9 @@ const TYPE_SPEED: float = 38.0
 signal finished
 
 ## Seconds each shot lasts (card, title, eye, fall, forest, comic, cave, out).
-@export var shot_durations: PackedFloat32Array = PackedFloat32Array([5.0, 5.0, 13.0, 13.0, 11.0, 16.0, 26.0, 3.0])
+@export var shot_durations: PackedFloat32Array = PackedFloat32Array([5.0, 5.0, 13.0, 13.0, 14.0, 16.0, 26.0, 3.0])
 ## Seconds into each shot before its first subtitle line.
-@export var line_leads: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 1.5, 1.6, 3.2, 1.0, 3.2, 0.0])
+@export var line_leads: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 1.5, 1.6, 9.0, 1.0, 3.2, 0.0])
 @export var eye_lines: Array[String] = [
 	"Mi abuelo decía que cuando un pato muere, nace una estrella.",
 	"Yo le creía. Todos le creíamos.",
