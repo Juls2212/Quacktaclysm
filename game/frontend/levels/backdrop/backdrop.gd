@@ -132,6 +132,16 @@ func _make_set(b: Biome) -> Dictionary:
 		var eyes := _parallax(root, "Eyes", BackdropLayer.Depth.MID)
 		eyes.z_index = -25
 		_fx(eyes, b, BackdropFx.Mode.EYES)
+	if b.kind == Biome.Kind.SWAMP or b.kind == Biome.Kind.FLOODED_SUBURB:
+		# Swaying moss, dripping roofs and lit windows, over the marsh trees and houses.
+		var marsh := _parallax(root, "Marsh", BackdropLayer.Depth.MID)
+		marsh.z_index = -25
+		_fx(marsh, b, BackdropFx.Mode.MARSH)
+		if show_foreground:
+			# The eyes of the moss creatures crouched in front of the play field.
+			var eyes := _parallax(root, "CreatureEyes", BackdropLayer.Depth.FORE)
+			eyes.z_index = 41
+			_fx(eyes, b, BackdropFx.Mode.CREATURE_EYES)
 	if show_particles and not Engine.is_editor_hint():
 		if b.particles != Biome.Particles.NONE:
 			_particles(root, b, b.particles, b.particle_color, b.particle_count, 7)
