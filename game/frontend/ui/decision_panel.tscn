@@ -1,6 +1,17 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://frontend/ui/decision_panel.gd" id="1_script"]
+[ext_resource type="Script" path="res://frontend/ui/decision_decor.gd" id="2_decor"]
+[ext_resource type="Script" path="res://frontend/ui/decision_button.gd" id="3_button"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_card"]
+
+[sub_resource type="FontVariation" id="FontVariation_italic"]
+variation_transform = Transform2D(1, 0, 0.22, 1, 0, 0)
+
+[sub_resource type="FontVariation" id="FontVariation_bold"]
+variation_embolden = 0.9
+spacing_glyph = 2
 
 [node name="DecisionPanel" type="CanvasLayer"]
 layer = 20
@@ -21,7 +32,18 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.55)
+color = Color(0.0235, 0.0431, 0.1176, 0.78)
+
+[node name="Vignette" type="Control" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_decor")
+mode = 0
 
 [node name="Center" type="CenterContainer" parent="Root"]
 layout_mode = 1
@@ -32,38 +54,89 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="Root/Center"]
-custom_minimum_size = Vector2(420, 0)
+custom_minimum_size = Vector2(560, 0)
 layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxEmpty_card")
+
+[node name="Card" type="Control" parent="Root/Center/Panel"]
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("2_decor")
+mode = 1
 
 [node name="Margin" type="MarginContainer" parent="Root/Center/Panel"]
 layout_mode = 2
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 20
+theme_override_constants/margin_left = 34
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 34
+theme_override_constants/margin_bottom = 26
 
 [node name="Box" type="VBoxContainer" parent="Root/Center/Panel/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 12
+
+[node name="Gem" type="Control" parent="Root/Center/Panel/Margin/Box"]
+custom_minimum_size = Vector2(0, 160)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("2_decor")
+mode = 2
 
 [node name="NameLabel" type="Label" parent="Root/Center/Panel/Margin/Box"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.97, 1, 1)
+theme_override_colors/font_outline_color = Color(0.02, 0.03, 0.08, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = SubResource("FontVariation_bold")
+theme_override_font_sizes/font_size = 32
 horizontal_alignment = 1
 
 [node name="DescriptionLabel" type="Label" parent="Root/Center/Panel/Margin/Box"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.78, 0.9, 1)
+theme_override_fonts/font = SubResource("FontVariation_italic")
+theme_override_font_sizes/font_size = 19
 horizontal_alignment = 1
 autowrap_mode = 3
 
+[node name="Rule" type="ColorRect" parent="Root/Center/Panel/Margin/Box"]
+custom_minimum_size = Vector2(380, 2)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+color = Color(0.3, 0.42, 0.7, 0.6)
+
 [node name="Buttons" type="HBoxContainer" parent="Root/Center/Panel/Margin/Box"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 40
 alignment = 1
 
 [node name="ReleaseButton" type="Button" parent="Root/Center/Panel/Margin/Box/Buttons"]
-custom_minimum_size = Vector2(140, 0)
+custom_minimum_size = Vector2(200, 60)
 layout_mode = 2
+script = ExtResource("3_button")
 
 [node name="KeepButton" type="Button" parent="Root/Center/Panel/Margin/Box/Buttons"]
-custom_minimum_size = Vector2(140, 0)
+custom_minimum_size = Vector2(200, 60)
 layout_mode = 2
+script = ExtResource("3_button")
+kind = 1
+
+[node name="Captions" type="HBoxContainer" parent="Root/Center/Panel/Margin/Box"]
+layout_mode = 2
+theme_override_constants/separation = 40
+alignment = 1
+
+[node name="ReleaseCaption" type="Label" parent="Root/Center/Panel/Margin/Box/Captions"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.82, 1, 1)
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+
+[node name="KeepCaption" type="Label" parent="Root/Center/Panel/Margin/Box/Captions"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.55, 0.45, 1)
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
