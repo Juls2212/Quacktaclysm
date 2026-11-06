@@ -57,6 +57,8 @@ func set_shot(next: Shot) -> void:
 	t = 0.0
 	line = -1
 	match next:
+		Shot.FALL:
+			_build_fall()
 		Shot.FOREST:
 			_build_forest()
 		Shot.COMIC:
@@ -72,9 +74,7 @@ func advance(delta: float) -> void:
 	var target := Vector2.ZERO
 	if shot == Shot.FALL:
 		# A short jolt on every impact.
-		var since: float = fposmod(t - 1.2, 1.9)
-		if t > 1.2 and since < 0.35:
-			target = Vector2(sin(t * 90.0), cos(t * 70.0)) * 7.0 * (1.0 - since / 0.35)
+		target = _fall_shake()
 	_shake = target
 	if shot == Shot.CAVE and _elder != null:
 		_animate_elder(delta)
@@ -280,67 +280,331 @@ func _draw_eye() -> void:
 # 4. The fall
 # =====================================================================================
 
+## The fall (~13 s). 1 (0-4 s): a velvet red sky of souls framed by glowing clouds, golden
+## four-pointed stars twinkling, the ruined city below. 2 (4-8 s): the gold stars dim and warm
+## five-pointed stars start to fall, turning, with a big one down the middle; the clouds lose
+## their gold. 3 (8-13 s): below a certain height each star turns red, cracks and grows an eye or
+## a mouth; where they hit the city: a flash, smoke, sparks and embers, a small jolt of the
+## camera, and the skyline lit orange from below.
+const SKY_CENTER := Color("5e0f12")
+const SKY_MID := Color("430a0c")
+const SKY_EDGE := Color("1c0304")
+const CLOUD := Color("8f8681")
+const CLOUD_CREAM := Color("d9cfc4")
+const CLOUD_GOLD := Color("ffd98a")
+const GOLD_HI := Color("fff1c2")
+const GOLD_MID := Color("e2b866")
+const GOLD_LOW := Color("8a6524")
+const FALL_CORE := Color("fff4c8")
+const FALL_AMBER := Color("ffc35a")
+const FALL_ORANGE := Color("e07a1a")
+const CORRUPT_RED := Color("c2331f")
+const CORRUPT_EDGE := Color("3a0608")
+const CITY := Color("120304")
+const CORRUPT_Y: float = 330.0
+## Golden stars of the sky: center, radius.
+const GOLD_STARS: Array = [
+	[Vector2(330, 150), 34.0], [Vector2(520, 250), 18.0], [Vector2(660, 140), 60.0], [Vector2(820, 230), 24.0],
+	[Vector2(960, 130), 40.0], [Vector2(440, 360), 26.0], [Vector2(760, 360), 16.0], [Vector2(900, 330), 44.0],
+	[Vector2(270, 300), 15.0], [Vector2(1040, 300), 20.0], [Vector2(590, 420), 22.0],
+]
+
+var _falling: Array = []
+var _clouds: Array = []
+
+
+func _build_fall() -> void:
+	_falling.clear()
+	for i in 18:
+		var r: float = 14.0 + _h(i + 1100) * 32.0
+		var dir := Vector2(0.45 if i % 2 == 0 else -0.4, 1.0).normalized()
+		var start: float = 4.0 + float(i) * 0.31 + _h(i + 1110) * 0.3
+		var land := Vector2(90.0 + _h(i + 1120) * 1100.0, 548.0 + _h(i + 1130) * 30.0)
+		var y0: float = -60.0 - r
+		var speed: float = maxf(170.0 + _h(i + 1140) * 150.0, (land.y - y0) / (dir.y * maxf(12.5 - start, 0.5)))
+		_falling.append(_fall_spec(start, r, dir, land, y0, speed, (_h(i + 1150) - 0.5) * 1.4, i))
+	# The big one, straight down the middle with a long trail.
+	_falling.append(_fall_spec(4.6, 90.0, Vector2(0.08, 1.0).normalized(), Vector2(660, 560), -200.0, 112.0, 0.4, 99))
+	_clouds.clear()
+	var banks: Array = [[Vector2(60, 300), Vector2(150, 260)], [Vector2(1220, 300), Vector2(150, 260)],
+			[Vector2(140, 70), Vector2(220, 80)], [Vector2(1140, 70), Vector2(220, 80)]]
+	for b in banks.size():
+		var bank: Array = banks[b]
+		for k in 16:
+			var c: Vector2 = bank[0] + Vector2((_h(b * 40 + k) - 0.5) * 2.0 * bank[1].x, (_h(b * 40 + k + 17) - 0.5) * 2.0 * bank[1].y)
+			_clouds.append([c, 40.0 + _h(b * 40 + k + 33) * 75.0, float(k)])
+
+
+func _fall_spec(start: float, r: float, dir: Vector2, land: Vector2, y0: float, speed: float, spin: float, salt: int) -> Dictionary:
+	var travel: float = (land.y - y0) / dir.y
+	var origin: Vector2 = land - dir * travel
+	return {"start": start, "r": r, "dir": dir, "origin": origin, "land": land, "speed": speed,
+			"hit": start + travel / speed, "spin": spin, "salt": salt}
+
+
+## Camera jolt right after each impact.
+func _fall_shake() -> Vector2:
+	var k: float = 0.0
+	for s in _falling:
+		var since: float = t - float(s["hit"])
+		if since >= 0.0 and since < 0.35:
+			k = maxf(k, (1.0 - since / 0.35) * (1.6 if float(s["r"]) > 60.0 else 0.8))
+	return Vector2(sin(t * 90.0), cos(t * 70.0)) * 6.0 * k
+
+
 func _draw_fall() -> void:
-	var sky := PackedVector2Array([Vector2(-20, -20), Vector2(1300, -20), Vector2(1300, 740), Vector2(-20, 740)])
-	draw_polygon(sky, PackedColorArray([Color(0.45, 0.05, 0.04), Color(0.5, 0.08, 0.04), Color(1.0, 0.52, 0.15), Color(0.95, 0.45, 0.12)]))
-	_brush_strokes(Rect2(0, 0, 1280, 460), Color(0.75, 0.22, 0.08, 0.5), 21)
-	# Columns of smoke rolling up from a few fires in the city.
-	for i in 4:
-		var base := Vector2(160.0 + float(i) * 300.0 + _h(i) * 80.0, 560.0)
-		for k in 9:
-			var u: float = fposmod(t * 0.07 + float(k) / 9.0 + _h(i), 1.0)
-			var p: Vector2 = base + Vector2(u * u * 140.0 + sin(u * 6.0 + float(k)) * 14.0, -u * 420.0)
-			var blob := _ellipse(p, 40.0 + u * 80.0, (40.0 + u * 80.0) * 0.7, 12, u * 2.0 + float(k))
-			draw_colored_polygon(blob, Color(0.14, 0.06, 0.06, 0.32 * (1.0 - u) * minf(u * 6.0, 1.0)))
-	# Falling stars with trails; each hits the ground on a beat.
-	for i in 7:
-		var hit_time: float = 1.2 + float(i) * 1.9
-		var fall_k: float = clampf(1.0 - (hit_time - t) / 1.1, 0.0, 1.0)
-		var land := Vector2(140.0 + _h(i + 7) * 1000.0, 560.0)
-		var from: Vector2 = land + Vector2(-380.0, -640.0)
-		if fall_k > 0.0 and fall_k < 1.0:
-			var p: Vector2 = from.lerp(land, fall_k)
-			for k in 8:
-				var q: Vector2 = p.lerp(from, float(k) / 16.0)
-				draw_circle(q, 9.0 - float(k), Color(EMBER.lerp(STAR, float(k) / 8.0), 0.7 - float(k) * 0.08))
-			_star(p, 16.0, STAR)
-		var since: float = t - hit_time
-		if since >= 0.0 and since < 2.5:
-			draw_circle(land, 30.0 + since * 120.0, Color(1.0, 0.85, 0.5, maxf(0.6 - since, 0.0)))
-			for k in 10:
-				var a: float = PI + _h(i * 10 + k) * PI
-				var e: Vector2 = land + Vector2.from_angle(a) * since * (120.0 + _h(k + i) * 160.0) + Vector2(0, since * since * 60.0)
-				draw_circle(e, 3.0, Color(EMBER, maxf(1.0 - since * 0.6, 0.0)))
-			draw_circle(land + Vector2(0, -20), 50.0 + since * 60.0, Color(0.3, 0.2, 0.16, maxf(0.5 - since * 0.25, 0.0)))
-	# Ruined city in black silhouette, poles leaning, wires down.
-	var skyline := PackedVector2Array([Vector2(-20, 740), Vector2(-20, 560)])
-	var x: float = -20.0
+	# Velvet sky: radial red, darker toward the edges, with a fine nap of noise.
+	draw_rect(Rect2(Vector2(-30, -30), DESIGN + Vector2(60, 60)), SKY_EDGE)
+	for k in 10:
+		var u: float = float(k) / 9.0
+		var col: Color = SKY_EDGE.lerp(SKY_MID, minf(u * 1.6, 1.0)).lerp(SKY_CENTER, maxf(u * 1.6 - 0.6, 0.0))
+		draw_colored_polygon(_ellipse(Vector2(640, 330), 900.0 * (1.0 - u * 0.75), 560.0 * (1.0 - u * 0.75), 48), Color(col, 0.55))
+	for i in 220:
+		var p := Vector2(_h(i + 1200) * 1280.0, _h(i + 1201) * 640.0)
+		var a: float = 0.03 + 0.03 * sin(t * 1.5 + float(i))
+		draw_rect(Rect2(p, Vector2(2, 2)), Color(1.0, 0.7, 0.7, a) if i % 2 == 0 else Color(0, 0, 0, a * 2.0))
+	# Fire glow rising from behind the skyline as the stars land.
+	var burning: float = 0.0
+	for s in _falling:
+		if t > float(s["hit"]):
+			burning += 0.12 if float(s["r"]) < 60.0 else 0.5
+	burning = clampf(burning, 0.0, 1.0)
+	if burning > 0.0:
+		draw_polygon(PackedVector2Array([Vector2(-30, 330), Vector2(1310, 330), Vector2(1310, 620), Vector2(-30, 620)]),
+				PackedColorArray([Color(1.0, 0.45, 0.1, 0.0), Color(1.0, 0.45, 0.1, 0.0), Color(1.0, 0.5, 0.12, 0.75 * burning), Color(1.0, 0.5, 0.12, 0.75 * burning)]))
+	# The golden stars of the souls, dimming once the fall begins.
+	var gold_k: float = 1.0 - smoothstep(4.0, 7.5, t)
+	if gold_k > 0.0:
+		for i in GOLD_STARS.size():
+			var spec: Array = GOLD_STARS[i]
+			var twinkle: float = 1.0 + 0.07 * sin(t * (2.0 + _h(i + 1300) * 2.0) + float(i))
+			_gold_star(spec[0], float(spec[1]) * twinkle, sin(t * 0.4 + float(i)) * 0.06, gold_k)
+	_draw_clouds(1.0 - smoothstep(4.0, 8.0, t) * 0.75)
+	# Falling stars, then the city they crash into.
+	for s in _falling:
+		_falling_star(s)
+	for i in 3:
+		_falling_moon(i)
+	_draw_city(burning)
+	for s in _falling:
+		_impact(s)
+	# Dark vignette: soft gradients on every side.
+	var edge := Color(0, 0, 0, 0.6)
+	var clear := Color(0, 0, 0, 0.0)
+	draw_polygon(PackedVector2Array([Vector2(-30, -30), Vector2(1310, -30), Vector2(1310, 200), Vector2(-30, 200)]), PackedColorArray([edge, edge, clear, clear]))
+	draw_polygon(PackedVector2Array([Vector2(-30, 520), Vector2(1310, 520), Vector2(1310, 750), Vector2(-30, 750)]), PackedColorArray([clear, clear, edge, edge]))
+	draw_polygon(PackedVector2Array([Vector2(-30, -30), Vector2(260, -30), Vector2(260, 750), Vector2(-30, 750)]), PackedColorArray([edge, clear, clear, edge]))
+	draw_polygon(PackedVector2Array([Vector2(1020, -30), Vector2(1310, -30), Vector2(1310, 750), Vector2(1020, 750)]), PackedColorArray([clear, edge, edge, clear]))
+
+
+## Fluffy clouds framing the sky: piles of soft balls, lit cream and gold on the side facing the
+## middle as if glowing from within. `glow` fades the gold away.
+func _draw_clouds(glow: float) -> void:
+	var center := Vector2(640, 330)
+	var drift := Vector2(sin(t * 0.12) * 10.0, cos(t * 0.09) * 4.0)
+	var rim: Color = CLOUD.lerp(CLOUD_CREAM, glow).lerp(CLOUD_GOLD, 0.45 * glow)
+	for cloud in _clouds:
+		var c: Vector2 = cloud[0] + drift
+		var r: float = cloud[1]
+		draw_circle(c, r * 1.15, Color(rim, 0.08 * glow))
+	for cloud in _clouds:
+		var c: Vector2 = cloud[0] + drift
+		var r: float = cloud[1]
+		var toward: Vector2 = (center - c).normalized()
+		draw_circle(c + toward * r * 0.1, r, rim)
+	for cloud in _clouds:
+		var c: Vector2 = cloud[0] + drift
+		var r: float = cloud[1]
+		var toward: Vector2 = (center - c).normalized()
+		draw_circle(c - toward * r * 0.06, r * 0.97, CLOUD.darkened(0.05 + 0.25 * (1.0 - glow)))
+
+
+## Four-pointed metallic gold star, the vertical arms longer, with bevel lines and a soft glow.
+func _gold_star(c: Vector2, r: float, rot: float, alpha: float) -> void:
+	for k in 4:
+		draw_circle(c, r * (0.9 + float(k) * 0.45), Color(1.0, 0.85, 0.45, 0.05 * alpha))
+	var tips: Array = []
+	var inners: Array = []
+	for k in 4:
+		var a: float = rot + PI * 0.5 * float(k) - PI * 0.5
+		var reach: float = r if k % 2 == 0 else r * 0.68
+		tips.append(c + Vector2.from_angle(a) * reach)
+		inners.append(c + Vector2.from_angle(a + PI * 0.25) * r * 0.2)
+	for k in 4:
+		var tip: Vector2 = tips[k]
+		var left: Vector2 = inners[(k + 3) % 4]
+		var right: Vector2 = inners[k]
+		draw_polygon(PackedVector2Array([c, left, tip, right]),
+				PackedColorArray([Color(GOLD_HI, alpha), Color(GOLD_MID, alpha), Color(GOLD_LOW, alpha), Color(GOLD_MID, alpha)]))
+		draw_line(c, tip, Color(1.0, 0.97, 0.85, 0.7 * alpha), maxf(r * 0.04, 1.0), true)
+	var outline := PackedVector2Array()
+	for k in 4:
+		outline.append(tips[k])
+		outline.append(inners[k])
+	outline.append(tips[0])
+	draw_polyline(outline, Color(0.35, 0.22, 0.06, 0.8 * alpha), maxf(r * 0.05, 1.2), true)
+
+
+## A warm five-pointed star with rounded tips, falling and turning; corrupts below CORRUPT_Y.
+func _falling_star(s: Dictionary) -> void:
+	var start: float = s["start"]
+	if t < start or t >= float(s["hit"]):
+		return
+	var r: float = s["r"]
+	var dir: Vector2 = s["dir"]
+	var p: Vector2 = Vector2(s["origin"]) + dir * float(s["speed"]) * (t - start)
+	var rot: float = float(s["spin"]) * (t - start)
+	var corrupt: float = smoothstep(CORRUPT_Y, CORRUPT_Y + 90.0, p.y)
+	# Trail: fading glow behind it (long for the big one).
+	var trail: float = r * (6.0 if r > 60.0 else 3.5)
+	for k in 10:
+		var u: float = float(k) / 10.0
+		var q: Vector2 = p - dir * trail * u
+		var col: Color = FALL_AMBER.lerp(CORRUPT_RED, corrupt)
+		draw_circle(q, r * (0.6 - u * 0.5), Color(col, 0.12 * (1.0 - u)))
+	# Halo, reddening as it corrupts.
+	var halo: Color = Color(1.0, 0.8, 0.4).lerp(Color(0.9, 0.2, 0.1), corrupt)
+	for k in 4:
+		draw_circle(p, r * (1.3 + float(k) * 0.55), Color(halo, 0.05))
+	var outer: Color = FALL_ORANGE.lerp(CORRUPT_RED, corrupt)
+	var mid: Color = FALL_AMBER.lerp(CORRUPT_RED.lightened(0.15), corrupt)
+	var core: Color = FALL_CORE.lerp(Color(0.95, 0.45, 0.3), corrupt)
+	# Glowing paper lantern: a soft bloom around the edge, then layers brightening to the middle.
+	for k in 3:
+		draw_colored_polygon(_round_star(p, r * (1.32 - float(k) * 0.1), rot), Color(mid, 0.1))
+	var body := _round_star(p, r, rot)
+	draw_colored_polygon(body, Color(outer, 0.92))
+	draw_colored_polygon(_round_star(p, r * 0.82, rot), Color(outer.lerp(mid, 0.6), 0.9))
+	draw_colored_polygon(_round_star(p, r * 0.62, rot), Color(mid, 0.92))
+	draw_colored_polygon(_round_star(p, r * 0.42, rot), Color(mid.lerp(core, 0.6), 0.95))
+	draw_colored_polygon(_round_star(p, r * 0.24, rot), core)
+	# Paper folds: light ridges out to the tips, faint creases toward the notches.
+	for k in 5:
+		var a: float = rot - PI * 0.5 + TAU * float(k) / 5.0
+		draw_line(p, p + Vector2.from_angle(a) * r * 0.92, Color(core, 0.45 * (1.0 - corrupt)), maxf(r * 0.04, 1.0), true)
+		draw_line(p, p + Vector2.from_angle(a + TAU / 10.0) * r * 0.5, Color(outer.darkened(0.25), 0.35), maxf(r * 0.03, 1.0), true)
+	if corrupt <= 0.0:
+		return
+	var edge := PackedVector2Array(body)
+	edge.append(body[0])
+	draw_polyline(edge, Color(CORRUPT_EDGE, corrupt), maxf(r * 0.09, 2.0), true)
+	# A black crack across it and a dark eye or mouth.
+	var crack := PackedVector2Array()
+	for k in 5:
+		var u: float = float(k) / 4.0
+		crack.append(p + Vector2(lerpf(-r * 0.7, r * 0.6, u), (0.2 - u * 0.5) * r + (r * 0.12 if k % 2 == 1 else -r * 0.08)).rotated(rot))
+	draw_polyline(crack, Color(0.03, 0.0, 0.0, corrupt), maxf(r * 0.07, 1.6), true)
+	if int(s["salt"]) % 2 == 0:
+		var eye := _ellipse(p + Vector2(r * 0.05, -r * 0.05).rotated(rot), r * 0.26, r * 0.15 * corrupt + 0.5, 16, rot)
+		draw_colored_polygon(eye, Color(0.04, 0.0, 0.0, corrupt))
+		draw_circle(p + Vector2(r * 0.08, -r * 0.05).rotated(rot), r * 0.07, Color(1.0, 0.55, 0.2, corrupt))
+	else:
+		var grin := PackedVector2Array()
+		for k in 12:
+			var u: float = float(k) / 11.0
+			grin.append(p + Vector2(lerpf(-r * 0.32, r * 0.32, u), r * 0.12 + sin(u * PI) * r * 0.18 * corrupt).rotated(rot))
+		for k in range(10, 0, -1):
+			var u: float = float(k) / 11.0
+			grin.append(p + Vector2(lerpf(-r * 0.32, r * 0.32, u), r * 0.12 + sin(u * PI) * r * 0.05).rotated(rot))
+		draw_colored_polygon(grin, Color(0.04, 0.0, 0.0, corrupt))
+
+
+## A small warm crescent drifting down among the stars, fading out before it reaches the city.
+func _falling_moon(i: int) -> void:
+	var start: float = 4.4 + float(i) * 1.1
+	if t < start:
+		return
+	var age: float = t - start
+	var p := Vector2(220.0 + float(i) * 380.0 + age * 18.0, -40.0 + age * 70.0)
+	var fade: float = 1.0 - smoothstep(CORRUPT_Y - 60.0, CORRUPT_Y + 20.0, p.y)
+	if fade <= 0.0:
+		return
+	var r: float = 18.0 + float(i) * 6.0
+	var rot: float = sin(age * 0.8 + float(i)) * 0.6
+	var pts := PackedVector2Array()
+	for k in 20:
+		var a: float = lerpf(-PI * 0.5, PI * 0.5, float(k) / 19.0)
+		pts.append(p + Vector2(cos(a) * r, sin(a) * r).rotated(rot))
+	for k in range(18, 0, -1):
+		var a: float = lerpf(-PI * 0.5, PI * 0.5, float(k) / 19.0)
+		pts.append(p + Vector2(cos(a) * r * 0.45 + r * 0.05, sin(a) * r * 0.92).rotated(rot))
+	for k in 3:
+		draw_circle(p + Vector2(r * 0.5, 0).rotated(rot), r * (1.0 + float(k) * 0.5), Color(1.0, 0.75, 0.35, 0.06 * fade))
+	draw_colored_polygon(pts, Color(FALL_AMBER, 0.9 * fade))
+
+
+## Five-pointed star with rounded tips (a smooth radius curve, so never self-intersecting).
+func _round_star(c: Vector2, r: float, rot: float) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for k in 60:
+		var a: float = TAU * float(k) / 60.0
+		var lobe: float = pow(0.5 + 0.5 * cos(5.0 * a), 2.2)
+		pts.append(c + Vector2.from_angle(a + rot - PI * 0.5) * r * lerpf(0.44, 1.0, lobe))
+	return pts
+
+
+## Flash, smoke column, sparks and embers where a star hits the city.
+func _impact(s: Dictionary) -> void:
+	var since: float = t - float(s["hit"])
+	if since < 0.0:
+		return
+	var land: Vector2 = s["land"]
+	var big: float = 2.0 if float(s["r"]) > 60.0 else 1.0
+	if since < 0.6:
+		var fade: float = 1.0 - since / 0.6
+		for k in 5:
+			draw_circle(land, (20.0 + since * 200.0) * big * (1.0 - float(k) * 0.17), Color(1.0, 0.62 + 0.07 * float(k), 0.25, 0.14 * fade))
+	for k in 6:
+		var u: float = fposmod(since * 0.25 + float(k) / 6.0, 1.0)
+		if since * 0.25 < float(k) / 6.0:
+			continue
+		var puff: Vector2 = land + Vector2(sin(u * 5.0 + float(k)) * 12.0 + u * 40.0, -u * 260.0 * big)
+		draw_colored_polygon(_ellipse(puff, (20.0 + u * 50.0) * big, (16.0 + u * 38.0) * big, 14, u * 3.0),
+				Color(0.12, 0.05, 0.05, 0.4 * (1.0 - u)))
+	if since < 1.6:
+		for k in 12:
+			var a: float = PI + 0.15 + _h(int(s["salt"]) * 12 + k) * (PI - 0.3)
+			var spd: float = (80.0 + _h(int(s["salt"]) * 12 + k + 5) * 200.0) * big
+			var e: Vector2 = land + Vector2.from_angle(a) * since * spd + Vector2(0, since * since * 160.0)
+			var col: Color = Color(1.0, 0.85, 0.3) if k % 3 == 0 else Color(1.0, 0.45, 0.12)
+			draw_circle(e, 2.2 if k % 3 == 0 else 1.6, Color(col, maxf(1.0 - since / 1.6, 0.0)))
+
+
+## The ruined city in black-red silhouette with poles and fallen wires, its edge lit by fire.
+func _draw_city(burning: float) -> void:
+	var skyline := PackedVector2Array([Vector2(-30, 740), Vector2(-30, 580)])
+	var x: float = -30.0
 	var k: int = 0
-	while x < 1300.0:
+	while x < 1310.0:
 		var w: float = 60.0 + _h(k + 200) * 90.0
-		var h: float = 50.0 + _h(k + 220) * 140.0
-		skyline.append(Vector2(x, 600.0 - h))
-		skyline.append(Vector2(x + w * 0.5, 600.0 - h + _h(k + 240) * 40.0))
-		skyline.append(Vector2(x + w, 600.0 - h * (0.7 + 0.3 * _h(k + 260))))
+		var h: float = 40.0 + _h(k + 220) * 120.0
+		skyline.append(Vector2(x, 612.0 - h))
+		skyline.append(Vector2(x + w * 0.5, 612.0 - h + _h(k + 240) * 36.0))
+		skyline.append(Vector2(x + w, 612.0 - h * (0.7 + 0.3 * _h(k + 260))))
 		x += w
 		k += 1
-	skyline.append(Vector2(1300, 560))
-	skyline.append(Vector2(1300, 740))
-	draw_colored_polygon(skyline, INK)
+	skyline.append(Vector2(1310, 580))
+	skyline.append(Vector2(1310, 740))
+	draw_colored_polygon(skyline, CITY)
+	if burning > 0.0:
+		var rim := PackedVector2Array()
+		for i in range(2, skyline.size() - 2):
+			rim.append(skyline[i])
+		draw_polyline(rim, Color(1.0, 0.55, 0.15, 0.55 * burning), 3.0, true)
 	for i in 5:
 		var px: float = 120.0 + float(i) * 260.0
 		var tilt: float = (_h(i + 300) - 0.5) * 0.6
-		var top := Vector2(px, 620) + Vector2.from_angle(-PI * 0.5 + tilt) * 260.0
-		draw_line(Vector2(px, 620), top, INK, 9.0, true)
-		draw_line(top + Vector2(-26, 8), top + Vector2(26, -8), INK, 6.0, true)
+		var top := Vector2(px, 640) + Vector2.from_angle(-PI * 0.5 + tilt) * 230.0
+		draw_line(Vector2(px, 650), top, CITY, 8.0, true)
+		draw_line(top + Vector2(-24, 8), top + Vector2(24, -8), CITY, 5.0, true)
 		if i < 4:
-			var next_top := Vector2(px + 260.0, 620) + Vector2.from_angle(-PI * 0.5 + (_h(i + 301) - 0.5) * 0.6) * 260.0
+			var next_top := Vector2(px + 260.0, 640) + Vector2.from_angle(-PI * 0.5 + (_h(i + 301) - 0.5) * 0.6) * 230.0
 			var wire := PackedVector2Array()
 			for j in 11:
 				var u: float = float(j) / 10.0
 				wire.append(top.lerp(next_top, u) + Vector2(0, sin(u * PI) * (40.0 + 60.0 * float(i % 2))))
-			draw_polyline(wire, INK, 2.4, true)
-	draw_rect(Rect2(-20, 600, 1320, 140), INK)
+			draw_polyline(wire, CITY, 2.4, true)
+	draw_rect(Rect2(-30, 630, 1340, 120), CITY)
 
 
 # =====================================================================================
@@ -613,18 +877,19 @@ func _almond_eye(c: Vector2, rx: float, tilt: float, open: float, alpha: float) 
 	closed.append(almond[0])
 	draw_polyline(closed, Color(0.12, 0.02, 0.02, alpha), 2.0, true)
 	# Brush strokes over and under: lids and brows.
-	for k in 3:
-		var lift: float = 6.0 + float(k) * 7.0
+	for k in 4:
+		var lift: float = 5.0 + float(k) * 6.5
 		var stroke := PackedVector2Array()
-		for j in 9:
-			var u: float = float(j) / 8.0
-			stroke.append(Vector2(lerpf(-rx * 1.1, rx * 1.05, u), -up_h * sin(u * PI) - lift - sin(u * 5.0 + float(k)) * 2.0))
-		draw_polyline(stroke, Color(0.1, 0.01, 0.01, (0.7 - float(k) * 0.18) * alpha), 3.5 - float(k), true)
-	var under := PackedVector2Array()
-	for j in 9:
-		var u: float = float(j) / 8.0
-		under.append(Vector2(lerpf(-rx * 0.9, rx * 1.0, u), down_h * sin(u * PI) + 7.0))
-	draw_polyline(under, Color(0.1, 0.01, 0.01, 0.5 * alpha), 3.0, true)
+		for j in 11:
+			var u: float = float(j) / 10.0
+			stroke.append(Vector2(lerpf(-rx * (1.2 - 0.05 * float(k)), rx * (1.1 + 0.04 * float(k)), u), -up_h * sin(u * PI) * (1.0 + 0.15 * float(k)) - lift - sin(u * 5.0 + float(k)) * 2.0))
+		draw_polyline(stroke, Color(0.16, 0.02, 0.02, (0.8 - float(k) * 0.16) * alpha), 5.5 - float(k) * 1.1, true)
+	for k in 2:
+		var under := PackedVector2Array()
+		for j in 11:
+			var u: float = float(j) / 10.0
+			under.append(Vector2(lerpf(-rx * (1.0 + 0.1 * float(k)), rx * 1.05, u), down_h * sin(u * PI) * (1.0 + 0.2 * float(k)) + 6.0 + float(k) * 7.0))
+		draw_polyline(under, Color(0.16, 0.02, 0.02, (0.6 - float(k) * 0.2) * alpha), 4.0 - float(k) * 1.2, true)
 	draw_set_transform(_shake, 0.0, Vector2.ONE)
 
 
