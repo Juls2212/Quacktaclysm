@@ -11,8 +11,13 @@ extends Node2D
 ## Swamp kinds (level 2): MOSS_SLAB a long slab of stone bricks with grass on top and vines
 ## hanging off the edges; MOSS_BROKEN the same with cut ends and a missing chunk; MOSS_STONES a
 ## pile of big mossy boulders; CAR a rusted car on a mound of mud; CAR_SUNK a car tilted and half
-## under dirty water; DOOR a door floating flat on the water.
-enum Kind { AUTO, GROUND, ISLAND, WALL, CEILING, PLANK, MOSS_SLAB, MOSS_BROKEN, MOSS_STONES, CAR, CAR_SUNK, DOOR }
+## under dirty water; DOOR a door floating flat on the water. Outside the marsh, CAR sits on a heap
+## of rubble instead of mud.
+## Decay kinds (levels 1 and 3): BUS a long rusted school bus; CONTAINER a rusted cargo container;
+## GIRDER a steel lattice girder; CRANE_HOOK a plate hanging from a crane hook on a chain that
+## sways a little (only the chain and hook move: the plate stays where its collision is).
+enum Kind { AUTO, GROUND, ISLAND, WALL, CEILING, PLANK, MOSS_SLAB, MOSS_BROKEN, MOSS_STONES, CAR, CAR_SUNK, DOOR,
+		BUS, CONTAINER, GIRDER, CRANE_HOOK }
 
 const INK := Color(0.106, 0.098, 0.122)
 const INK_W := 2.8
@@ -44,7 +49,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	# Only the kinds with swaying vines, drips or ripples redraw every frame.
 	var k: Kind = resolved_kind()
-	if k in [Kind.MOSS_SLAB, Kind.MOSS_BROKEN, Kind.MOSS_STONES, Kind.CAR_SUNK, Kind.DOOR]:
+	if k in [Kind.MOSS_SLAB, Kind.MOSS_BROKEN, Kind.MOSS_STONES, Kind.CAR_SUNK, Kind.DOOR, Kind.CRANE_HOOK]:
 		_time += delta
 		queue_redraw()
 
@@ -86,11 +91,19 @@ func _draw() -> void:
 		Kind.MOSS_STONES:
 			_draw_moss_stones()
 		Kind.CAR:
-			_draw_car(false)
+			_draw_car(false, b)
 		Kind.CAR_SUNK:
-			_draw_car(true)
+			_draw_car(true, b)
 		Kind.DOOR:
 			_draw_door()
+		Kind.BUS:
+			_draw_bus()
+		Kind.CONTAINER:
+			_draw_container()
+		Kind.GIRDER:
+			_draw_girder(-size.x * 0.5, size.x * 0.5, -size.y * 0.5, maxf(size.y, 20.0))
+		Kind.CRANE_HOOK:
+			_draw_crane_hook()
 
 
 # =====================================================================================
@@ -542,13 +555,16 @@ func _draw_moss_stones() -> void:
 
 
 ## Rusted car: on a mound of mud, or tilted and half under the water.
-func _draw_car(sunk: bool) -> void:
+func _draw_car(sunk: bool, b: Biome = null) -> void:
 	var half: Vector2 = size * 0.5
 	var top: float = -half.y
 	var tilt: float = -0.1 if sunk else 0.0
 	var rust := Color(0.5, 0.32, 0.2)
-	if not sunk:
+	var marsh: bool = b == null or b.kind == Biome.Kind.SWAMP or b.kind == Biome.Kind.FLOODED_SUBURB
+	if not sunk and marsh:
 		draw_colored_polygon(_blob(Vector2(0, top + 46), Vector2(half.x + 16, 30), 14, 41), Color(0.2, 0.17, 0.12))
+	elif not sunk:
+		_draw_rubble_heap(half.x, top)
 	var w: float = size.x * 0.5
 	var pts := PackedVector2Array([Vector2(-w, top + 22), Vector2(-w * 0.95, top + 8), Vector2(-w * 0.55, top + 4), Vector2(-w * 0.35, top),
 			Vector2(w * 0.4, top), Vector2(w * 0.6, top + 5), Vector2(w * 0.97, top + 9), Vector2(w, top + 22), Vector2(w * 0.9, top + 34), Vector2(-w * 0.92, top + 34)])
@@ -629,3 +645,147 @@ func _draw_vine_hang(from: Vector2, length: float, salt: int) -> void:
 		var p: Vector2 = pts[j]
 		var side: float = 1.0 if j % 4 == 1 else -1.0
 		draw_colored_polygon(_blob(p + Vector2(side * 4.0, 0), Vector2(3.5, 2.2), 8, salt * 7 + j), MOSS_LIGHT)
+
+
+# =====================================================================================
+# Decay kinds (levels 1 and 3)
+# =====================================================================================
+
+const RUST := Color(0.5, 0.29, 0.17)
+const RUST_LIGHT := Color(0.7, 0.4, 0.2)
+const BUS_YELLOW := Color(0.82, 0.62, 0.2)
+const STEEL_DARK := Color(0.3, 0.3, 0.32)
+const GLASS_DARK := Color(0.1, 0.11, 0.12)
+
+
+## A heap of broken concrete under a car, with a bent rebar or two sticking out.
+func _draw_rubble_heap(half_w: float, top: float) -> void:
+	draw_colored_polygon(_blob(Vector2(0, top + 44), Vector2(half_w + 14, 26), 14, 43), Color(0.24, 0.22, 0.21))
+	for i in 6:
+		var x: float = lerpf(-half_w, half_w, (float(i) + 0.5) / 6.0) + (_rand(i + 500) - 0.5) * 12.0
+		var chunk := _blob(Vector2(x, top + 40 + _rand(i + 510) * 14.0), Vector2(10 + _rand(i + 520) * 8.0, 7 + _rand(i + 530) * 5.0), 6, i + 540)
+		draw_colored_polygon(chunk, Color(0.55, 0.53, 0.5).darkened(_rand(i + 550) * 0.3))
+		_outline(chunk, 2.0)
+	for k in 2:
+		var x: float = (_rand(k + 560) - 0.5) * half_w * 1.4
+		draw_polyline(PackedVector2Array([Vector2(x, top + 44), Vector2(x + 6, top + 28), Vector2(x + 14, top + 24)]), RUST, 2.2, true)
+
+
+## Long rusted school bus: its roof is the walkable top.
+func _draw_bus() -> void:
+	var half: Vector2 = size * 0.5
+	var top: float = -half.y
+	var depth: float = 38.0
+	var body := PackedVector2Array([Vector2(-half.x + 6, top), Vector2(half.x - 14, top), Vector2(half.x - 2, top + 8), Vector2(half.x, top + depth - 6),
+			Vector2(half.x - 6, top + depth), Vector2(-half.x + 4, top + depth), Vector2(-half.x, top + depth - 6), Vector2(-half.x, top + 6)])
+	draw_colored_polygon(body, BUS_YELLOW)
+	# Black stripe, a row of windows (some smashed), rust bleeding down from the seams.
+	draw_line(Vector2(-half.x + 2, top + 24), Vector2(half.x - 2, top + 24), INK, 3.0, true)
+	var windows: int = maxi(int((size.x - 40.0) / 30.0), 2)
+	for i in windows:
+		var x0: float = -half.x + 14.0 + float(i) * (size.x - 40.0) / float(windows)
+		var win := _rect(Vector2(x0, top + 6), Vector2(x0 + 20, top + 19))
+		draw_colored_polygon(win, GLASS_DARK if _rand(i + 600) > 0.3 else Color(0.32, 0.36, 0.38))
+		if _rand(i + 610) > 0.65:
+			draw_line(Vector2(x0 + 3, top + 7), Vector2(x0 + 14, top + 17), Color(0.6, 0.64, 0.66, 0.8), 1.2, true)
+		_outline(win, 1.6)
+	for i in 5:
+		var x: float = -half.x + _rand(i + 620) * size.x
+		draw_colored_polygon(_blob(Vector2(x, top + 28 + _rand(i + 630) * 6.0), Vector2(8 + _rand(i + 640) * 10.0, 4.0), 8, i + 650), Color(RUST, 0.85))
+		draw_line(Vector2(x, top + 26), Vector2(x + 1, top + 36), Color(RUST, 0.7), 1.6, true)
+	# Front: a cracked windscreen and a dead headlight.
+	draw_colored_polygon(PackedVector2Array([Vector2(half.x - 12, top + 4), Vector2(half.x - 4, top + 10), Vector2(half.x - 4, top + 20), Vector2(half.x - 12, top + 20)]), GLASS_DARK)
+	draw_circle(Vector2(half.x - 4, top + 30), 3.0, Color(0.85, 0.8, 0.6))
+	_outline(body, 2.8)
+	for wx in [-half.x + 34.0, half.x - 40.0]:
+		draw_colored_polygon(_blob(Vector2(wx, top + depth + 2), Vector2(11, 7), 10, int(wx)), Color(0.12, 0.12, 0.13))
+		draw_arc(Vector2(wx, top + depth), 11.0, PI, TAU, 12, INK, 3.0, true)
+	draw_line(Vector2(-half.x + 8, top + 1), Vector2(half.x - 16, top + 1), BUS_YELLOW.lightened(0.25), 2.0, true)
+
+
+## Rusted cargo container: corrugated walls, door bars at one end, corner castings.
+func _draw_container() -> void:
+	var half: Vector2 = size * 0.5
+	var top: float = -half.y
+	# Not much deeper than its collision: the player walks under some of them.
+	var depth: float = maxf(size.y, 30.0)
+	var base: Color = Color(0.6, 0.24, 0.17) if _rand(700) > 0.5 else Color(0.2, 0.4, 0.43)
+	var box := _rect(Vector2(-half.x, top), Vector2(half.x, top + depth))
+	draw_colored_polygon(box, base)
+	var ribs: int = maxi(int(size.x / 9.0), 4)
+	for i in ribs:
+		var x: float = lerpf(-half.x + 6, half.x - 6, float(i) / float(ribs - 1))
+		draw_line(Vector2(x, top + 4), Vector2(x, top + depth - 4), base.darkened(0.3), 2.0, true)
+		draw_line(Vector2(x + 2, top + 4), Vector2(x + 2, top + depth - 4), base.lightened(0.12), 1.0, true)
+	for i in 4:
+		var x: float = -half.x + _rand(i + 710) * size.x
+		var streak := PackedVector2Array([Vector2(x - 4, top + 3), Vector2(x + 5, top + 3), Vector2(x + 2, top + 10 + _rand(i + 720) * (depth - 14)), Vector2(x - 2, top + 8)])
+		draw_colored_polygon(streak, Color(RUST_LIGHT, 0.75))
+	# Door bars on the right end.
+	for k in 2:
+		var x: float = half.x - 8.0 - float(k) * 9.0
+		draw_line(Vector2(x, top + 3), Vector2(x, top + depth - 3), STEEL_DARK, 3.0, true)
+		draw_rect(Rect2(x - 2.5, top + depth * 0.5 - 3, 5, 6), STEEL_DARK)
+	for corner in [Vector2(-half.x, top), Vector2(half.x - 8, top), Vector2(-half.x, top + depth - 7), Vector2(half.x - 8, top + depth - 7)]:
+		draw_rect(Rect2(corner, Vector2(8, 7)), base.darkened(0.45))
+	draw_line(Vector2(-half.x, top + 1.5), Vector2(half.x, top + 1.5), base.lightened(0.25), 2.0, true)
+	_outline(box, 2.8)
+
+
+## Steel lattice girder between x0 and x1: two chords and a zig-zag web, bolted.
+func _draw_girder(x0: float, x1: float, top: float, depth: float) -> void:
+	var steel := Color(0.46, 0.42, 0.4)
+	var bottom: float = top + depth
+	var top_chord := _rect(Vector2(x0, top), Vector2(x1, top + 6))
+	var bottom_chord := _rect(Vector2(x0, bottom - 5), Vector2(x1, bottom))
+	var bays: int = maxi(int((x1 - x0) / 22.0), 2)
+	for i in bays:
+		var a: float = lerpf(x0 + 3, x1 - 3, float(i) / float(bays))
+		var b2: float = lerpf(x0 + 3, x1 - 3, float(i + 1) / float(bays))
+		var from := Vector2(a, top + 5) if i % 2 == 0 else Vector2(a, bottom - 4)
+		var to := Vector2(b2, bottom - 4) if i % 2 == 0 else Vector2(b2, top + 5)
+		draw_line(from, to, INK, 5.0, true)
+		draw_line(from, to, steel.darkened(0.1), 3.0, true)
+	for chord in [top_chord, bottom_chord]:
+		draw_colored_polygon(chord, steel)
+		_outline(chord, 2.2)
+	for i in bays + 1:
+		var x: float = lerpf(x0 + 3, x1 - 3, float(i) / float(bays))
+		draw_circle(Vector2(x, top + 3), 1.4, STEEL_DARK)
+		draw_circle(Vector2(x, bottom - 2.5), 1.4, STEEL_DARK)
+	for i in 3:
+		var x: float = lerpf(x0, x1, _rand(i + 760))
+		draw_colored_polygon(_blob(Vector2(x, top + 3), Vector2(6, 2.4), 7, i + 770), Color(RUST_LIGHT, 0.7))
+	draw_line(Vector2(x0 + 2, top + 1), Vector2(x1 - 2, top + 1), steel.lightened(0.3), 1.5, true)
+
+
+## A short girder plate hanging from a crane hook on a long chain that sways a little.
+func _draw_crane_hook() -> void:
+	var half: Vector2 = size * 0.5
+	var top: float = -half.y
+	_draw_girder(-half.x, half.x, top, maxf(size.y, 18.0))
+	var sway: float = sin(_time * 0.9 + _rand(800) * TAU) * 6.0
+	var hook := Vector2(sway * 0.5, top - 46.0)
+	# Two slings from the plate's ends up to the hook.
+	for side in [-1.0, 1.0]:
+		var end := Vector2(side * (half.x - 10.0), top + 2.0)
+		draw_line(end, hook + Vector2(side * 3.0, 6.0), INK, 3.6, true)
+		draw_line(end, hook + Vector2(side * 3.0, 6.0), Color(0.55, 0.52, 0.48), 1.8, true)
+	# The hook: a curved steel claw under a pulley block.
+	draw_arc(hook + Vector2(0, 2), 7.0, 0.0, PI * 1.3, 12, INK, 5.5, true)
+	draw_arc(hook + Vector2(0, 2), 7.0, 0.0, PI * 1.3, 12, Color(0.85, 0.65, 0.2), 3.0, true)
+	var block := _rect(hook + Vector2(-9, -26), hook + Vector2(9, -8))
+	draw_colored_polygon(block, Color(0.85, 0.62, 0.18))
+	draw_line(hook + Vector2(-9, -17), hook + Vector2(9, -17), INK, 1.6, true)
+	_outline(block, 2.2)
+	# The chain up to the top of the world, bending with the sway.
+	var chain_top: float = -global_position.y - 40.0
+	var from := hook + Vector2(0, -26)
+	var links: int = maxi(int((from.y - chain_top) / 9.0), 2)
+	for i in links:
+		var u: float = float(i) / float(links)
+		var p := Vector2(from.x * (1.0 - u) + sin(u * PI) * sway * 0.4, lerpf(from.y, chain_top, u))
+		var vertical: bool = i % 2 == 0
+		var link := Rect2(p - (Vector2(3, 5) if vertical else Vector2(1.5, 5)), Vector2(6, 10) if vertical else Vector2(3, 10))
+		draw_rect(link, INK, false, 2.2)
+		draw_rect(link, Color(0.5, 0.48, 0.46), false, 1.0)
