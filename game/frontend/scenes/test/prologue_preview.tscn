@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://frontend/prologue/prologue_cutscene.tscn" id="1_prologue"]
+
+[node name="ProloguePreview" type="Node2D"]
+
+[node name="Hint" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 330.0
+offset_right = 1240.0
+offset_bottom = 390.0
+text = "Fin del prólogo. Pulsa F6 para verlo otra vez."
+horizontal_alignment = 1
+
+[node name="PrologueCutscene" parent="." instance=ExtResource("1_prologue")]
