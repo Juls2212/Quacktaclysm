@@ -138,6 +138,8 @@ var _style_fx: Node2D = null
 var _style_bits: Array = []
 var _style_clock: float = 0.0
 var _style_rng := RandomNumberGenerator.new()
+var _style_was_hurt: bool = false
+var _puff_clock: float = 0.0
 
 
 func _process(delta: float) -> void:
@@ -266,16 +268,33 @@ func get_part_center(p: Part) -> Vector2:
 func get_part_radius(p: Part) -> float:
 	match p:
 		Part.HEAD:
-			return _head_radius() * _look_scale()
+			return _head_radius() * _body_scale()
 		Part.WEAPON:
-			return 4.0 * _look_scale()
-	return 14.0 * _look_scale()
+			return 4.0 * _body_scale()
+	return 14.0 * _body_scale()
+
+
+## Size of the duck's ragdoll pieces (their collision), which the bigger cartoon drawing of the
+## brutes does not change.
+func _body_scale() -> float:
+	match look:
+		Look.BRUTE:
+			return 1.1
+		Look.BRUTE_TOUGH:
+			return 1.2
+	return _look_scale()
+
+
+## Cartoon exaggeration for every corrupted duck (not the hero or the grandfather): bigger bulging
+## eyes, heavier bags, bigger grime, patches and teeth, longer tufts, so the wear reads at game size.
+func _toon() -> bool:
+	return look != Look.HERO and look != Look.GRANDFATHER
 
 
 ## Weapon from the hand to its tip (local space, at rest).
 func get_weapon_vector() -> Vector2:
 	var pose: Vector2 = _idle_weapon_pose(false)
-	return Vector2.from_angle(pose.y) * _weapon_length() * _look_scale()
+	return Vector2.from_angle(pose.y) * _weapon_length() * _body_scale()
 
 
 func get_neck_point() -> Vector2:
@@ -361,9 +380,9 @@ func _build_root() -> Transform2D:
 func _look_scale() -> float:
 	match look:
 		Look.BRUTE:
-			return 1.1
-		Look.BRUTE_TOUGH:
 			return 1.2
+		Look.BRUTE_TOUGH:
+			return 1.25
 		Look.BANDIT:
 			return 0.95
 		Look.BOSS_WOODCUTTER, Look.BOSS_SWAMP, Look.BOSS_STORM:
@@ -1671,18 +1690,21 @@ func _draw_twisted_beak(at: Vector2, s: float) -> void:
 	for i in 2:
 		var x: float = 3.0 + i * 3.4
 		var y: float = 1.6 + open * 0.4 * (x / 9.0)
-		_shape(PackedVector2Array([at + Vector2(x - 0.7, y + 0.2) * s, at + Vector2(x + 0.7, y + 0.1) * s,
-				at + Vector2(x + 0.4 - i * 0.8, y - 1.3) * s]), TOOTH, 0.9)
+		var up: float = 1.3 * (1.7 if _toon() else 1.0)
+		_shape(PackedVector2Array([at + Vector2(x - 0.9, y + 0.2) * s, at + Vector2(x + 0.9, y + 0.1) * s,
+				at + Vector2(x + 0.4 - i * 0.8, y - up) * s]), TOOTH, 0.9)
 	var upper := PackedVector2Array([at + Vector2(-1, -4) * s, at + Vector2(4, -4.4) * s, at + Vector2(7.5, -5.6) * s,
 			at + Vector2(11, -4.6) * s, at + Vector2(12.5, -2.6) * s, at + Vector2(10, -0.6) * s, at + Vector2(6, 0.4) * s,
 			at + Vector2(2.5, 0.2) * s, at + Vector2(-1, 1.0) * s])
 	_shape(upper, BEAK, 2.2)
+	var fang: float = 1.75 if _toon() else 1.0
 	for i in 4:
 		var x: float = 1.0 + i * 2.3
-		var h: float = 1.2 + _hash(i * 7 + 1) * 1.4
+		var h: float = (1.2 + _hash(i * 7 + 1) * 1.4) * fang
 		var lean: float = (_hash(i * 7 + 2) - 0.5) * 1.6
-		_shape(PackedVector2Array([at + Vector2(x - 0.8, 0.3) * s, at + Vector2(x + 0.8, 0.1) * s,
-				at + Vector2(x + lean, 0.3 + h) * s]), TOOTH, 0.9)
+		var half_w: float = 0.8 * (1.3 if fang > 1.0 else 1.0)
+		_shape(PackedVector2Array([at + Vector2(x - half_w, 0.3) * s, at + Vector2(x + half_w, 0.1) * s,
+				at + Vector2(x + lean, 0.3 + h) * s]), TOOTH, 1.1 if fang > 1.0 else 0.9)
 	# The split running down the beak.
 	_line_strip(PackedVector2Array([at + Vector2(5.2, -4.8) * s, at + Vector2(6.0, -2.8) * s, at + Vector2(5.2, -1.2) * s,
 			at + Vector2(5.8, 0.3) * s]), INK, 1.4)
@@ -1706,9 +1728,13 @@ func _lid_color() -> Color:
 ## `glow` makes the iris burn with `iris` (corrupted ducks); otherwise `iris` is the pupil color.
 func _draw_tired_eye(at: Vector2, r: float, iris: Color, lid: Color, glow: bool, droop: float = -1.0) -> void:
 	var k: float = minf(_wear_k(), 1.0)
-	var bag := Color(BAGS, 0.3 + 0.35 * k)
-	_arc(at + Vector2(0, r * 0.45), r * 1.05, PI * 0.18, PI * 0.82, 8, bag, 1.8, true)
-	_arc(at + Vector2(-0.3, r * 0.95), r * 0.85, PI * 0.25, PI * 0.75, 6, Color(bag, bag.a * 0.6), 1.2, true)
+	var toon: bool = _toon()
+	if toon:
+		# Cartoon: bigger, bulging eyes over thick dark bags.
+		r *= 1.32
+	var bag := Color(BAGS.darkened(0.3) if toon else BAGS, (0.6 if toon else 0.3) + 0.35 * k)
+	_arc(at + Vector2(0, r * 0.45), r * 1.05, PI * 0.18, PI * 0.82, 8, bag, 3.2 if toon else 1.8, true)
+	_arc(at + Vector2(-0.3, r * 0.95), r * 0.85, PI * 0.25, PI * 0.75, 6, Color(bag, bag.a * 0.6), 2.2 if toon else 1.2, true)
 	if dead or ragdoll:
 		_draw_x_eye(at, r * 0.72)
 		return
@@ -1722,7 +1748,7 @@ func _draw_tired_eye(at: Vector2, r: float, iris: Color, lid: Color, glow: bool,
 		return
 	if glow:
 		_dot(at, r * (1.9 if enraged else 1.5), Color(iris, 0.22))
-	_shape(_ellipse(at, r, r * 1.08, 14), SCLERA, 1.7)
+	_shape(_ellipse(at, r, r * 1.08, 14), SCLERA, 2.2 if toon else 1.7)
 	# Tiny pupil that darts from spot to spot, never quite still.
 	var rate: float = 1.7 if look == Look.BANDIT else 0.7
 	var step: int = int(floorf(_time * rate + _hash(int(at.y * 5.0)) * 5.0))
@@ -1730,10 +1756,10 @@ func _draw_tired_eye(at: Vector2, r: float, iris: Color, lid: Color, glow: bool,
 	gaze += Vector2(sin(_time * 17.0), cos(_time * 13.0)) * 0.12
 	var pupil: Vector2 = at + gaze.limit_length(r * 0.5)
 	if glow:
-		_dot(pupil, r * 0.5, iris)
-		_dot(pupil, r * 0.2, INK)
+		_dot(pupil, r * (0.36 if toon else 0.5), iris)
+		_dot(pupil, r * (0.15 if toon else 0.2), INK)
 	else:
-		_dot(pupil, r * 0.27, iris)
+		_dot(pupil, r * (0.17 if toon else 0.27), iris)
 		_dot(pupil + Vector2(0.3, -0.4), 0.35, PAPER)
 	_draw_lid(at, r, droop if droop >= 0.0 else 0.3 + 0.12 * k, lid)
 
@@ -1764,7 +1790,7 @@ func _draw_mutant_eye(at: Vector2, r: float, salt: int) -> void:
 	var pulse: float = 0.6 + 0.4 * sin(_time * 4.0 + salt)
 	var tilt: float = (_hash(salt + 3) - 0.5) * 0.8
 	var shape := _ellipse(at, r, r * (0.9 + _hash(salt + 2) * 0.3), 12, tilt)
-	_dot(at, r * 1.9, Color(CORRUPT, 0.16 * pulse))
+	_dot(at, r * 1.9, Color(CORRUPT, (0.3 if _toon() else 0.16) * pulse))
 	if t > period - 0.16:
 		_shape(shape, _lid_color(), 1.5)
 		_line(at - Vector2(r, 0).rotated(tilt), at + Vector2(r, 0).rotated(tilt), INK, 1.2, true)
@@ -1803,7 +1829,7 @@ func _draw_extra_eyes(body_spots: bool = false) -> void:
 			continue
 		_cur = Part.BODY if body_spots else Part.HEAD
 		var at: Vector2 = spot[0]
-		var r: float = spot[1]
+		var r: float = float(spot[1]) * (1.35 if _toon() else 1.0)
 		if look == Look.BOSS_WOODCUTTER:
 			# A new ragged hole torn in the sack for each eye.
 			_shape(_ellipse(at, r * 1.4, r * 1.25, 10), Color(0.08, 0.07, 0.1), 1.4)
@@ -1847,9 +1873,10 @@ func _grime(center: Vector2, r: Vector2, count: int, salt: int) -> void:
 		var a: float = _hash(salt + i * 3) * TAU
 		var rr: float = sqrt(_hash(salt + i * 3 + 1)) * 0.75
 		var p: Vector2 = center + Vector2(cos(a) * r.x, sin(a) * r.y) * rr
-		var s: float = 1.3 + _hash(salt + i * 3 + 2) * 2.4
+		var s: float = (1.3 + _hash(salt + i * 3 + 2) * 2.4) * (1.6 if _toon() else 1.0)
 		var col: Color = SOOT if i % 3 == 0 else DIRT
-		_poly(_blob(p, Vector2(s * 1.35, s), 7, salt + i * 11), Color(col, (0.2 + 0.15 * _hash(salt + i * 7)) * minf(k, 1.0)))
+		var alpha: float = (0.4 + 0.2 * _hash(salt + i * 7)) if _toon() else (0.2 + 0.15 * _hash(salt + i * 7))
+		_poly(_blob(p, Vector2(s * 1.35, s), 7, salt + i * 11), Color(col.darkened(0.15) if _toon() else col, alpha * minf(k, 1.0)))
 		if i % 4 == 1:
 			_dot(p + Vector2(s * 1.6, -s * 0.4), 0.55, Color(col, 0.5 * minf(k, 1.0)))
 
@@ -1873,7 +1900,7 @@ func _draw_tufts(c: Vector2, r: float, color: Color, count: int) -> void:
 	for i in count:
 		var a: float = deg_to_rad(-70.0 - 150.0 * float(i) / float(maxi(count - 1, 1))) + (_hash(i * 5 + 3) - 0.5) * 0.3
 		var base: Vector2 = c + Vector2.from_angle(a) * (r - 1.0)
-		var length: float = (3.5 + _hash(i * 5 + 1) * 4.0) * (0.7 + 0.3 * k)
+		var length: float = (3.5 + _hash(i * 5 + 1) * 4.0) * (0.7 + 0.3 * k) * (1.8 if _toon() else 1.0)
 		var bend: float = (_hash(i * 5 + 2) - 0.5) * 0.9
 		var sway: float = 0.0 if ragdoll else sin(_time * 2.4 + i) * 0.08
 		var tip: Vector2 = base + Vector2.from_angle(a + bend + sway) * (length + 1.0)
@@ -1887,6 +1914,8 @@ func _draw_tufts(c: Vector2, r: float, color: Color, count: int) -> void:
 
 ## Square of cloth sewn on with big crude stitches.
 func _draw_patch(at: Vector2, s: float, color: Color, rot: float) -> void:
+	if _toon():
+		s *= 1.3
 	var corners := PackedVector2Array()
 	for v in [Vector2(-s, -s), Vector2(s, -s * 0.9), Vector2(s * 1.05, s), Vector2(-s * 0.95, s * 1.05)]:
 		corners.append(at + (v as Vector2).rotated(rot))
@@ -1897,11 +1926,13 @@ func _draw_patch(at: Vector2, s: float, color: Color, rot: float) -> void:
 		var n: Vector2 = (b - a).orthogonal().normalized()
 		for t in [0.33, 0.66]:
 			var p: Vector2 = a.lerp(b, t)
-			_line(p - n * 0.9, p + n * 0.9, INK, 0.9, true)
+			_line(p - n * 1.2, p + n * 1.2, INK, 1.3 if _toon() else 0.9, true)
 
 
 ## Dirty bandage wound between two points, with a rusty stain.
 func _draw_bandage(a: Vector2, b: Vector2, w: float) -> void:
+	if _toon():
+		w *= 1.35
 	_line(a, b, INK, w + 2.2, true)
 	_line(a, b, BANDAGE, w, true)
 	var d: Vector2 = b - a
@@ -1911,7 +1942,7 @@ func _draw_bandage(a: Vector2, b: Vector2, w: float) -> void:
 	for i in count:
 		var p: Vector2 = a.lerp(b, (float(i) + 0.5) / float(count))
 		_line(p - n * w * 0.5 + dir * 0.6, p + n * w * 0.5 - dir * 0.6, Color(INK, 0.45), 0.9, true)
-	_dot(a.lerp(b, 0.6), w * 0.3, Color(0.55, 0.3, 0.22, 0.45))
+	_dot(a.lerp(b, 0.6), w * (0.42 if _toon() else 0.3), Color(0.55, 0.3, 0.22, 0.75 if _toon() else 0.45))
 
 
 ## Bare patch of pale pink skin where the feathers were torn out, stitched shut.
@@ -1948,6 +1979,8 @@ func _draw_cracks(center: Vector2, r: Vector2, count: int, salt: int) -> void:
 
 ## Dark drool stretching from the beak, dripping off now and then.
 func _draw_drool(at: Vector2, amount: float) -> void:
+	if _toon():
+		amount *= 1.6
 	var cycle: float = fposmod(_time * 0.45 + float(int(look)) * 0.3, 1.0)
 	var full: float = 10.0 * amount
 	var length: float = lerpf(2.0, full, _ease_out(cycle / 0.8)) if cycle < 0.8 else full * (1.0 - (cycle - 0.8) / 0.2 * 0.6)
@@ -1958,8 +1991,8 @@ func _draw_drool(at: Vector2, amount: float) -> void:
 	var end: Vector2 = at + down * length + Vector2(sin(_time * 3.0) * 0.8, 0.0)
 	var mid: Vector2 = at.lerp(end, 0.5) + Vector2(0.6, 0.0)
 	var strand := PackedVector2Array([at, mid, end])
-	_line_strip(strand, INK, 2.8)
-	_line_strip(strand, DROOL, 1.5)
+	_line_strip(strand, INK, 3.6 if _toon() else 2.8)
+	_line_strip(strand, DROOL, 2.2 if _toon() else 1.5)
 	var blob: float = 1.3 + amount * 0.5
 	_dot(end, blob + 0.7, INK)
 	_dot(end, blob, DROOL)
@@ -2004,12 +2037,18 @@ func _draw_gas_mask(c: Vector2, r: float) -> void:
 	_shape(plate, rubber)
 	_poly(_blob(c + Vector2(r * 0.4, r * 0.4), Vector2(2.2, 1.6), 7, 91), Color(DIRT, 0.5))
 	var broken: bool = dead or ragdoll
-	var glass := Color(0.55, 0.5, 0.3) if broken else Color(1.0, 0.86, 0.25)
+	var glass := Color(0.55, 0.5, 0.3) if broken else (Color(1.0, 0.93, 0.45) if level_style == LevelStyle.POLVO else Color(1.0, 0.86, 0.25))
 	for v in [[c + Vector2(2.5, -3.2), 3.3], [c + Vector2(r * 0.75, -2.4), 2.8]]:
 		var at: Vector2 = v[0]
 		var vr: float = v[1]
 		if not broken:
-			_dot(at, vr * 1.7, Color(1.0, 0.86, 0.25, 0.22))
+			if level_style == LevelStyle.POLVO:
+				# Dusty city ducks: the visors burn through the dust.
+				var beat: float = 0.75 + 0.25 * sin(_time * 3.0 + float(style_seed % 5))
+				_dot(at, vr * 3.0, Color(1.0, 0.8, 0.2, 0.22 * beat))
+				_dot(at, vr * 2.0, Color(1.0, 0.86, 0.25, 0.45 * beat))
+			else:
+				_dot(at, vr * 1.7, Color(1.0, 0.86, 0.25, 0.22))
 		_shape(_ellipse(at, vr + 1.1, vr + 1.1, 14), Color(0.45, 0.42, 0.36), 1.6)
 		_shape(_ellipse(at, vr, vr, 14), glass, 1.2)
 		if broken:
@@ -2423,13 +2462,36 @@ func _advance_style(delta: float) -> void:
 			"spark":
 				v.y += 160.0 * delta
 				v *= 0.97
+			"puff":
+				v *= 0.92
 		bit["v"] = v
 		bit["p"] = (bit["p"] as Vector2) + v * delta
 	if not dead and not ragdoll and part == Part.ALL and is_visible_in_tree():
 		_style_clock -= delta
-		if _style_clock <= 0.0 and _style_bits.size() < 40:
+		if _style_clock <= 0.0 and _style_bits.size() < 60:
 			_emit_style_bit()
+		if level_style == LevelStyle.POLVO:
+			_emit_dust_puffs(delta)
 	_style_fx.queue_redraw()
+
+
+## Dusty ducks raise a cloud at their feet while walking and burst into dust when hit.
+func _emit_dust_puffs(delta: float) -> void:
+	var feet: Vector2 = to_global(Vector2(0.0, foot_y))
+	var s: float = _look_scale()
+	if hurt and not _style_was_hurt:
+		var root: Transform2D = _build_root()
+		for k in 9:
+			var at: Vector2 = to_global(root * Vector2(_style_rng.randf_range(-14.0, 14.0), _style_rng.randf_range(-34.0, -6.0)))
+			var dir: Vector2 = Vector2.from_angle(_style_rng.randf() * TAU)
+			_add_bit(at, dir * _style_rng.randf_range(40.0, 90.0), _style_rng.randf_range(0.5, 0.8), "puff", 5.0 * s)
+	_style_was_hurt = hurt
+	_puff_clock -= delta
+	if grounded and ground_speed > 5.0 and _puff_clock <= 0.0 and _style_bits.size() < 60:
+		_puff_clock = 0.11
+		var back: float = -signf(global_transform.x.x) if global_transform.x.x != 0.0 else -1.0
+		_add_bit(feet + Vector2(_style_rng.randf_range(-6.0, 6.0) * s, -3.0), Vector2(back * _style_rng.randf_range(15.0, 35.0), -_style_rng.randf_range(8.0, 20.0)),
+				_style_rng.randf_range(0.45, 0.7), "puff", 4.0 * s)
 
 
 func _emit_style_bit() -> void:
@@ -2458,8 +2520,8 @@ func _emit_style_bit() -> void:
 				_add_bit(from, dir * _style_rng.randf_range(50.0, 130.0), _style_rng.randf_range(0.3, 0.5), "spark")
 
 
-func _add_bit(p: Vector2, v: Vector2, life: float, kind: String) -> void:
-	_style_bits.append({"p": p, "v": v, "life": life, "max": life, "kind": kind})
+func _add_bit(p: Vector2, v: Vector2, life: float, kind: String, size: float = 1.0) -> void:
+	_style_bits.append({"p": p, "v": v, "life": life, "max": life, "kind": kind, "size": size})
 
 
 ## Algae strands as [root (rig space), length, phase]: off the head and the shoulders.
@@ -2468,11 +2530,14 @@ func _algae_strands() -> Array:
 	var r: float = _head_radius()
 	var sh: Vector2 = _shoulder()
 	var out: Array = []
+	# [root, length, phase, on the head]
+	# Off the crown and the back of the head (the face stays clear), the shoulders and the hip;
+	# none reaches below the feet.
 	for k in 3:
-		out.append([c + Vector2(-r * 0.7 + float(k) * r * 0.55, -r * 0.55 + absf(float(k) - 1.0) * r * 0.3), 9.0 + _sh(k) * 8.0, _sh(k + 10) * TAU])
-	out.append([sh + Vector2(-4, 2), 14.0 + _sh(4) * 6.0, _sh(14) * TAU])
-	out.append([sh + Vector2(6, 4), 12.0 + _sh(5) * 8.0, _sh(15) * TAU])
-	out.append([Vector2(-10, -6), 10.0 + _sh(6) * 6.0, _sh(16) * TAU])
+		out.append([c + Vector2(-r * 0.95 + float(k) * r * 0.38, -r * 0.6 + absf(float(k) - 1.0) * r * 0.25), 13.0 + _sh(k) * 7.0, _sh(k + 10) * TAU, true])
+	out.append([sh + Vector2(-5, 2), 15.0 + _sh(4) * 5.0, _sh(14) * TAU, false])
+	out.append([sh + Vector2(5, 4), 13.0 + _sh(5) * 5.0, _sh(15) * TAU, false])
+	out.append([Vector2(-12, -10), 8.0 + _sh(6) * 2.0, _sh(16) * TAU, false])
 	return out
 
 
@@ -2483,7 +2548,8 @@ func _algae_points(s: Array) -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	for i in 6:
 		var u: float = float(i) / 5.0
-		pts.append(root + Vector2(sin(_time * 2.2 + phase + u * 2.4) * 3.0 * u, length * u))
+		var still: float = 0.3 if ragdoll else 1.0
+		pts.append(root + Vector2(sin(_time * 2.2 + phase + u * 2.4) * 4.0 * u * still, length * u))
 	return pts
 
 
@@ -2492,15 +2558,26 @@ func _crack_paths() -> Array:
 	var out: Array = []
 	var c: Vector2 = _head_center()
 	var r: float = _head_radius()
-	var starts: Array = [Vector2(-8, -20), Vector2(4, -12), Vector2(-4, -6), c + Vector2(-r * 0.4, -r * 0.5), c + Vector2(r * 0.1, r * 0.1)]
+	var starts: Array = [Vector2(-8, -20), Vector2(4, -12), Vector2(-4, -8), c + Vector2(-r * 0.4, -r * 0.4), c + Vector2(-r * 0.1, r * 0.2)]
+	var body_c := Vector2(-1, -15)
+	var body_r := Vector2(13.0, 10.5)
 	for k in starts.size():
+		var head: bool = k >= 3
 		var p: Vector2 = starts[k]
 		var dir: float = _sh(k + 20) * TAU
 		var pts := PackedVector2Array([p])
-		var step: float = 3.5 if k >= 3 else 4.5
+		var step: float = 2.6 if head else 3.4
 		for i in 4:
 			dir += (_sh(k * 7 + i + 30) - 0.5) * 1.6
 			p += Vector2.from_angle(dir) * step
+			# Keep the crack on the duck: pull it back inside the head or the body.
+			if head:
+				p = c + (p - c).limit_length(r * 0.8)
+			else:
+				var q: Vector2 = (p - body_c) / body_r
+				if q.length() > 1.0:
+					p = body_c + q.normalized() * body_r
+					dir += PI * 0.6
 			pts.append(p)
 		out.append(pts)
 	return out
@@ -2510,7 +2587,7 @@ func _draw_level_style() -> void:
 	var fx: Node2D = _style_fx
 	if fx == null:
 		return
-	if part == Part.ALL and not ragdoll:
+	if part != Part.WEAPON and part != Part.FX:
 		fx.draw_set_transform_matrix(_build_root())
 		match level_style:
 			LevelStyle.POLVO:
@@ -2531,41 +2608,72 @@ func _draw_level_style() -> void:
 				fx.draw_circle(p + Vector2(-0.6, -0.6), 0.7, Color(0.85, 1.0, 0.8, 0.8 * a))
 			"spark":
 				var v: Vector2 = bit["v"]
-				fx.draw_line(p, p - v * 0.035, Color(1.0, 0.9, 0.4, a), 1.6, true)
-				fx.draw_circle(p, 1.2, Color(1.0, 1.0, 0.8, a))
+				fx.draw_line(p, p - v * 0.035, Color(1.0, 0.9, 0.4, a), 2.0, true)
+				fx.draw_circle(p, 1.5, Color(1.0, 1.0, 0.8, a))
+			"puff":
+				var grow: float = float(bit["size"]) * (1.0 + (1.0 - a) * 1.6)
+				fx.draw_circle(p, grow, Color(0.66, 0.62, 0.55, 0.5 * a))
+				fx.draw_circle(p + Vector2(-grow * 0.3, -grow * 0.3), grow * 0.55, Color(0.78, 0.74, 0.66, 0.4 * a))
 
 
-## Dust and soot blotches over the feathers.
+## Whether a style decoration on the head (or on the body) belongs to the piece this rig draws
+## (the whole duck, or one ragdoll piece).
+func _style_on(head: bool) -> bool:
+	return part == Part.ALL or (part == Part.HEAD) == head
+
+
+## Big grey dust and soot blotches over the feathers.
 func _style_dust(fx: Node2D) -> void:
 	var c: Vector2 = _head_center()
 	var r: float = _head_radius()
-	for i in 6:
-		var at := Vector2(-1.0 + (_sh(i) - 0.5) * 22.0, -15.0 + (_sh(i + 40) - 0.5) * 16.0)
-		if i >= 4:
+	for i in 7:
+		var on_head: bool = i >= 5
+		if not _style_on(on_head):
+			continue
+		var at := Vector2(-1.0 + (_sh(i) - 0.5) * 24.0, -15.0 + (_sh(i + 40) - 0.5) * 18.0)
+		if on_head:
 			at = c + Vector2((_sh(i) - 0.5) * r * 1.1, (_sh(i + 40) - 0.5) * r * 0.9)
-		var col := Color(0.5, 0.45, 0.38, 0.42) if i % 2 == 0 else Color(0.3, 0.28, 0.26, 0.32)
-		fx.draw_colored_polygon(_ellipse(at, 3.0 + _sh(i + 50) * 3.5, 2.2 + _sh(i + 60) * 2.0, 12, _sh(i + 70) * PI), col)
-	for i in 5:
-		fx.draw_circle(Vector2(-12.0 + _sh(i + 80) * 22.0, -26.0 + _sh(i + 90) * 22.0), 0.9, Color(0.25, 0.23, 0.2, 0.6))
+		var col := Color(0.55, 0.53, 0.5, 0.7) if i % 2 == 0 else Color(0.32, 0.31, 0.3, 0.6)
+		var blot := _ellipse(at, 5.0 + _sh(i + 50) * 4.5, 3.6 + _sh(i + 60) * 2.6, 12, _sh(i + 70) * PI)
+		fx.draw_colored_polygon(blot, col)
+		fx.draw_colored_polygon(_ellipse(at + Vector2(-1.2, -1.0), 2.2, 1.5, 8), Color(0.82, 0.8, 0.76, 0.35))
+	if _style_on(false):
+		for i in 6:
+			fx.draw_circle(Vector2(-12.0 + _sh(i + 80) * 22.0, -26.0 + _sh(i + 90) * 22.0), 1.3, Color(0.22, 0.2, 0.18, 0.75))
 
 
-## Algae hanging off the head and the arms, swaying, with a moss cap.
+## Long thick algae hanging off the head and the arms, swaying, with a moss cap.
 func _style_algae(fx: Node2D) -> void:
 	var c: Vector2 = _head_center()
 	var r: float = _head_radius()
-	fx.draw_colored_polygon(_ellipse(c + Vector2(-1, -r * 0.72), r * 0.75, r * 0.32, 14), Color(0.3, 0.52, 0.24, 0.9))
+	if _style_on(true):
+		var cap := _ellipse(c + Vector2(-1, -r * 0.72), r * 0.95, r * 0.42, 14)
+		fx.draw_colored_polygon(cap, Color(0.3, 0.52, 0.24, 0.95))
+		var ring := PackedVector2Array(cap)
+		ring.append(cap[0])
+		fx.draw_polyline(ring, Color(INK, 0.7), 1.6, true)
 	for s in _algae_strands():
+		if not _style_on(bool(s[3])):
+			continue
 		var pts: PackedVector2Array = _algae_points(s)
-		fx.draw_polyline(pts, Color(INK, 0.85), 4.0, true)
-		fx.draw_polyline(pts, Color(0.3, 0.55, 0.22), 2.2, true)
+		fx.draw_polyline(pts, Color(INK, 0.9), 5.2, true)
+		fx.draw_polyline(pts, Color(0.3, 0.55, 0.22), 3.2, true)
+		fx.draw_polyline(pts, Color(0.5, 0.75, 0.35, 0.7), 1.0, true)
 		var tip: Vector2 = pts[pts.size() - 1]
-		fx.draw_colored_polygon(_ellipse(tip + Vector2(0, 1.5), 2.2, 3.0, 10), Color(0.42, 0.7, 0.3))
+		fx.draw_colored_polygon(_ellipse(tip + Vector2(0, 1.5), 2.6, 3.6, 10), Color(0.42, 0.7, 0.3))
 
 
-## Glowing yellow cracks that pulse.
+## Wide glowing yellow cracks that pulse, with a halo of light around them.
 func _style_cracks(fx: Node2D) -> void:
 	var pulse: float = 0.55 + 0.45 * sin(_time * 3.2 + float(style_seed % 7))
-	for path in _crack_paths():
-		fx.draw_polyline(path, Color(INK, 0.7), 3.4, true)
-		fx.draw_polyline(path, Color(1.0, 0.82, 0.25, 0.25 * pulse), 6.0, true)
-		fx.draw_polyline(path, Color(1.0, 0.92, 0.45, 0.55 + 0.45 * pulse), 1.6, true)
+	if dead or ragdoll:
+		pulse = 0.35
+	var paths: Array = _crack_paths()
+	for k in paths.size():
+		if not _style_on(k >= 3):
+			continue
+		var path: PackedVector2Array = paths[k]
+		fx.draw_polyline(path, Color(1.0, 0.8, 0.2, 0.12 * pulse), 11.0, true)
+		fx.draw_polyline(path, Color(1.0, 0.82, 0.25, 0.28 * pulse), 7.0, true)
+		fx.draw_polyline(path, Color(INK, 0.8), 4.6, true)
+		fx.draw_polyline(path, Color(1.0, 0.92, 0.45, 0.65 + 0.35 * pulse), 2.6, true)
