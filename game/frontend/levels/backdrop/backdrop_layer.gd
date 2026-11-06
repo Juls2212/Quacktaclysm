@@ -149,42 +149,6 @@ func _dead_forest() -> void:
 			_fore_branches(c)
 
 
-## Level 2, zone B: rotten willows over toxic water, sickly mist, things watching.
-func _swamp() -> void:
-	var c: Color = _color()
-	match depth:
-		Depth.FAR:
-			_set_ground(450.0, 35.0, [2, 3, 6])
-			_extras(c)
-			_ridge(c)
-		Depth.MIDFAR:
-			_set_ground(500.0, 18.0, [3, 4, 9])
-			for i in 8:
-				var x: float = _slot(i, 8)
-				_bare_tree(x, _gy(x) + 6.0, 90.0 + _r(i) * 70.0, c, 0.15)
-			_extras(c)
-			_ridge(c)
-			_mist(520.0, 0.7)
-		Depth.MID:
-			_set_ground(585.0, 14.0, [2, 5, 8])
-			for i in 4:
-				var x: float = _slot(i, 4)
-				_willow(x, _gy(x) + 6.0, 200.0 + _r(i) * 80.0, c)
-			for i in 2:
-				var x: float = _slot(i, 2) + 300.0
-				_barrel(x, _gy(x) + 2.0, 20.0, 0.5 - _r(i + 3), c)
-			_extras(c)
-			_ridge(c)
-			_mist(620.0, 0.75)
-		Depth.NEAR:
-			_water(672.0, c, true)
-			for i in 26:
-				var x: float = _slot(i, 26)
-				_reeds(x, 676.0, 40.0 + _r(i) * 40.0, c)
-		Depth.FORE:
-			_fore_reeds(c)
-
-
 ## Level 3, zone B: the crater where the stars fell. An old temple stands among broken towers,
 ## rocks hang in the air where time stopped, and the ground still glows.
 func _star_crater() -> void:
@@ -276,51 +240,6 @@ func _ruined_city() -> void:
 			_fore_rubble(c)
 
 
-## Level 2, zone A: a suburb gone under. Roofs poke out of dirty water, poles lean or lie down.
-func _flooded_suburb() -> void:
-	var c: Color = _color()
-	match depth:
-		Depth.FAR:
-			_set_ground(430.0, 34.0, [2, 3, 5])
-			_extras(c)
-			_ridge(c)
-		Depth.MIDFAR:
-			_set_ground(500.0, 8.0, [3, 4, 7])
-			for i in 8:
-				var x: float = _slot(i, 8)
-				_house(x, 506.0 + _r(i + 2) * 18.0, 70.0 + _r(i) * 30.0, 46.0 + _r(i + 5) * 16.0, c, (_r(i + 7) - 0.5) * 0.3, false)
-			_water(498.0, c, false)
-			_mist(520.0, 0.5)
-		Depth.MID:
-			for i in 3:
-				var x: float = _slot(i, 3) + 100.0
-				_house(x, 600.0 + _r(i + 3) * 16.0, 120.0 + _r(i) * 40.0, 70.0 + _r(i + 9) * 20.0, c, (_r(i + 1) - 0.5) * 0.35, false)
-			var tops: Array[Vector2] = []
-			for i in 5:
-				var x: float = _slot(i, 5) + 300.0
-				if i == 1:
-					# One pole already down in the water.
-					_pole(x, 584.0, 190.0, 1.15, c)
-				else:
-					tops.append(_pole(x, 584.0, 190.0 + _r(i) * 30.0, (_r(i + 20) - 0.5) * 0.3, c))
-			_wires(tops, 34.0)
-			_set_ground(580.0, 0.0, [1])
-			_extras(c)
-			_water(578.0, c, false)
-			for i in 5:
-				var x: float = _slot(i, 5) + 520.0
-				_floating_junk(Vector2(x, 584.0 + _r(i + 30) * 14.0), i, c)
-			_mist(622.0, 0.4)
-		Depth.NEAR:
-			_water(668.0, c, false)
-			for i in 5:
-				var x: float = _slot(i, 5)
-				_fence(x, x + 120.0, 44.0, c, true, 676.0)
-			_car(_slot(3, 5) + 60.0, 690.0, 100.0, -0.12, c)
-		Depth.FORE:
-			_fore_wires(c)
-
-
 ## Level 3, zone A: chimneys, gas holders, a cooling tower and pipes, under orange lights.
 func _industrial() -> void:
 	var c: Color = _color()
@@ -370,6 +289,163 @@ func _industrial() -> void:
 			_ridge(c)
 		Depth.FORE:
 			_fore_girders(c)
+
+
+## Level 2 marsh, in sage-green flat layers that pale with distance (zone A: the flooded village;
+## zone B, `dense`: the toxic swamp, darker, more fog and trees, fewer houses). FAR: pale thin
+## trunks lost in the fog and a crooked village far away. MIDFAR: a band of fog and mid-green
+## trees with dry branches. MID: dark trees hung with moss and sunken houses with bright moss roofs
+## and warm windows (their moss sways and windows flicker in BackdropFx MARSH). NEAR: thick black
+## trunks framing the view (behind the play field). FORE: crouching moss creatures and a fallen
+## trunk below the floor line.
+const MARSH_TRUNK := Color("1e2818")
+const MARSH_ROOF := Color("7cc23a")
+const MARSH_WINDOW := Color("ffb84a")
+const MARSH_WALL := Color(0.45, 0.5, 0.43)
+
+
+func _flooded_suburb() -> void:
+	_marsh(false)
+
+
+func _swamp() -> void:
+	_marsh(true)
+
+
+func _marsh(dense: bool) -> void:
+	var dark: float = 0.22 if dense else 0.0
+	var far: Color = biome.far_color.darkened(dark)
+	var mid: Color = biome.mid_color.darkened(dark)
+	var near: Color = biome.near_color.darkened(dark)
+	match depth:
+		Depth.FAR:
+			for i in 28:
+				var x: float = _slot(i, 28)
+				var w: float = 5.0 + _r(i) * 7.0
+				var col: Color = far.lerp(biome.haze, 0.35 + 0.3 * _r(i + 5))
+				_line(Vector2(x, 660), Vector2(x + (_r(i + 9) - 0.5) * 10.0, 40.0 + _r(i + 3) * 80.0), col, w)
+				_line(Vector2(x, 260.0 + _r(i + 7) * 120.0), Vector2(x + 30.0 * (1.0 if i % 2 == 0 else -1.0), 230.0 + _r(i + 8) * 100.0), col, w * 0.4)
+			var houses: int = 4 if dense else 9
+			for i in houses:
+				_marsh_far_house(_slot(i, houses), 520.0 + _r(i + 40) * 20.0, 40.0 + _r(i + 41) * 30.0, 50.0 + _r(i + 42) * 40.0, mid.lerp(biome.haze, 0.25))
+			draw_rect(Rect2(-WIDTH, 530, WIDTH * 3.0, BOTTOM), mid.lerp(biome.haze, 0.3))
+			_mist(560.0, 0.55 if dense else 0.4)
+		Depth.MIDFAR:
+			_mist(330.0, 0.25 if dense else 0.15)
+			var n: int = 20 if dense else 16
+			for i in n:
+				var x: float = _slot(i, n)
+				_marsh_tree(x, 560.0, 220.0 + _r(i) * 140.0, 10.0 + _r(i + 2) * 6.0, mid, false, i)
+			draw_rect(Rect2(-WIDTH, 556, WIDTH * 3.0, BOTTOM), mid)
+			_mist(600.0, 0.55 if dense else 0.4)
+		Depth.MID:
+			for tree in BackdropFx.marsh_trees(biome):
+				_marsh_tree(float(tree[0]), 600.0, float(tree[1]), 16.0 + _r(int(tree[0])) * 8.0, near, true, int(tree[0]))
+			for house in BackdropFx.marsh_houses(biome):
+				_marsh_house(house)
+			draw_rect(Rect2(-WIDTH, 596, WIDTH * 3.0, BOTTOM), near.darkened(0.2))
+			if dense:
+				_mist(630.0, 0.35)
+		Depth.NEAR:
+			for i in 4:
+				var x: float = _slot(i, 4) + 200.0
+				_marsh_trunk(x, 34.0 + _r(i) * 16.0)
+		Depth.FORE:
+			for cr in BackdropFx.marsh_creatures(biome):
+				_marsh_creature(float(cr[0]), float(cr[1]))
+			var log_x: float = _slot(1, 2) + 300.0
+			_fill(PackedVector2Array([Vector2(log_x - 160, 770), Vector2(log_x - 150, 742), Vector2(log_x + 140, 730), Vector2(log_x + 160, 752), Vector2(log_x + 150, 772)]),
+					Color(biome.foreground_color, 0.92), false)
+			_dot(Vector2(log_x + 150, 751), 12.0, Color(biome.foreground_color.lightened(0.08), 0.92))
+
+
+## A crooked house far away: a box with a sharp roof, a window or two lit faintly.
+func _marsh_far_house(x: float, ground: float, w: float, h: float, col: Color) -> void:
+	var lean: float = (_r(int(x)) - 0.5) * 10.0
+	_fill(PackedVector2Array([Vector2(x - w * 0.5, ground + 20), Vector2(x - w * 0.5 + lean * 0.3, ground - h), Vector2(x + lean, ground - h - w * 0.8),
+			Vector2(x + w * 0.5 + lean * 0.3, ground - h), Vector2(x + w * 0.5, ground + 20)]), col, false)
+	if _r(int(x) + 3) > 0.4:
+		_rect(Rect2(Vector2(x - 4, ground - h * 0.6), Vector2(7, 9)), Color(MARSH_WINDOW, 0.45))
+
+
+## A tree: trunk, a few dry branches; the dark ones carry hanging moss tufts.
+func _marsh_tree(x: float, ground: float, h: float, w: float, col: Color, mossy: bool, salt: int) -> void:
+	var lean: float = (_r(salt + 3) - 0.5) * 18.0
+	var top := Vector2(x + lean, ground - h)
+	_fill(PackedVector2Array([Vector2(x - w, ground + 10), Vector2(top.x - w * 0.4, top.y), Vector2(top.x + w * 0.4, top.y), Vector2(x + w, ground + 10)]), col, mossy)
+	for k in 4:
+		var p: Vector2 = Vector2(x, ground).lerp(top, 0.45 + 0.15 * float(k))
+		var dir: float = -1.0 if (k + salt) % 2 == 0 else 1.0
+		var tip: Vector2 = p + Vector2(dir * (30.0 + _r(salt + k) * 40.0), -20.0 - _r(salt + k + 9) * 30.0)
+		_stroke(p, tip, col, maxf(w * 0.3, 2.0))
+		_line(tip, tip + Vector2(dir * 12.0, -10.0), col, 2.0)
+	if mossy:
+		var moss: Color = col.lerp(Color(0.45, 0.6, 0.3), 0.35)
+		for k in 3:
+			var p: Vector2 = Vector2(x, ground).lerp(top, 0.5 + 0.15 * float(k))
+			_fill(_ellipse(p + Vector2(0, 6), w * 1.3, 8.0), moss, false)
+
+
+## A sunken, crooked house among the trees: grey-green walls with beams, a bright dripping moss
+## roof with holes and a chimney, warm lit windows (their glow is animated by BackdropFx).
+func _marsh_house(house: Array) -> void:
+	var origin := Vector2(float(house[0]), float(house[1]))
+	var w: float = house[2]
+	var h: float = house[3]
+	var tilt: float = house[4]
+	var wall := PackedVector2Array([Vector2(-w * 0.5, 30), Vector2(-w * 0.5, -h), Vector2(w * 0.5, -h), Vector2(w * 0.5, 30)])
+	_fill(_rot(_moved(wall, origin), origin, tilt), MARSH_WALL)
+	for bx in [-0.25, 0.25]:
+		_line(origin + Vector2(w * float(bx), 20).rotated(tilt), origin + Vector2(w * float(bx), -h).rotated(tilt), Color(0.28, 0.3, 0.24), 4.0)
+	_line(origin + Vector2(-w * 0.5, -h * 0.45).rotated(tilt), origin + Vector2(w * 0.5, -h * 0.45).rotated(tilt), Color(0.28, 0.3, 0.24), 4.0)
+	var roof := PackedVector2Array([Vector2(-w * 0.64, -h + 8), Vector2(-w * 0.3, -h - w * 0.3), Vector2(0, -h - w * 0.4), Vector2(w * 0.12, -h - w * 0.36),
+			Vector2(w * 0.64, -h + 8), Vector2(w * 0.5, -h + 18), Vector2(w * 0.36, -h + 8), Vector2(w * 0.16, -h + 22), Vector2(-w * 0.08, -h + 10),
+			Vector2(-w * 0.3, -h + 20), Vector2(-w * 0.48, -h + 10)])
+	_fill(_rot(_moved(roof, origin), origin, tilt), MARSH_ROOF)
+	# Moss tufts along the ridge, a hole with broken rafters, and a crooked brick chimney on top.
+	for k in 4:
+		var q: Vector2 = Vector2(-w * 0.3, -h - w * 0.3).lerp(Vector2(w * 0.12, -h - w * 0.36), float(k) / 3.0)
+		_fill(_ellipse(origin + (q + Vector2(0, 3)).rotated(tilt), 9.0, 5.0), MARSH_ROOF.lightened(0.15), false)
+	var hole: Vector2 = origin + Vector2(-w * 0.22, -h - w * 0.08).rotated(tilt)
+	_fill(_rot(PackedVector2Array([hole + Vector2(-12, -5), hole + Vector2(4, -9), hole + Vector2(13, -1), hole + Vector2(2, 7), hole + Vector2(-10, 5)]), hole, tilt),
+			Color(0.1, 0.12, 0.08), false)
+	_line(hole + Vector2(-9, -6).rotated(tilt), hole + Vector2(8, 5).rotated(tilt), Color(0.32, 0.26, 0.16), 2.5)
+	_line(hole + Vector2(-2, -8).rotated(tilt), hole + Vector2(-1, 6).rotated(tilt), Color(0.32, 0.26, 0.16), 2.5)
+	var chimney := PackedVector2Array([Vector2(w * 0.24, -h - w * 0.2), Vector2(w * 0.22, -h - w * 0.46), Vector2(w * 0.38, -h - w * 0.48), Vector2(w * 0.38, -h - w * 0.12)])
+	_fill(_rot(_moved(chimney, origin), origin, tilt), Color(0.42, 0.36, 0.34))
+	_line(origin + Vector2(w * 0.23, -h - w * 0.34).rotated(tilt), origin + Vector2(w * 0.38, -h - w * 0.35).rotated(tilt), Color(0.24, 0.2, 0.18), 2.0)
+	for win in BackdropFx.house_windows(house):
+		var p: Vector2 = origin + (win as Vector2).rotated(tilt)
+		_fill(_rot(PackedVector2Array([p + Vector2(-9, -11), p + Vector2(9, -11), p + Vector2(9, 11), p + Vector2(-9, 11)]), p, tilt), MARSH_WINDOW)
+		_line(p + Vector2(0, -11).rotated(tilt), p + Vector2(0, 11).rotated(tilt), Color(0.3, 0.2, 0.1), 2.0)
+
+
+func _marsh_trunk(x: float, w: float) -> void:
+	var lean: float = (_r(int(x)) - 0.5) * 40.0
+	_fill(PackedVector2Array([Vector2(x - w, 760), Vector2(x - w * 0.8 + lean, -60), Vector2(x + w * 0.8 + lean, -60), Vector2(x + w, 760)]), MARSH_TRUNK, false)
+	for k in 2:
+		var y: float = 160.0 + float(k) * 200.0 + _r(int(x) + k) * 80.0
+		var dir: float = -1.0 if k % 2 == 0 else 1.0
+		var p := Vector2(x + lean * (1.0 - y / 760.0) + dir * w * 0.7, y)
+		_line(p, p + Vector2(dir * 90.0, -50.0), MARSH_TRUNK, w * 0.35)
+
+
+## A mound of moss crouched like a creature (its eyes blink in BackdropFx CREATURE_EYES).
+func _marsh_creature(x: float, s: float) -> void:
+	var col := Color(biome.foreground_color, 0.92)
+	var pts := PackedVector2Array([Vector2(x - s, 770), Vector2(x - s * 0.8, 760 - s * 0.6), Vector2(x - s * 0.3, 760 - s * 1.0), Vector2(x + s * 0.2, 760 - s * 1.3),
+			Vector2(x + s * 0.65, 760 - s * 1.2), Vector2(x + s * 0.8, 760 - s * 0.7), Vector2(x + s * 1.1, 770)])
+	_fill(pts, col, false)
+	for k in 3:
+		var p := Vector2(x - s * 0.6 + float(k) * s * 0.5, 760 - s * (0.7 + 0.15 * float(k % 2)))
+		_line(p, p + Vector2(2, s * 0.35), col, 3.0)
+
+
+func _moved(pts: PackedVector2Array, by: Vector2) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for p in pts:
+		out.append(p + by)
+	return out
 
 
 ## Optional silhouettes a biome switches on (ruins far away, dead trees in the middle).
