@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource type="PackedScene" path="res://frontend/levels/level_base.tscn" id="1_base"]
 [ext_resource type="PackedScene" path="res://frontend/levels/blocks/placeholder_platform.tscn" id="2_platform"]
@@ -18,6 +18,7 @@
 [ext_resource type="PackedScene" path="res://frontend/levels/blocks/biome_zone.tscn" id="91_zone"]
 [ext_resource type="Resource" path="res://frontend/levels/biome/swamp_biome.tres" id="92_zone_b"]
 [ext_resource type="Script" path="res://frontend/levels/terrain/marsh_water.gd" id="93_water"]
+[ext_resource type="Script" path="res://frontend/levels/blocks/enemy_level_style.gd" id="95_enemy_style"]
 
 [node name="Level2" instance=ExtResource("1_base") node_paths=PackedStringArray("boss", "encounter", "fragment_drop", "arena_gates")]
 biome = ExtResource("90_biome")
@@ -32,7 +33,7 @@ encounter = NodePath("Content/Encounter")
 fragment_drop = NodePath("SoulFragmentDrop")
 arena_gates = [NodePath("Content/ArenaGate")]
 background_color = Color(0.07, 0.13, 0.11, 1)
-intro_lines = {"mercy": "El pantano guarda silencio... aun queda algo que salvar. (texto provisional)", "mercy_hopeful": "Entre la niebla del pantano brilla una esperanza. (texto provisional)", "balanced": "El pantano te observa, sin juzgar. (texto provisional)", "burden": "El agua turbia pesa como las almas que cargas. (texto provisional)", "burden_bitter": "El pantano huele a rencor, y es tuyo. (texto provisional)"}
+intro_lines = {"mercy": "El pantano guarda silencio... aun queda algo que salvar.", "mercy_hopeful": "Entre la niebla del pantano brilla una esperanza.", "balanced": "El pantano te observa, sin juzgar.", "burden": "El agua turbia pesa como las almas que cargas.", "burden_bitter": "El pantano huele a rencor, y es tuyo."}
 intro_duration = 4.0
 variant_groups = {"calm": [], "corrupted": [NodePath("Content/ExtraFast"), NodePath("Content/ExtraMelee")], "standard": []}
 
@@ -215,3 +216,10 @@ skin = 9
 
 [node name="MarshWater" type="Node2D" parent="."]
 script = ExtResource("93_water")
+
+[node name="LevelTitleCard" parent="."]
+level_name = "EL PANTANO"
+
+[node name="EnemyLevelStyle" type="Node" parent="."]
+script = ExtResource("95_enemy_style")
+style = 2
