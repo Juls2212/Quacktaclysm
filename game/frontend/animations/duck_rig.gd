@@ -28,6 +28,9 @@ enum Action { NONE, SLASH, HEAVY, DASH_SLASH, CAST, ATTACK, CHARGE }
 enum Phase { WINDUP, STRIKE, RECOVER }
 ## ALL draws the whole duck; the others draw one ragdoll piece. FX (shadow, smears) is never a piece.
 enum Part { ALL, BODY, HEAD, WEAPON, FX }
+## Per-level look of the common enemies: dusty city survivors (some in gas masks), swamp ducks
+## hung with algae and dripping, storm ducks cracked open with pulsing yellow light.
+enum LevelStyle { NONE, POLVO, ALGAS, GRIETAS }
 
 const INK := Color(0.106, 0.098, 0.122)
 const PAPER := Color(0.984, 0.976, 0.957)
@@ -84,6 +87,13 @@ const TOOTH := Color(0.93, 0.9, 0.76)
 @export var gas_mask: bool = false
 @export_flags("Can helmet", "Pot helmet", "Plush", "Pan shield") var survivor_props: int = 0
 @export_group("")
+## Per-level look (set at run time by EnemyLevelStyle on the level's enemies). Visual only: a tint
+## of the duck plus dust, algae or cracks drawn by a child node over it, and falling ash, drops
+## or sparks.
+@export var level_style: LevelStyle = LevelStyle.NONE:
+	set(value):
+		level_style = value
+		_refresh_level_style()
 
 # --- Pose inputs (written by the controller each frame) ---
 var ground_speed: float = 0.0
@@ -121,6 +131,13 @@ var _cur: Part = Part.BODY
 var _tip: Vector2 = Vector2.ZERO
 ## Mutations in effect this frame (see _mutations()).
 var _mx: Dictionary = {}
+## Seed of the per-duck level-style choices (who wears a gas mask, where the cracks run).
+var style_seed: int = 0
+var _style_fx: Node2D = null
+## Falling ash, drops and sparks of the level style, in global space: {p, v, life, max, kind}.
+var _style_bits: Array = []
+var _style_clock: float = 0.0
+var _style_rng := RandomNumberGenerator.new()
 
 
 func _process(delta: float) -> void:
@@ -128,6 +145,7 @@ func _process(delta: float) -> void:
 	_advance_body(delta)
 	_advance_ghosts(delta)
 	_advance_strands(delta)
+	_advance_style(delta)
 	queue_redraw()
 
 
@@ -153,6 +171,8 @@ func copy_style_from(source: DuckRig) -> void:
 	gas_mask = source.gas_mask
 	survivor_props = source.survivor_props
 	enraged = source.enraged
+	style_seed = source.style_seed
+	level_style = source.level_style
 
 
 ## Mutations drawn this frame: the look's own mix (or the custom one), grown in a boss's phase 2.
@@ -202,6 +222,9 @@ func _mutations() -> Dictionary:
 		m["cracks"] = true
 		m["drool"] = true
 		m["fury"] = true
+	# One dusty city duck in three hides behind a gas mask with yellow visors.
+	if level_style == LevelStyle.POLVO and not is_boss() and posmod(style_seed, 3) == 0:
+		m["mask"] = true
 	return m
 
 
@@ -2339,3 +2362,210 @@ func _ease_out(t: float) -> float:
 func _ease_in_out(t: float) -> float:
 	var c: float = clampf(t, 0.0, 1.0)
 	return c * c * (3.0 - 2.0 * c)
+
+
+# =====================================================================================
+# Level style: dust (city), algae (swamp), glowing cracks (storm). Drawn by a child node over
+# the duck so the duck's tint (self_modulate) does not dull them.
+# =====================================================================================
+
+func _refresh_level_style() -> void:
+	if style_seed == 0:
+		style_seed = int(get_instance_id() % 100003) + 1
+	_style_rng.seed = style_seed
+	self_modulate = _style_tint()
+	if level_style == LevelStyle.NONE:
+		if _style_fx != null:
+			_style_fx.queue_free()
+			_style_fx = null
+		_style_bits.clear()
+		return
+	if _style_fx == null:
+		_style_fx = Node2D.new()
+		_style_fx.name = "LevelStyleFx"
+		add_child(_style_fx, false, Node.INTERNAL_MODE_BACK)
+		_style_fx.draw.connect(_draw_level_style)
+	_style_clock = _style_rng.randf_range(0.1, 0.6)
+
+
+func _style_tint() -> Color:
+	match level_style:
+		LevelStyle.POLVO:
+			return Color(0.92, 0.88, 0.82)
+		LevelStyle.ALGAS:
+			return Color(0.72, 0.92, 0.66)
+		LevelStyle.GRIETAS:
+			return Color(0.6, 0.47, 0.76)
+	return Color.WHITE
+
+
+## Stable per-duck random number in [0, 1).
+func _sh(i: int) -> float:
+	var v: float = sin(float(style_seed) * 12.9898 + float(i) * 78.233) * 43758.5453
+	return v - floorf(v)
+
+
+func _advance_style(delta: float) -> void:
+	if level_style == LevelStyle.NONE or _style_fx == null:
+		return
+	for i in range(_style_bits.size() - 1, -1, -1):
+		var bit: Dictionary = _style_bits[i]
+		bit["life"] = float(bit["life"]) - delta
+		if float(bit["life"]) <= 0.0:
+			_style_bits.remove_at(i)
+			continue
+		var v: Vector2 = bit["v"]
+		match String(bit["kind"]):
+			"ash":
+				v.x += sin(_time * 3.0 + float(i)) * 20.0 * delta
+			"drop":
+				v.y += 420.0 * delta
+			"spark":
+				v.y += 160.0 * delta
+				v *= 0.97
+		bit["v"] = v
+		bit["p"] = (bit["p"] as Vector2) + v * delta
+	if not dead and not ragdoll and part == Part.ALL and is_visible_in_tree():
+		_style_clock -= delta
+		if _style_clock <= 0.0 and _style_bits.size() < 40:
+			_emit_style_bit()
+	_style_fx.queue_redraw()
+
+
+func _emit_style_bit() -> void:
+	var root: Transform2D = _build_root()
+	match level_style:
+		LevelStyle.POLVO:
+			# Ash shaken off the feathers, much more of it while the duck moves.
+			var moving: bool = grounded and ground_speed > 5.0
+			_style_clock = 0.07 if moving else _style_rng.randf_range(0.5, 1.0)
+			var at := Vector2(_style_rng.randf_range(-12.0, 12.0), _style_rng.randf_range(-30.0, -8.0))
+			_add_bit(to_global(root * at), Vector2(_style_rng.randf_range(-15.0, 15.0), _style_rng.randf_range(25.0, 45.0)),
+					_style_rng.randf_range(0.8, 1.3), "ash")
+		LevelStyle.ALGAS:
+			_style_clock = _style_rng.randf_range(0.35, 0.8)
+			var strands: Array = _algae_strands()
+			var s: Array = strands[_style_rng.randi() % strands.size()]
+			var pts: PackedVector2Array = _algae_points(s)
+			_add_bit(to_global(root * pts[pts.size() - 1]), Vector2(0.0, 20.0), 0.7, "drop")
+		LevelStyle.GRIETAS:
+			_style_clock = _style_rng.randf_range(0.6, 1.8)
+			var cracks: Array = _crack_paths()
+			var path: PackedVector2Array = cracks[_style_rng.randi() % cracks.size()]
+			var from: Vector2 = to_global(root * path[_style_rng.randi() % path.size()])
+			for k in _style_rng.randi_range(3, 5):
+				var dir: Vector2 = Vector2.from_angle(_style_rng.randf_range(-PI * 0.95, -PI * 0.05))
+				_add_bit(from, dir * _style_rng.randf_range(50.0, 130.0), _style_rng.randf_range(0.3, 0.5), "spark")
+
+
+func _add_bit(p: Vector2, v: Vector2, life: float, kind: String) -> void:
+	_style_bits.append({"p": p, "v": v, "life": life, "max": life, "kind": kind})
+
+
+## Algae strands as [root (rig space), length, phase]: off the head and the shoulders.
+func _algae_strands() -> Array:
+	var c: Vector2 = _head_center()
+	var r: float = _head_radius()
+	var sh: Vector2 = _shoulder()
+	var out: Array = []
+	for k in 3:
+		out.append([c + Vector2(-r * 0.7 + float(k) * r * 0.55, -r * 0.55 + absf(float(k) - 1.0) * r * 0.3), 9.0 + _sh(k) * 8.0, _sh(k + 10) * TAU])
+	out.append([sh + Vector2(-4, 2), 14.0 + _sh(4) * 6.0, _sh(14) * TAU])
+	out.append([sh + Vector2(6, 4), 12.0 + _sh(5) * 8.0, _sh(15) * TAU])
+	out.append([Vector2(-10, -6), 10.0 + _sh(6) * 6.0, _sh(16) * TAU])
+	return out
+
+
+func _algae_points(s: Array) -> PackedVector2Array:
+	var root: Vector2 = s[0]
+	var length: float = s[1]
+	var phase: float = s[2]
+	var pts := PackedVector2Array()
+	for i in 6:
+		var u: float = float(i) / 5.0
+		pts.append(root + Vector2(sin(_time * 2.2 + phase + u * 2.4) * 3.0 * u, length * u))
+	return pts
+
+
+## Crack paths (rig space): three over the body and two over the head, fixed per duck.
+func _crack_paths() -> Array:
+	var out: Array = []
+	var c: Vector2 = _head_center()
+	var r: float = _head_radius()
+	var starts: Array = [Vector2(-8, -20), Vector2(4, -12), Vector2(-4, -6), c + Vector2(-r * 0.4, -r * 0.5), c + Vector2(r * 0.1, r * 0.1)]
+	for k in starts.size():
+		var p: Vector2 = starts[k]
+		var dir: float = _sh(k + 20) * TAU
+		var pts := PackedVector2Array([p])
+		var step: float = 3.5 if k >= 3 else 4.5
+		for i in 4:
+			dir += (_sh(k * 7 + i + 30) - 0.5) * 1.6
+			p += Vector2.from_angle(dir) * step
+			pts.append(p)
+		out.append(pts)
+	return out
+
+
+func _draw_level_style() -> void:
+	var fx: Node2D = _style_fx
+	if fx == null:
+		return
+	if part == Part.ALL and not ragdoll:
+		fx.draw_set_transform_matrix(_build_root())
+		match level_style:
+			LevelStyle.POLVO:
+				_style_dust(fx)
+			LevelStyle.ALGAS:
+				_style_algae(fx)
+			LevelStyle.GRIETAS:
+				_style_cracks(fx)
+	fx.draw_set_transform_matrix(Transform2D.IDENTITY)
+	for bit in _style_bits:
+		var p: Vector2 = fx.to_local(bit["p"])
+		var a: float = clampf(float(bit["life"]) / float(bit["max"]), 0.0, 1.0)
+		match String(bit["kind"]):
+			"ash":
+				fx.draw_circle(p, 1.5, Color(0.62, 0.6, 0.56, 0.85 * a))
+			"drop":
+				fx.draw_circle(p, 2.0, Color(0.4, 0.66, 0.36, 0.9 * a))
+				fx.draw_circle(p + Vector2(-0.6, -0.6), 0.7, Color(0.85, 1.0, 0.8, 0.8 * a))
+			"spark":
+				var v: Vector2 = bit["v"]
+				fx.draw_line(p, p - v * 0.035, Color(1.0, 0.9, 0.4, a), 1.6, true)
+				fx.draw_circle(p, 1.2, Color(1.0, 1.0, 0.8, a))
+
+
+## Dust and soot blotches over the feathers.
+func _style_dust(fx: Node2D) -> void:
+	var c: Vector2 = _head_center()
+	var r: float = _head_radius()
+	for i in 6:
+		var at := Vector2(-1.0 + (_sh(i) - 0.5) * 22.0, -15.0 + (_sh(i + 40) - 0.5) * 16.0)
+		if i >= 4:
+			at = c + Vector2((_sh(i) - 0.5) * r * 1.1, (_sh(i + 40) - 0.5) * r * 0.9)
+		var col := Color(0.5, 0.45, 0.38, 0.42) if i % 2 == 0 else Color(0.3, 0.28, 0.26, 0.32)
+		fx.draw_colored_polygon(_ellipse(at, 3.0 + _sh(i + 50) * 3.5, 2.2 + _sh(i + 60) * 2.0, 12, _sh(i + 70) * PI), col)
+	for i in 5:
+		fx.draw_circle(Vector2(-12.0 + _sh(i + 80) * 22.0, -26.0 + _sh(i + 90) * 22.0), 0.9, Color(0.25, 0.23, 0.2, 0.6))
+
+
+## Algae hanging off the head and the arms, swaying, with a moss cap.
+func _style_algae(fx: Node2D) -> void:
+	var c: Vector2 = _head_center()
+	var r: float = _head_radius()
+	fx.draw_colored_polygon(_ellipse(c + Vector2(-1, -r * 0.72), r * 0.75, r * 0.32, 14), Color(0.3, 0.52, 0.24, 0.9))
+	for s in _algae_strands():
+		var pts: PackedVector2Array = _algae_points(s)
+		fx.draw_polyline(pts, Color(INK, 0.85), 4.0, true)
+		fx.draw_polyline(pts, Color(0.3, 0.55, 0.22), 2.2, true)
+		var tip: Vector2 = pts[pts.size() - 1]
+		fx.draw_colored_polygon(_ellipse(tip + Vector2(0, 1.5), 2.2, 3.0, 10), Color(0.42, 0.7, 0.3))
+
+
+## Glowing yellow cracks that pulse.
+func _style_cracks(fx: Node2D) -> void:
+	var pulse: float = 0.55 + 0.45 * sin(_time * 3.2 + float(style_seed % 7))
+	for path in _crack_paths():
+		fx.draw_polyline(path, Color(INK, 0.7), 3.4, true)
+		fx.draw_polyline(path, Color(1.0, 0.82, 0.25, 0.25 * pulse), 6.0, true)
+		fx.draw_polyline(path, Color(1.0, 0.92, 0.45, 0.55 + 0.45 * pulse), 1.6, true)
