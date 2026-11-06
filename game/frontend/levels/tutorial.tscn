@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="PackedScene" path="res://frontend/levels/level_base.tscn" id="1_base"]
 [ext_resource type="PackedScene" path="res://frontend/levels/blocks/placeholder_platform.tscn" id="2_platform"]
@@ -10,6 +10,7 @@
 [ext_resource type="Resource" path="res://frontend/levels/biome/meadow_biome.tres" id="90_biome"]
 [ext_resource type="Script" path="res://frontend/animations/duck_rig.gd" id="91_rig"]
 [ext_resource type="Script" path="res://frontend/animations/grandfather_npc.gd" id="92_elder"]
+[ext_resource type="PackedScene" path="res://frontend/prologue/prologue_cutscene.tscn" id="93_prologue"]
 
 [sub_resource type="RectangleShape2D" id="Shape_exit"]
 size = Vector2(60, 220)
@@ -140,3 +141,5 @@ steps = Array[Dictionary]([{
 "kind": "dash_slash",
 "text": "Pulsa atacar ({attack}) durante el dash ({dash}) para el tajo de dash"
 }])
+
+[node name="PrologueCutscene" parent="." instance=ExtResource("93_prologue")]
