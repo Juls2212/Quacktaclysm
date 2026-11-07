@@ -15,7 +15,7 @@ var _font: Font
 
 func _ready() -> void:
 	flat = true
-	_font = ThemeDB.fallback_font
+	_font = GameFonts.BODY
 	for state in ["normal", "hover", "pressed", "focus", "disabled", "hover_pressed"]:
 		add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_disabled_color", "font_hover_pressed_color"]:
