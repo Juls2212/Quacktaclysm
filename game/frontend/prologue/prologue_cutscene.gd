@@ -1,8 +1,8 @@
 class_name PrologueCutscene
 extends Node
-## Opening cinematic of a new game, played over the tutorial when it loads (~95 s unskipped):
-## presenters' card, title, the hero's eye, the stars falling on the city, eyes in the forest, the
-## grandfather's comic page and the prophecy in the cave, then a fade into the tutorial.
+## Opening cinematic of a new game, played over the tutorial when it loads (~98 s unskipped):
+## the card, the title, the hero's portrait, his eye, the stars falling on the city, eyes in the
+## forest, the grandfather's comic page and the prophecy in the cave, then a fade into the tutorial.
 ## Draws on its own canvas layers above the level (shots below, cinema bars / subtitles / skip on
 ## top). While it plays it keeps the player locked (player.set_input_locked(true) every frame) and
 ## hides the tutorial prompt and the grandfather's speech label; at the end or on skip it unlocks
@@ -18,10 +18,10 @@ const TYPE_SPEED: float = 38.0
 
 signal finished
 
-## Seconds each shot lasts (card, title, eye, fall, forest, comic, cave, out).
-@export var shot_durations: PackedFloat32Array = PackedFloat32Array([5.0, 5.0, 13.0, 13.0, 14.0, 16.0, 26.0, 3.0])
+## Seconds each shot lasts (card, title, portrait, eye, fall, forest, comic, cave, out).
+@export var shot_durations: PackedFloat32Array = PackedFloat32Array([5.0, 3.4, 5.0, 13.0, 13.0, 14.0, 16.0, 26.0, 3.0])
 ## Seconds into each shot before its first subtitle line.
-@export var line_leads: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 1.5, 1.6, 9.0, 1.0, 3.2, 0.0])
+@export var line_leads: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0, 1.5, 1.6, 9.0, 1.0, 3.2, 0.0])
 @export var eye_lines: Array[String] = [
 	"Mi abuelo decía que cuando un pato muere, nace una estrella.",
 	"Yo le creía. Todos le creíamos.",
@@ -243,22 +243,31 @@ func _show_shot(index: int) -> void:
 	_light.energy = 0.0
 
 
-## Ink splash, brush wipe or fade to black between shots — never a hard cut.
+## Ink splash, brush wipe or fade to black between shots — never a hard cut. Each shot has its
+## own way in: a wipe into the title, the fall, the comic and the end; a fade into the rest; a
+## slow soft fade from the hero's portrait into his eye (the same take, closer).
 func _go_next() -> void:
 	var next: int = _index + 1
 	if next >= shot_durations.size():
 		_finish()
 		return
 	_next_index = next
-	if next % 2 == 1:
-		_wipe.play(Vector2(640, 360), 1100.0)
-		_switch_left = 0.18
-	else:
-		_fade_to(1.0, 0.3)
-		_switch_left = 0.32
-		get_tree().create_timer(0.34, true).timeout.connect(func() -> void:
-			if is_instance_valid(self) and not _ending:
-				_fade_to(0.0, 0.4))
+	match next:
+		PrologueShots.Shot.TITLE, PrologueShots.Shot.FALL, PrologueShots.Shot.COMIC, PrologueShots.Shot.OUT:
+			_wipe.play(Vector2(640, 360), 1100.0)
+			_switch_left = 0.18
+		PrologueShots.Shot.EYE:
+			_fade_through(0.45, 0.6)
+		_:
+			_fade_through(0.3, 0.4)
+
+
+func _fade_through(out_time: float, in_time: float) -> void:
+	_fade_to(1.0, out_time)
+	_switch_left = out_time + 0.02
+	get_tree().create_timer(out_time + 0.04, true).timeout.connect(func() -> void:
+		if is_instance_valid(self) and not _ending:
+			_fade_to(0.0, in_time))
 
 
 func _lines_of(index: int) -> Array[String]:
