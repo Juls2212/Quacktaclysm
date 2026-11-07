@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://backend/progression/ending_controller.gd" id="1_script"]
+[ext_resource type="FontFile" path="res://frontend/ui/fonts/rubik_wet_paint/RubikWetPaint-Regular.ttf" id="2_title"]
+[ext_resource type="FontFile" path="res://frontend/ui/fonts/patrick_hand/PatrickHand-Regular.ttf" id="3_body"]
 
 [node name="Ending" type="Control"]
 layout_mode = 3
@@ -36,27 +38,39 @@ theme_override_constants/separation = 14
 
 [node name="TitleLabel" type="Label" parent="Center/Box"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 48
+theme_override_colors/font_outline_color = Color(0.106, 0.098, 0.122, 1)
+theme_override_constants/outline_size = 10
+theme_override_fonts/font = ExtResource("2_title")
+theme_override_font_sizes/font_size = 52
 horizontal_alignment = 1
 
 [node name="EndingLabel" type="Label" parent="Center/Box"]
+theme_override_fonts/font = ExtResource("3_body")
+theme_override_font_sizes/font_size = 22
 custom_minimum_size = Vector2(560, 0)
 layout_mode = 2
 horizontal_alignment = 1
 autowrap_mode = 3
 
 [node name="ReleasedLabel" type="Label" parent="Center/Box"]
+theme_override_fonts/font = ExtResource("3_body")
+theme_override_font_sizes/font_size = 22
 layout_mode = 2
 horizontal_alignment = 1
 
 [node name="KeptLabel" type="Label" parent="Center/Box"]
+theme_override_fonts/font = ExtResource("3_body")
+theme_override_font_sizes/font_size = 22
 layout_mode = 2
 horizontal_alignment = 1
 
 [node name="NarrativeLabel" type="Label" parent="Center/Box"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
+theme_override_fonts/font = ExtResource("3_body")
+theme_override_font_sizes/font_size = 15
 horizontal_alignment = 1
 
 [node name="BackButton" type="Button" parent="Center/Box"]
+theme_override_fonts/font = ExtResource("3_body")
+theme_override_font_sizes/font_size = 22
 layout_mode = 2
