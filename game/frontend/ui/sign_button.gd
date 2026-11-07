@@ -2,7 +2,7 @@
 class_name SignButton
 extends Button
 ## A salvaged sign: a broken wooden plank (hanging from ropes or nailed on) or a torn piece of
-## cardboard with tape, its label set in InkType. Still a regular Button (focus, keyboard,
+## cardboard with tape, its label set in InkType (Rubik Wet Paint). Still a regular Button (focus, keyboard,
 ## `pressed`); only the drawing is custom. Hover or focus swings it, warms the lettering, rims it
 ## in yellow and points a katana at it; a click shakes it; disabled signs go grey and hang crooked.
 
@@ -113,8 +113,14 @@ func _draw() -> void:
 	style.wobble = 0.6
 	if disabled:
 		style.fill = Color(0.78, 0.76, 0.72)
-	var width: float = InkType.measure(text, cap_height)
-	InkType.draw(self, text, Vector2((s.x - width) * 0.5, (s.y - cap_height) * 0.5 - 2.0), cap_height, style)
+	# Shrink the lettering if it would not fit on the board.
+	var cap: float = cap_height
+	var width: float = InkType.measure(text, cap)
+	var room: float = s.x - 34.0
+	if width > room and width > 0.0:
+		cap *= room / width
+		width = InkType.measure(text, cap)
+	InkType.draw(self, text, Vector2((s.x - width) * 0.5, (s.y - cap) * 0.5 - 2.0), cap, style)
 	if _hot > 0.01:
 		_draw_katana_pointer(Vector2(-14.0 - 8.0 * sin(_time * 5.0), s.y * 0.5), _hot)
 
