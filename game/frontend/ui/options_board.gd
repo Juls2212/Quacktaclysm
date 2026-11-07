@@ -60,7 +60,7 @@ func _ready() -> void:
 	box.add_child(shake_check)
 	var controls_title := Label.new()
 	controls_title.text = controls_text
-	controls_title.theme_type_variation = &"KeyLabel"
+	controls_title.theme_type_variation = &"HeaderLabel"
 	box.add_child(controls_title)
 	var grid := GridContainer.new()
 	grid.columns = 2
