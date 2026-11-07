@@ -10,6 +10,9 @@ extends Node2D
 ## (ExorcismCutscene, which pauses the game while it plays; skipped in headless runs). The short
 ## red-thread effect (State.KEPT) stays available but is no longer started by the choice.
 ## Cleans itself up when the fragment goes away.
+## When the fragment appears the gem is born as a small spark in the chest of the fallen boss,
+## grows and rises slowly (~1.5 s) to the fragment while its halo lights up, then floats. Touching
+## the fragment before that ends completes it at once (skipped in headless runs).
 
 enum State { IDLE, FLOATING, RELEASED, KEPT }
 
@@ -18,6 +21,7 @@ const BLUE := Color("2c7fe0")
 const RED := Color("c2331f")
 const GEM_SIZE: float = 26.0
 const EXORCISM := preload("res://frontend/fx/exorcism_cutscene.tscn")
+const EMERGE_TIME: float = 1.5
 
 var _state: State = State.IDLE
 var _fragment: Node2D = null
@@ -26,6 +30,11 @@ var _at: Vector2 = Vector2.ZERO
 var _t: float = 0.0
 var _time: float = 0.0
 var _level: Node = null
+## 0..1 progress of the gem rising out of the boss (1 = floating normally).
+var _emerge: float = 1.0
+var _emerge_from: Vector2 = Vector2.ZERO
+var _boss_chest: Vector2 = Vector2.ZERO
+var _has_chest: bool = false
 
 
 func _ready() -> void:
@@ -40,6 +49,15 @@ func _ready() -> void:
 		(drop as Node).connect(&"fragment_spawned", _on_fragment_spawned)
 	if flow.has_signal(&"decision_made"):
 		flow.connect(&"decision_made", _on_decision_made)
+	var boss: Variant = _level.get(&"boss")
+	if boss is Node and (boss as Node).has_signal(&"defeated"):
+		(boss as Node).connect(&"defeated", _on_boss_defeated)
+
+
+func _on_boss_defeated(boss: Node) -> void:
+	if boss is Node2D:
+		_boss_chest = (boss as Node2D).global_position + Vector2(0, 8)
+		_has_chest = true
 
 
 func _on_fragment_spawned(fragment: Node2D) -> void:
@@ -52,6 +70,16 @@ func _on_fragment_spawned(fragment: Node2D) -> void:
 	var data: Variant = fragment.get(&"data")
 	if data is Resource and (data as Resource).get(&"tint") is Color:
 		_tint = (data as Resource).get(&"tint")
+	_emerge = 1.0
+	if DisplayServer.get_name() != "headless":
+		_emerge = 0.0
+		_emerge_from = _boss_chest if _has_chest else fragment.global_position + Vector2(0, 50)
+		if fragment.has_signal(&"collected"):
+			fragment.connect(&"collected", _finish_emerge, CONNECT_ONE_SHOT)
+
+
+func _finish_emerge(_fragment_node: Variant = null) -> void:
+	_emerge = 1.0
 
 
 func _on_decision_made(fragment_id: String, choice: String) -> void:
@@ -81,6 +109,7 @@ func _process(delta: float) -> void:
 				_fragment = null
 			else:
 				_at = _fragment.global_position
+				_emerge = minf(_emerge + delta / EMERGE_TIME, 1.0)
 		State.RELEASED:
 			if _t > 2.2:
 				_state = State.IDLE
@@ -93,11 +122,46 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	match _state:
 		State.FLOATING:
-			GemDrawer.draw(self, to_local(_at) + Vector2(0, sin(_time * 2.0) * 4.0), GEM_SIZE, _time, _tint)
+			if _emerge < 1.0:
+				_draw_emerge()
+			else:
+				GemDrawer.draw(self, to_local(_at) + Vector2(0, sin(_time * 2.0) * 4.0), GEM_SIZE, _time, _tint)
 		State.RELEASED:
 			_draw_release()
 		State.KEPT:
 			_draw_keep()
+
+
+## The gem leaves the fallen boss's chest as a spark, grows and rises slowly to the fragment.
+func _draw_emerge() -> void:
+	var u: float = _emerge
+	var from: Vector2 = to_local(_emerge_from)
+	var to: Vector2 = to_local(_at) + Vector2(0, sin(_time * 2.0) * 4.0 * smoothstep(0.75, 1.0, u))
+	var rise: float = smoothstep(0.08, 1.0, u)
+	var pos: Vector2 = from.lerp(to, rise) + Vector2(sin(u * TAU * 1.5) * 7.0 * (1.0 - u), 0)
+	var size: float = lerpf(3.0, GEM_SIZE, smoothstep(0.0, 0.85, u))
+	var halo: float = smoothstep(0.1, 1.0, u)
+	# A thin trail of light back to where it was born.
+	for i in 10:
+		var k: float = float(i) / 9.0
+		var p: Vector2 = from.lerp(pos, k) + Vector2(sin(k * 7.0 + _time * 4.0) * 4.0, 0)
+		draw_circle(p, 1.2 + k * 1.6, Color(SKY, 0.35 * k * (1.0 - u)))
+	# The halo lights up softly.
+	for k in 4:
+		draw_circle(pos, size * (1.1 + float(k) * 0.45), Color(BLUE.lerp(SKY, 0.4), 0.06 * halo))
+	# The first spark, twinkling.
+	var spark: float = 1.0 - smoothstep(0.0, 0.35, u)
+	if spark > 0.0:
+		var r: float = 6.0 + 4.0 * sin(_time * 18.0)
+		draw_circle(pos, r * 1.6, Color(SKY, 0.3 * spark))
+		draw_line(pos - Vector2(r * 2.2, 0), pos + Vector2(r * 2.2, 0), Color(1, 1, 1, spark), 1.6, true)
+		draw_line(pos - Vector2(0, r * 2.2), pos + Vector2(0, r * 2.2), Color(1, 1, 1, spark), 1.6, true)
+		draw_circle(pos, 2.6, Color(1, 1, 1, spark))
+	# Tiny shapes would make degenerate polygons: the crystal only once it has some size.
+	if size >= 8.0:
+		GemDrawer.draw(self, pos, size, _time, _tint)
+	else:
+		draw_circle(pos, size * 0.6, Color(1, 1, 1, 0.9))
 
 
 func _draw_release() -> void:
