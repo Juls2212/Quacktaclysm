@@ -7,7 +7,10 @@ extends Control
 ## All texts are exported.
 
 @export var title_text: String = "QUACKTACLYSM"
+## No longer shown under the title (it became the opening below); kept for the label.
 @export var tagline_text: String = "Las estrellas cayeron. Los muertos volvieron. Solo queda una katana."
+## Opening shown the first time the menu opens in a run: one line after another, typed out.
+@export var intro_lines: PackedStringArray = PackedStringArray(["Las estrellas cayeron.", "Los muertos volvieron.", "Solo queda una katana."])
 @export var new_game_text: String = "Nueva partida"
 @export var continue_text: String = "Continuar"
 @export var options_text: String = "Opciones"
@@ -30,7 +33,7 @@ extends Control
 @export var credits_resources_title: String = "Recursos externos"
 ## One line per external asset.
 @export var credits_resources: PackedStringArray = PackedStringArray([
-	"Fuentes: Rubik Wet Paint y Patrick Hand (Google Fonts, licencia SIL OFL) y Special Elite (Google Fonts, licencia Apache 2.0)",
+	"Fuentes: Rubik Wet Paint y Patrick Hand (Google Fonts, licencia SIL OFL), Special Elite y Rock Salt (Google Fonts, licencia Apache 2.0)",
 ])
 @export var credits_thanks_title: String = "Agradecimientos"
 @export_multiline var credits_thanks: String = "A quien juegue hasta el final.\nA los patos que no lo lograron."
@@ -86,6 +89,16 @@ extends Control
 @onready var title_crack: Control = $TitleCrack
 
 ## Title pieces that step aside while a big panel is open, with their resting positions.
+## Seconds each opening line takes to type, and the pause before the next one.
+const INTRO_TYPE_TIME: float = 1.2
+const INTRO_GAP: float = 0.35
+
+## The opening plays once per run (not again when coming back from a level).
+static var _intro_seen: bool = false
+
+var _intro: Control = null
+var _intro_time: float = 0.0
+var _intro_leaving: float = -1.0
 var _header: Array[Control] = []
 var _header_home: Array[Vector2] = []
 var _header_tween: Tween = null
@@ -143,15 +156,36 @@ func _ready() -> void:
 	GameSettings.apply(_settings)
 	_show_main_buttons()
 	message_label.text = ""
-	_play_intro()
+	# The tagline under the title became the opening.
+	tagline_label.visible = false
+	if not _intro_seen and DisplayServer.get_name() != "headless" and not intro_lines.is_empty():
+		_intro_seen = true
+		_start_opening()
+	else:
+		_play_intro()
 
 
 func _process(delta: float) -> void:
+	if _intro != null:
+		_advance_opening(delta)
 	if credits_panel.visible:
 		# The front page scrolls up slowly and starts over once it has gone past.
 		credits_roll.position.y -= credits_speed * delta
 		if credits_roll.position.y < -credits_roll.size.y:
 			credits_roll.position.y = credits_scroll.size.y
+
+
+func _input(event: InputEvent) -> void:
+	if _intro == null:
+		return
+	# While the opening runs the menu takes no input; any key, click or button skips it.
+	var press: bool = (event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo) \
+			or (event is InputEventMouseButton and (event as InputEventMouseButton).pressed) \
+			or (event is InputEventJoypadButton and (event as InputEventJoypadButton).pressed)
+	if press and _intro_leaving < 0.0:
+		_end_opening(0.3)
+	if event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton or event is InputEventJoypadMotion:
+		get_viewport().set_input_as_handled()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -383,3 +417,109 @@ func _set_main_buttons_disabled(disabled: bool) -> void:
 	options_button.disabled = disabled
 	credits_button.disabled = disabled
 	quit_button.disabled = disabled
+
+
+# =====================================================================================
+# Opening (first time the menu opens in a run)
+# =====================================================================================
+
+## Black screen with a fine grain; the lines appear one by one in the centre, typed out on an old
+## typewriter, the last one sealed by a small red star; then they fade and the menu makes its
+## usual entrance. Nothing in the menu reacts meanwhile.
+func _start_opening() -> void:
+	_intro = Control.new()
+	_intro.name = "Opening"
+	_intro.mouse_filter = Control.MOUSE_FILTER_STOP
+	_intro.z_index = 100
+	add_child(_intro)
+	_intro.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_intro.draw.connect(_draw_opening)
+	_intro_time = 0.0
+	_intro_leaving = -1.0
+	get_viewport().gui_release_focus()
+
+
+func _opening_typed_end() -> float:
+	return 0.4 + float(intro_lines.size()) * (INTRO_TYPE_TIME + INTRO_GAP)
+
+
+func _advance_opening(delta: float) -> void:
+	_intro_time += delta
+	if _intro_leaving < 0.0 and _intro_time > _opening_typed_end() + 1.2:
+		_end_opening(1.0)
+	if _intro_leaving >= 0.0:
+		_intro_leaving -= delta
+		if _intro_leaving <= 0.0:
+			_intro.queue_free()
+			_intro = null
+			return
+	_intro.queue_redraw()
+
+
+## Fades the opening out over `seconds` while the menu makes its entrance; focus on the first button.
+func _end_opening(seconds: float) -> void:
+	_intro_leaving = seconds
+	_intro.set_meta("leave_total", seconds)
+	_play_intro()
+	for button: Button in [new_game_button, continue_button, quit_button]:
+		if not button.disabled:
+			button.grab_focus()
+			break
+
+
+func _draw_opening() -> void:
+	var s: Vector2 = _intro.size
+	var alpha: float = 1.0
+	var words: float = 1.0
+	if _intro_leaving >= 0.0:
+		var total: float = float(_intro.get_meta("leave_total", 1.0))
+		var k: float = 1.0 - _intro_leaving / maxf(total, 0.01)
+		words = 1.0 - clampf(k * 2.0, 0.0, 1.0)
+		alpha = 1.0 - clampf(k * 1.6 - 0.4, 0.0, 1.0)
+	_intro.draw_rect(Rect2(Vector2.ZERO, s), Color(0.02, 0.02, 0.03, alpha))
+	# Fine film grain, different every frame.
+	var seed_t: int = int(_intro_time * 24.0)
+	for i in 260:
+		var h1: float = fposmod(sin(float(i * 7 + seed_t * 131) * 12.9898) * 43758.5453, 1.0)
+		var h2: float = fposmod(sin(float(i * 13 + seed_t * 71) * 78.233) * 43758.5453, 1.0)
+		var shade: float = 0.25 + 0.5 * fposmod(h1 * 7.0, 1.0)
+		_intro.draw_rect(Rect2(Vector2(h1 * s.x, h2 * s.y), Vector2(2, 2)), Color(shade, shade, shade, 0.08 * alpha))
+	if words <= 0.0:
+		return
+	var font: Font = GameFonts.TYPEWRITER
+	var size: int = 34
+	var line_h: float = 58.0
+	var top: float = s.y * 0.5 - line_h * float(intro_lines.size() - 1) * 0.5
+	for i in intro_lines.size():
+		var line: String = intro_lines[i]
+		var start: float = 0.4 + float(i) * (INTRO_TYPE_TIME + INTRO_GAP)
+		var shown: float = clampf((_intro_time - start) / INTRO_TYPE_TIME, 0.0, 1.0) * float(line.length())
+		if _intro_leaving >= 0.0:
+			shown = float(line.length())
+		if shown <= 0.0:
+			continue
+		var w: float = font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+		var x: float = (s.x - w) * 0.5
+		var y: float = top + float(i) * line_h
+		for c in line.length():
+			var a: float = clampf(shown - float(c), 0.0, 1.0)
+			var ch: String = line[c]
+			if a > 0.0:
+				var ink: float = 0.8 + 0.2 * fposmod(sin(float(c * 31 + i * 7) * 12.9898) * 43758.5453, 1.0)
+				_intro.draw_char(font, Vector2(x, y), ch, size, Color(0.92, 0.88, 0.8, a * ink * words))
+			x += font.get_char_size(ch.unicode_at(0), size).x
+		if i == intro_lines.size() - 1 and shown >= float(line.length()):
+			# A small red star glowing after the last word.
+			var since: float = _intro_time - (start + INTRO_TYPE_TIME)
+			var glow: float = clampf(since / 0.3, 0.0, 1.0) * (0.75 + 0.25 * sin(_intro_time * 5.0))
+			if _intro_leaving >= 0.0:
+				glow = 1.0
+			var c := Vector2(x + 22.0, y - 11.0)
+			for k in 4:
+				_intro.draw_circle(c, 6.0 + float(k) * 6.0, Color(1.0, 0.2, 0.12, 0.08 * glow * words))
+			var star := PackedVector2Array()
+			for k in 10:
+				var r: float = 9.0 if k % 2 == 0 else 3.8
+				star.append(c + Vector2.from_angle(-PI * 0.5 + float(k) * PI / 5.0) * r * maxf(glow, 0.2))
+			_intro.draw_colored_polygon(star, Color(1.0, 0.24, 0.16, glow * words))
+
