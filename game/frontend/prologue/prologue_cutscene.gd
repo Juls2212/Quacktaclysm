@@ -1,6 +1,7 @@
 class_name PrologueCutscene
 extends Node
-## Opening cinematic of a new game, played over the tutorial when it loads (~93 s unskipped):
+## Opening cinematic of a new game, played over the tutorial when it loads (~2 min unskipped; each
+## shot lasts as long as its lines need to be read):
 ## the card, the title, the hero's eye, the stars falling on the city, eyes in the forest, the
 ## grandfather's comic page and the prophecy in the cave, then a fade into the tutorial.
 ## Draws on its own canvas layers above the level (shots below, cinema bars / subtitles / skip on
@@ -14,11 +15,20 @@ extends Node
 const SHOTS_SCRIPT := preload("res://frontend/prologue/prologue_shots.gd")
 const THEME := preload("res://frontend/ui/theme/quack_theme.tres")
 const BAR_HEIGHT: float = 78.0
-const TYPE_SPEED: float = 38.0
+## Typewriter speed of the subtitles (characters per second).
+const TYPE_SPEED: float = 35.0
+## A fully typed line stays READ_BASE s plus 1 s per READ_CHARS characters, READ_MIN-READ_MAX s.
+const READ_BASE: float = 1.0
+const READ_CHARS: float = 15.0
+const READ_MIN: float = 2.5
+const READ_MAX: float = 6.0
+## Time a shot keeps after its last line before it moves on.
+const SHOT_TAIL: float = 0.6
 
 signal finished
 
-## Seconds each shot lasts (card, title, eye, fall, forest, comic, cave, out).
+## Shortest time each shot lasts (card, title, eye, fall, forest, comic, cave, out); a shot grows
+## beyond it when its lines need more reading time (see _shot_length).
 @export var shot_durations: PackedFloat32Array = PackedFloat32Array([5.0, 3.4, 13.0, 13.0, 14.0, 16.0, 26.0, 3.0])
 ## Seconds into each shot before its first subtitle line.
 @export var line_leads: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 1.5, 1.6, 9.0, 1.0, 3.2, 0.0])
@@ -119,7 +129,7 @@ func _process(delta: float) -> void:
 		_switch_left -= delta
 		if _switch_left < 0.0:
 			_show_shot(_next_index)
-	elif _time >= shot_durations[_index]:
+	elif _time >= _shot_length(_index):
 		_go_next()
 
 
@@ -236,6 +246,12 @@ func _show_shot(index: int) -> void:
 	_line = -1
 	_switch_left = -1.0
 	_subtitle.text = ""
+	# The shot learns how long it really lasts and when its lines come, then builds itself.
+	_shots.length = _shot_length(index)
+	var starts := PackedFloat32Array()
+	for k in _lines_of(index).size():
+		starts.append(_line_start(index, k))
+	_shots.line_starts = starts
 	_shots.set_shot(index as PrologueShots.Shot)
 	var cave: bool = index == PrologueShots.Shot.CAVE
 	_dark.color = Color(0.05, 0.05, 0.07) if cave else Color.WHITE
@@ -252,6 +268,7 @@ func _go_next() -> void:
 		_finish()
 		return
 	_next_index = next
+	_subtitle.text = ""
 	match next:
 		PrologueShots.Shot.TITLE, PrologueShots.Shot.FALL, PrologueShots.Shot.COMIC, PrologueShots.Shot.OUT:
 			_wipe.play(Vector2(640, 360), 1100.0)
@@ -285,11 +302,39 @@ func _lines_of(index: int) -> Array[String]:
 	return []
 
 
+## Seconds a line takes to type out and then stay to be read (from its real text).
+func _line_time(text: String) -> float:
+	return float(text.length()) / TYPE_SPEED + clampf(READ_BASE + float(text.length()) / READ_CHARS, READ_MIN, READ_MAX)
+
+
 func _line_start(index: int, k: int) -> float:
 	var lines: Array[String] = _lines_of(index)
-	var lead: float = line_leads[index] if index < line_leads.size() else 1.0
-	var slot: float = (shot_durations[index] - lead - 1.0) / float(maxi(lines.size(), 1))
-	return lead + slot * float(k)
+	var start: float = line_leads[index] if index < line_leads.size() else 1.0
+	for j in mini(k, lines.size()):
+		start += _line_time(lines[j])
+	return start
+
+
+## How long a shot really lasts: its own length, or longer so every line gets its reading time
+## (and the card its own texts).
+func _shot_length(index: int) -> float:
+	var base: float = shot_durations[index] if index < shot_durations.size() else 3.0
+	var lines: Array[String] = _lines_of(index)
+	if not lines.is_empty():
+		base = maxf(base, _line_start(index, lines.size()) + SHOT_TAIL)
+	if index == PrologueShots.Shot.CARD and _shots != null:
+		base = maxf(base, _shots.card_length())
+	return base
+
+
+## Total running time of the prologue without skipping (shots plus the transitions between them).
+func total_length() -> float:
+	var total: float = 0.0
+	for i in shot_durations.size():
+		total += _shot_length(i)
+		if i + 1 < shot_durations.size():
+			total += 0.47 if i + 1 == PrologueShots.Shot.EYE else (0.18 if (i + 1) in [PrologueShots.Shot.TITLE, PrologueShots.Shot.FALL, PrologueShots.Shot.COMIC, PrologueShots.Shot.OUT] else 0.32)
+	return total
 
 
 func _update_lines() -> void:
@@ -319,7 +364,7 @@ func _advance_text() -> void:
 	if _line + 1 < lines.size():
 		_time = maxf(_time, _line_start(_index, _line + 1))
 	else:
-		_time = shot_durations[_index]
+		_time = _shot_length(_index)
 
 
 ## The cave: darkness, then the grandfather's torch lights up and flickers.
