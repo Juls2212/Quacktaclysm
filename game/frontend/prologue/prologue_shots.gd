@@ -19,9 +19,11 @@ const DESIGN := Vector2(1280, 720)
 ## Card typing: when it starts and keys per second.
 const CARD_TYPE_START: float = 0.45
 const CARD_TYPE_SPEED: float = 13.0
+## Seconds the tagline takes to be scribbled across the card.
+const CARD_WRITE_TIME: float = 1.1
 
 ## Shot 1: typed letter by letter on an old typewriter (one line per row; the first row small and
-## spaced, the rest big), then the tagline lands below in the title face.
+## spaced, the rest big), then the tagline is scribbled below by hand (Rock Salt).
 @export_multiline var card_typed_text: String = "BASADA EN
 UNA PROFECÍA"
 @export var card_tagline_text: String = "Una historia quacktástica"
@@ -170,32 +172,34 @@ func _draw_card() -> void:
 	var done: float = float(count)
 	if typed < done and caret.x > 0.0 and fmod(t, 0.5) < 0.3:
 		draw_rect(Rect2(caret + Vector2(2, 4), Vector2(16, 3)), Color(INK, 0.8 * fade))
-	# 2. The tagline in the title face, landing with a thump on a splash of ink.
-	var land: float = CARD_TYPE_START + done / CARD_TYPE_SPEED + 0.35
-	var tag_size: int = 56
-	var tag_font: Font = GameFonts.TITLE
-	var tag_pos := Vector2(100.0, y + 30.0)
-	var tag_w: float = tag_font.get_string_size(card_tagline_text, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_size).x
-	text_right = maxf(text_right, tag_pos.x + tag_w)
+	# 2. The tagline scribbled by hand across the card: bone white over a dark red shadow, tilted,
+	# written left to right, with a little tremble as the pen lifts.
+	var land: float = CARD_TYPE_START + done / CARD_TYPE_SPEED + 0.3
+	var hand: Font = GameFonts.HAND
+	var tag_size: int = 34
+	var tilt: float = deg_to_rad(-6.0)
+	var tag_pos := Vector2(108.0, y + 52.0)
+	var tag_w: float = hand.get_string_size(card_tagline_text, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_size).x
+	text_right = maxf(text_right, tag_pos.x + tag_w * cos(tilt) + 10.0)
 	var since: float = t - land
 	if since >= 0.0:
-		var splash: float = smoothstep(0.0, 0.12, since)
-		var c: Vector2 = tag_pos + Vector2(tag_w * 0.42, -18.0)
-		draw_colored_polygon(_splat(c, 90.0 * splash, 11), Color(0.36, 0.04, 0.05, 0.85 * fade))
-		draw_colored_polygon(_splat(c + Vector2(tag_w * 0.32, 10), 52.0 * splash, 12), Color(0.36, 0.04, 0.05, 0.85 * fade))
-		for d in 9:
-			var p: Vector2 = c + Vector2.from_angle(_h(d + 2780) * TAU) * (100.0 + _h(d + 2790) * 120.0) * splash
-			draw_circle(p, 3.0 + _h(d + 2800) * 7.0, Color(0.36, 0.04, 0.05, 0.85 * fade))
-		# The thump: big for an instant, a small overshoot, then still.
-		var k: float = clampf(since / 0.22, 0.0, 1.0)
-		var sc: float = lerpf(1.4, 1.0, smoothstep(0.0, 0.6, k)) - 0.06 * sin(clampf((k - 0.6) / 0.4, 0.0, 1.0) * PI)
-		var pivot: Vector2 = tag_pos + Vector2(tag_w * 0.5, -float(tag_size) * 0.3)
-		draw_set_transform(_shake + pivot - pivot * sc, 0.0, Vector2(sc, sc))
-		var cream := Color(0.98, 0.93, 0.8, fade)
-		draw_string_outline(tag_font, tag_pos + Vector2(4, 5), card_tagline_text, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_size, 12, Color(INK, fade))
-		draw_string(tag_font, tag_pos + Vector2(4, 5), card_tagline_text, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_size, Color(0.42, 0.06, 0.06, fade))
-		draw_string_outline(tag_font, tag_pos, card_tagline_text, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_size, 12, Color(INK, fade))
-		draw_string(tag_font, tag_pos, card_tagline_text, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_size, cream)
+		var n: int = card_tagline_text.length()
+		var written: float = since / CARD_WRITE_TIME * float(n)
+		var tremble := Vector2.ZERO
+		var after: float = since - CARD_WRITE_TIME
+		if after > 0.0 and after < 0.3:
+			tremble = Vector2(sin(t * 75.0), cos(t * 61.0)) * 2.5 * (1.0 - after / 0.3)
+		draw_set_transform(_shake + tag_pos + tremble, tilt, Vector2.ONE)
+		var x: float = 0.0
+		for i in n:
+			var ch: String = card_tagline_text[i]
+			var adv: float = hand.get_char_size(ch.unicode_at(0), tag_size).x
+			var a: float = clampf(written - float(i), 0.0, 1.0) * fade
+			if a > 0.0 and ch != " ":
+				draw_char(hand, Vector2(x + 3.0, 4.0), ch, tag_size, Color(0.45, 0.04, 0.05, 0.9 * a))
+				draw_char_outline(hand, Vector2(x, 0.0), ch, tag_size, 3, Color(INK, 0.45 * a))
+				draw_char(hand, Vector2(x, 0.0), ch, tag_size, Color(0.937, 0.886, 0.784, a))
+			x += adv
 		draw_set_transform(_shake, 0.0, Vector2.ONE)
 	# Wings and claws reach in from the right but stop short of the text.
 	var reach: float = 1.0 - pow(1.0 - clampf(t / 1.6, 0.0, 1.0), 3.0)
@@ -1320,8 +1324,8 @@ func _pine(base: Vector2, h: float, color: Color) -> void:
 ## painted like the prologue's eye (heavy upper lash line, curved lashes, dark bags, long messy
 ## white brows, dark irises with a small glint; one slow blink); it drops from above and bounces,
 ## with a white flash and halftone dots that come and go. YELLOW: the katana drawn from its dark
-## scabbard (curved silver blade with a wavy temper line, dark gold guard, diamond-wrapped grip,
-## metal pommel, his hand on the grip); it bursts out of the centre (0 -> 110 % -> 100 %) over
+## scabbard (a near-black blade wreathed in red fire, a dark red grip wrapped in black diamonds,
+## a small square guard, a metal pommel, his hand on the grip, a star flash at the mouth); it bursts out of the centre (0 -> 110 % -> 100 %) over
 ## radial impact lines, and "SHHNK!" pops with its own bounce. At the end of the page all the
 ## panels leave together under a sweep of ink.
 const COMIC_RECTS: Array = [Rect2(40, 50, 640, 570), Rect2(705, 50, 535, 270), Rect2(705, 345, 535, 275)]
@@ -1545,6 +1549,8 @@ func _draw_comic_sweep() -> void:
 	if k <= 0.0:
 		return
 	var front: float = -200.0 + 1700.0 * k
+	if front < 60.0:
+		return
 	var pts := PackedVector2Array([Vector2(-40, -40)])
 	for i in 13:
 		var y: float = lerpf(-40.0, 760.0, float(i) / 12.0)
@@ -1732,89 +1738,124 @@ func _old_eye(panel: Control, c: Vector2, side: float, open: float, since: float
 		_tapered_on(panel, pts, 7.0, 0.8, Color(0.96, 0.95, 0.9))
 
 
-## The katana drawn from its scabbard, and the sound in big yellow letters. The blade comes out
-## over 0.6 s: the grip (in his hand) slides away from the mouth of the scabbard and the blade
-## shows between them.
+## The katana drawn from its scabbard: a long near-black blade with a thin light edge and a glint
+## running along it, red flames licking off it in curved tongues (strongest near the guard) with
+## red drops around, a dark red grip wrapped in black diamonds, a small square dark guard, a metal
+## pommel, and a yellow-white star flashing where the blade leaves the scabbard. The blade comes
+## out over 0.6 s (the grip, in his hand, slides away from the mouth) and the fire grows with it.
+const BLADE_BLACK := Color("1a0e10")
+const FLAME_DEEP := Color("d42a1a")
+const FLAME_HOT := Color("ff6a3a")
+
+
 func _comic_katana(panel: Control, s: Vector2, since: float) -> void:
 	var draw_k: float = clampf(since / 0.6, 0.0, 1.0)
-	var saya_a := Vector2(30, s.y * 0.8)
-	var mouth := Vector2(s.x * 0.4, s.y * 0.56)
+	var fire: float = smoothstep(0.0, 1.0, clampf(since / 0.9, 0.0, 1.0))
+	var saya_a := Vector2(24, s.y * 0.94)
+	var mouth := Vector2(s.x * 0.3, s.y * 0.74)
 	var dir: Vector2 = (mouth - saya_a).normalized()
 	var nrm: Vector2 = dir.orthogonal()
+	var blade_len: float = 240.0 * draw_k
+	var guard: Vector2 = mouth + dir * blade_len
 	# Motion lines along the draw.
 	for k in 6:
-		var p: Vector2 = mouth + dir * (60.0 + float(k) * 36.0) + nrm * (36.0 + float(k % 3) * 14.0)
-		panel.draw_line(p, p - dir * (40.0 + 60.0 * draw_k), Color(INK, 0.45), 3.0, true)
-	# Scabbard: dark lacquer, a metal end cap, the cord tied near the mouth.
-	_tapered_on(panel, PackedVector2Array([saya_a, saya_a.lerp(mouth, 0.5) + nrm * 3.0, mouth]), 30.0, 30.0, INK)
-	_tapered_on(panel, PackedVector2Array([saya_a, saya_a.lerp(mouth, 0.5) + nrm * 3.0, mouth]), 22.0, 22.0, Color(0.14, 0.08, 0.1))
-	panel.draw_line(saya_a + nrm * 6.0, mouth + nrm * 6.0, Color(0.5, 0.35, 0.4, 0.5), 2.0, true)
-	panel.draw_colored_polygon(_ellipse(saya_a, 16.0, 13.0, 14, dir.angle()), Color(0.45, 0.36, 0.14))
+		var p: Vector2 = mouth + dir * (60.0 + float(k) * 40.0) - nrm * (40.0 + float(k % 3) * 14.0)
+		panel.draw_line(p, p - dir * (40.0 + 60.0 * draw_k), Color(INK, 0.4), 3.0, true)
+	# Red drops spattered around the blade.
+	for k in 26:
+		var u: float = _h(k + 2900)
+		if u > draw_k + 0.05:
+			continue
+		var side: float = -1.0 if _h(k + 2910) > 0.45 else 1.0
+		var p: Vector2 = mouth + dir * blade_len * u + nrm * side * (30.0 + _h(k + 2920) * 90.0) * fire - dir * _h(k + 2930) * 30.0
+		p += Vector2(sin(t * 2.0 + float(k)), cos(t * 1.7 + float(k))) * 1.5
+		panel.draw_circle(p, (1.5 + _h(k + 2940) * 3.5) * fire, FLAME_DEEP if k % 3 else FLAME_HOT)
+	# Flames: curved tongues licking off both sides of the blade and back toward the scabbard,
+	# bigger and hotter near the guard; they wave and grow as the blade comes out.
+	if blade_len > 8.0:
+		# A red glow hugging the blade, the bed the tongues rise from.
+		_brush_on(panel, PackedVector2Array([mouth, mouth.lerp(guard, 0.5), guard]), 22.0 * fire + 8.0, 40.0 * fire + 8.0, Color(FLAME_DEEP, 0.8))
+		for k in 13:
+			var u: float = (float(k) + 0.5) / 13.0
+			var base: Vector2 = mouth + dir * blade_len * u
+			var side: float = -1.0 if (k * 7) % 3 == 0 else 1.0
+			var strength: float = (0.35 + 0.65 * u) * fire
+			var length: float = (55.0 + 120.0 * u) * strength * (0.6 + 0.7 * _h(k + 2950))
+			if length < 14.0:
+				continue
+			var sway: float = sin(t * 5.5 + float(k) * 1.7) * 0.18
+			_flame_tongue(panel, base, dir, nrm * side, length, 18.0 + 22.0 * strength, sway, Color(FLAME_DEEP, 0.95))
+			_flame_tongue(panel, base, dir, nrm * side, length * 0.62, 10.0 + 12.0 * strength, sway * 1.4, Color(FLAME_HOT, 0.92))
+			if length > 50.0:
+				_flame_tongue(panel, base, dir, nrm * side, length * 0.3, 6.0 + 4.0 * strength, sway, Color(1.0, 0.84, 0.58, 0.85))
+	# Scabbard: dark lacquer, a metal end cap, the cord near the mouth.
+	_tapered_on(panel, PackedVector2Array([saya_a, saya_a.lerp(mouth, 0.5) + nrm * 3.0, mouth]), 26.0, 26.0, INK)
+	_tapered_on(panel, PackedVector2Array([saya_a, saya_a.lerp(mouth, 0.5) + nrm * 3.0, mouth]), 18.0, 18.0, Color(0.14, 0.06, 0.08))
+	panel.draw_colored_polygon(_ellipse(saya_a, 14.0, 11.0, 14, dir.angle()), Color(0.45, 0.4, 0.38))
 	for k in 3:
 		var p: Vector2 = mouth - dir * (40.0 + float(k) * 10.0)
-		panel.draw_line(p - nrm * 14.0, p + nrm * 14.0, Color(0.55, 0.2, 0.25), 4.0, true)
-	# The blade between the scabbard and the guard: slightly curved, silver, a lighter edge and the
-	# wavy temper line.
-	var blade_len: float = 210.0 * draw_k
-	var guard: Vector2 = mouth + dir * blade_len
+		panel.draw_line(p - nrm * 12.0, p + nrm * 12.0, Color(0.55, 0.12, 0.12), 4.0, true)
+	# The blade: near black, a thin light edge, a glint running along it.
 	if blade_len > 4.0:
 		var back := PackedVector2Array()
 		var edge := PackedVector2Array()
-		var hamon := PackedVector2Array()
 		for k in 13:
 			var u: float = float(k) / 12.0
-			var p: Vector2 = mouth + dir * blade_len * u - nrm * sin(u * PI * 0.5) * 6.0 * draw_k
-			back.append(p - nrm * 7.0)
-			edge.append(p + nrm * 8.0)
-			hamon.append(p + nrm * (2.0 + sin(u * 26.0) * 2.2))
+			var p: Vector2 = mouth + dir * blade_len * u - nrm * sin(u * PI * 0.5) * 5.0 * draw_k
+			back.append(p - nrm * 8.0)
+			edge.append(p + nrm * 9.0)
 		var blade := PackedVector2Array(back)
 		var rev := PackedVector2Array(edge)
 		rev.reverse()
 		blade.append_array(rev)
-		panel.draw_colored_polygon(blade, Color(0.72, 0.75, 0.8))
-		var bright := PackedVector2Array(hamon)
-		bright.append_array(rev)
-		panel.draw_colored_polygon(bright, Color(0.93, 0.95, 0.98))
-		panel.draw_polyline(hamon, Color(0.55, 0.6, 0.68), 1.6, true)
-		panel.draw_polyline(back, Color(1, 1, 1, 0.5), 1.2, true)
+		panel.draw_colored_polygon(blade, BLADE_BLACK)
+		panel.draw_polyline(edge, Color(0.78, 0.6, 0.58), 1.8, true)
 		var ring := PackedVector2Array(blade)
 		ring.append(blade[0])
-		panel.draw_polyline(ring, INK, 3.0, true)
-	# Habaki (brass collar), then the oval dark gold guard.
-	panel.draw_colored_polygon(PackedVector2Array([guard - nrm * 9.0, guard - nrm * 9.0 + dir * 10.0, guard + nrm * 10.0 + dir * 10.0, guard + nrm * 10.0]), Color(0.78, 0.6, 0.22))
-	var tsuba: Vector2 = guard + dir * 14.0
-	var tsuba_pts := _ellipse(tsuba, 7.0, 34.0, 24, dir.angle())
-	panel.draw_colored_polygon(tsuba_pts, Color(0.48, 0.36, 0.1))
-	panel.draw_colored_polygon(_ellipse(tsuba - nrm * 8.0, 3.0, 14.0, 12, dir.angle()), Color(0.75, 0.6, 0.25, 0.6))
-	_ink_outline_on(panel, tsuba_pts, 3.0)
-	# Grip: light ray-skin under a dark cord crossing in diamonds; a metal pommel at the end.
+		panel.draw_polyline(ring, INK, 2.4, true)
+		var g: float = fposmod(t * 0.9, 1.4)
+		if g < 1.0:
+			var a: Vector2 = edge[int(g * 11.0)]
+			panel.draw_line(a - dir * 18.0, a + dir * 18.0, Color(1.0, 0.92, 0.8, 0.85), 2.4, true)
+	# Small, almost square dark guard.
+	var tsuba: Vector2 = guard + dir * 6.0
+	var square := PackedVector2Array([tsuba + (-dir * 6.0 - nrm * 15.0), tsuba + (dir * 6.0 - nrm * 15.0), tsuba + (dir * 6.0 + nrm * 15.0), tsuba + (-dir * 6.0 + nrm * 15.0)])
+	panel.draw_colored_polygon(square, Color(0.12, 0.08, 0.08))
+	panel.draw_line(tsuba - nrm * 12.0, tsuba + nrm * 12.0, Color(0.45, 0.3, 0.26), 1.5, true)
+	_ink_outline_on(panel, square, 3.0)
+	# Grip: dark red wrapped in black diamonds; a metal pommel at the end.
 	var grip_a: Vector2 = tsuba + dir * 8.0
-	var grip_b: Vector2 = grip_a + dir * 128.0
-	var grip := PackedVector2Array([grip_a - nrm * 13.0, grip_b - nrm * 12.0, grip_b + nrm * 12.0, grip_a + nrm * 13.0])
-	panel.draw_colored_polygon(grip, Color(0.93, 0.9, 0.8))
+	var grip_b: Vector2 = grip_a + dir * 120.0
+	var grip := PackedVector2Array([grip_a - nrm * 11.0, grip_b - nrm * 10.0, grip_b + nrm * 10.0, grip_a + nrm * 11.0])
+	panel.draw_colored_polygon(grip, Color(0.42, 0.06, 0.07))
 	for k in 7:
-		var a: Vector2 = grip_a.lerp(grip_b, float(k) / 7.0)
-		var b: Vector2 = grip_a.lerp(grip_b, float(k + 1) / 7.0)
-		panel.draw_line(a - nrm * 12.0, b + nrm * 12.0, Color(0.12, 0.1, 0.16), 5.0, true)
-		panel.draw_line(a + nrm * 12.0, b - nrm * 12.0, Color(0.12, 0.1, 0.16), 5.0, true)
+		var c: Vector2 = grip_a.lerp(grip_b, (float(k) + 0.5) / 7.0)
+		panel.draw_colored_polygon(PackedVector2Array([c - dir * 8.0, c - nrm * 8.0, c + dir * 8.0, c + nrm * 8.0]), Color(0.05, 0.03, 0.04))
+		panel.draw_colored_polygon(PackedVector2Array([c - dir * 3.0, c - nrm * 3.0, c + dir * 3.0, c + nrm * 3.0]), Color(0.75, 0.15, 0.12))
 	_ink_outline_on(panel, grip, 3.0)
-	var pommel := PackedVector2Array([grip_b - nrm * 13.0, grip_b - nrm * 11.0 + dir * 16.0, grip_b + nrm * 11.0 + dir * 16.0, grip_b + nrm * 13.0])
-	panel.draw_colored_polygon(pommel, Color(0.5, 0.4, 0.16))
+	var pommel := PackedVector2Array([grip_b - nrm * 11.0, grip_b - nrm * 9.0 + dir * 14.0, grip_b + nrm * 9.0 + dir * 14.0, grip_b + nrm * 11.0])
+	panel.draw_colored_polygon(pommel, Color(0.5, 0.48, 0.46))
+	panel.draw_line(grip_b + dir * 4.0 - nrm * 7.0, grip_b + dir * 4.0 + nrm * 7.0, Color(0.85, 0.85, 0.82), 2.0, true)
 	_ink_outline_on(panel, pommel, 3.0)
-	# His hand wrapped round the grip.
-	var hand: Vector2 = grip_a.lerp(grip_b, 0.42)
-	var fist := _ellipse(hand, 40.0, 24.0, 20, dir.angle())
+	# His hand round the grip.
+	var hand: Vector2 = grip_a.lerp(grip_b, 0.45)
+	var fist := _ellipse(hand, 34.0, 21.0, 20, dir.angle())
 	panel.draw_colored_polygon(fist, ELDER_SKIN)
 	for k in 3:
-		var p: Vector2 = hand + dir * (-18.0 + float(k) * 16.0)
-		panel.draw_line(p - nrm * 20.0, p - nrm * 4.0, Color(INK, 0.8), 2.4, true)
-	panel.draw_colored_polygon(_ellipse(hand + nrm * 16.0 + dir * 14.0, 12.0, 8.0, 12, dir.angle()), ELDER_SKIN.lightened(0.08))
+		var p: Vector2 = hand + dir * (-15.0 + float(k) * 14.0)
+		panel.draw_line(p - nrm * 17.0, p - nrm * 3.0, Color(INK, 0.8), 2.4, true)
 	_ink_outline_on(panel, fist, 4.0)
-	# His other hand steadying the scabbard at the mouth.
-	var hold: Vector2 = mouth - dir * 22.0
-	var palm := _ellipse(hold, 30.0, 22.0, 18, dir.angle() + 0.3)
-	panel.draw_colored_polygon(palm, ELDER_SKIN.darkened(0.08))
-	_ink_outline_on(panel, palm, 4.0)
+	# Yellow-white star flashing where the blade leaves the scabbard.
+	var flash: float = (0.75 + 0.25 * sin(t * 9.0)) * (0.6 + 0.6 * (1.0 - draw_k)) * smoothstep(0.0, 0.1, since)
+	if flash > 0.15:
+		var r: float = 34.0 * flash
+		panel.draw_circle(mouth, r * 0.9, Color(1.0, 0.85, 0.4, 0.25))
+		var star := PackedVector2Array()
+		for k in 8:
+			var a: float = float(k) * PI * 0.25 + 0.3
+			star.append(mouth + Vector2.from_angle(a) * (r if k % 2 == 0 else r * 0.18))
+		panel.draw_colored_polygon(star, Color(1.0, 0.92, 0.55))
+		panel.draw_circle(mouth, r * 0.16, Color(1, 1, 1))
 	if since > 0.3:
 		# "SHHNK!" pops out with its own little bounce.
 		var style := InkType.Style.new()
@@ -1826,7 +1867,34 @@ func _comic_katana(panel: Control, s: Vector2, since: float) -> void:
 		# Sized to the panel from its real width, centred, then the bounce on top.
 		var cap: float = minf(66.0, 66.0 * (s.x - 70.0) / maxf(InkType.measure(sound_text, 66.0), 1.0)) * pop
 		var w: float = InkType.measure(sound_text, cap)
-		InkType.draw(panel, sound_text, Vector2((s.x - w) * 0.5, 30.0 + (66.0 - cap) * 0.4), cap, style)
+		# Top left, out of the way of the grip.
+		InkType.draw(panel, sound_text, Vector2(28.0 + (66.0 - cap) * 0.5, 26.0 + (66.0 - cap) * 0.4), cap, style)
+
+
+## A tongue of fire rising off the blade at `base`: a broad foot along the blade, an outer edge
+## bulging out toward `out`, the tip swept back (against `dir`) and swaying by `sway` radians.
+func _flame_tongue(ci: CanvasItem, base: Vector2, dir: Vector2, out: Vector2, length: float, foot: float, sway: float, color: Color) -> void:
+	var b0: Vector2 = base - dir * foot * 0.5
+	var b1: Vector2 = base + dir * foot * 0.5
+	var tip: Vector2 = base + (out * 0.62 - dir * 0.78).rotated(sway * signf(out.cross(dir))) * length
+	var c_out: Vector2 = b1 + out * length * 0.62 + dir * length * 0.05
+	var c_in: Vector2 = b0 + out * length * 0.12 - dir * length * 0.35
+	var pts := PackedVector2Array()
+	for i in 9:
+		pts.append(_bezier(b1, c_out, tip, float(i) / 8.0))
+	for i in range(1, 8):
+		pts.append(_bezier(tip, c_in, b0, float(i) / 8.0))
+	ci.draw_colored_polygon(pts, color)
+
+
+## A brush stroke thinning from `w0` to `w1` made of round segments (no polygon, so tight curls
+## never break it).
+func _brush_on(ci: CanvasItem, pts: PackedVector2Array, w0: float, w1: float, color: Color) -> void:
+	var n: int = pts.size()
+	for i in range(n - 1):
+		var w: float = lerpf(w0, w1, float(i) / float(maxi(n - 1, 1)))
+		ci.draw_line(pts[i], pts[i + 1], color, w, true)
+		ci.draw_circle(pts[i], w * 0.5, color)
 
 
 func _ink_outline_on(ci: CanvasItem, pts: PackedVector2Array, width: float) -> void:
