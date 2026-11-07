@@ -28,8 +28,10 @@ extends Control
 @export var credits_art_line: String = "Diseño visual, interfaces y escenarios: Laura Escobar"
 @export var credits_engine_line: String = "Hecho con Godot 4 y GDScript"
 @export var credits_resources_title: String = "Recursos externos"
-## One line per external asset (empty for now).
-@export var credits_resources: PackedStringArray = PackedStringArray()
+## One line per external asset.
+@export var credits_resources: PackedStringArray = PackedStringArray([
+	"Fuentes: Rubik Wet Paint y Patrick Hand (Google Fonts, licencia SIL OFL) y Special Elite (Google Fonts, licencia Apache 2.0)",
+])
 @export var credits_thanks_title: String = "Agradecimientos"
 @export_multiline var credits_thanks: String = "A quien juegue hasta el final.\nA los patos que no lo lograron."
 ## Pixels per second the credits roll up.
@@ -278,12 +280,12 @@ func _build_credits() -> void:
 	credits_roll.add_child(headline)
 	for line in [credits_dev_line, credits_art_line, credits_engine_line]:
 		_credit_line(line, &"")
-	_credit_line(credits_resources_title, &"KeyLabel")
+	_credit_line(credits_resources_title, &"HeaderLabel")
 	for line in credits_resources:
 		_credit_line(line, &"NoteLabel")
 	if credits_resources.is_empty():
 		_credit_line("—", &"NoteLabel")
-	_credit_line(credits_thanks_title, &"KeyLabel")
+	_credit_line(credits_thanks_title, &"HeaderLabel")
 	_credit_line(credits_thanks, &"NoteLabel")
 
 
