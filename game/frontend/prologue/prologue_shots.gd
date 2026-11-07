@@ -1,16 +1,17 @@
 class_name PrologueShots
 extends Control
 ## Paints the shots of the prologue, all in code with thick ink and brush texture:
-## CARD the series-style card ("BASADA EN / UNA PROFECÍA" typed, then the tagline) on brushed orange with deformed wings
-## and claws reaching in, TITLE the cracking QUACKTACLYSM title, EYE an anime-style close-up of
-## the hero's eye with red stars falling in the iris, FALL the town seen from a rooftop through the
-## hero's eyes as the sky turns red and the stars rain down on it, FOREST the dark pine
-## wood with huge amber eyes, COMIC the grandfather's comic page, CAVE the prophecy stone lit by a
+## CARD the series-style card ("BASADA EN / UNA PROFECÍA" typed, then the tagline scribbled) on
+## brushed orange with deformed wings and claws reaching in, TITLE QUACKTACLYSM dropping in letter
+## by letter and cracking, PORTRAIT the hero in a full-screen comic panel, EYE an anime-style
+## close-up of his eye with red stars falling in the iris, FALL the town seen from a rooftop
+## through his eyes as the sky turns red and the stars rain down on it, FOREST the dark pine wood
+## with huge amber eyes, COMIC the grandfather's comic page, CAVE the prophecy stone lit by a
 ## torch, OUT the fade to the tutorial. The cutscene sets `shot`, `t` (seconds into the shot) and
 ## `line` (current subtitle); some shots add their own nodes (ducks, comic panels, the torchlight).
 ## Visual only.
 
-enum Shot { CARD, TITLE, EYE, FALL, FOREST, COMIC, CAVE, OUT }
+enum Shot { CARD, TITLE, PORTRAIT, EYE, FALL, FOREST, COMIC, CAVE, OUT }
 
 const INK := Color(0.07, 0.06, 0.08)
 const STAR := Color(1.0, 0.82, 0.32)
@@ -81,6 +82,8 @@ func advance(delta: float) -> void:
 	if shot == Shot.FALL:
 		# A short jolt on every impact.
 		target = _fall_shake()
+	elif shot == Shot.PORTRAIT:
+		target = _portrait_shake()
 	elif shot == Shot.COMIC:
 		# A short jolt as each panel lands.
 		target = _comic_shake()
@@ -109,6 +112,8 @@ func _draw() -> void:
 			_draw_card()
 		Shot.TITLE:
 			_draw_title()
+		Shot.PORTRAIT:
+			_draw_portrait()
 		Shot.EYE:
 			_draw_eye()
 		Shot.FALL:
@@ -252,46 +257,301 @@ func _claw_reach(root: Vector2, length: float, angle: float, color: Color) -> vo
 # 2. Title
 # =====================================================================================
 
+## The title (~3.4 s): black with a fine grain, sparks and small stars drifting down behind; the
+## letters drop in one by one (0.06 s apart), each landing with a little bounce and a puff of dust;
+## once they are all down the crack opens from top to bottom (~0.4 s) and glows yellow in soft
+## pulses; it holds, then the cutscene fades it into the hero's portrait. Centred exactly.
+const TITLE_CAP: float = 80.0
+const TITLE_DROP_START: float = 0.25
+const TITLE_DROP_GAP: float = 0.06
+const TITLE_DROP_TIME: float = 0.34
+
+
 func _draw_title() -> void:
 	draw_rect(Rect2(Vector2(-20, -20), DESIGN + Vector2(40, 40)), Color(0.02, 0.02, 0.03))
-	# Sparks and stars falling behind.
-	for i in 40:
-		var speed: float = 120.0 + _h(i) * 220.0
+	_grain(0.06)
+	# Sparks and small stars falling slowly behind.
+	for i in 44:
+		var speed: float = 40.0 + _h(i) * 70.0
 		var p := Vector2(_h(i + 50) * DESIGN.x, fposmod(_h(i + 90) * DESIGN.y + t * speed, DESIGN.y + 40.0) - 20.0)
-		if i % 5 == 0:
-			_star(p, 5.0 + _h(i + 3) * 5.0, Color(STAR, 0.8))
+		if i % 4 == 0:
+			_star(p, 3.0 + _h(i + 3) * 4.0, Color(STAR, 0.7))
 		else:
-			draw_line(p, p - Vector2(2, 10), Color(EMBER, 0.6), 2.0, true)
-	var grow: float = clampf(t / 0.9, 0.0, 1.0)
-	var cap: float = lerpf(64.0, 84.0, 1.0 - pow(1.0 - grow, 3.0))
+			draw_line(p, p - Vector2(1, 7), Color(EMBER, 0.5), 2.0, true)
+	var cap: float = TITLE_CAP
 	var style := InkType.Style.new()
-	style.fill = Color(0.95, 0.88, 0.66, grow)
-	style.extrude = Color(0.3, 0.2, 0.1, grow)
-	style.ink = Color(INK, grow)
+	style.fill = Color(0.95, 0.88, 0.66)
+	style.extrude = Color(0.3, 0.2, 0.1)
+	style.ink = INK
 	style.depth = 1.1
-	style.base = Transform2D(0.0, _shake)
-	# Centred exactly on the screen from the real width of the set text; the extrusion hangs down
-	# and to the right, so the block is nudged back by half of it.
+	style.wobble = 0.0
+	var u: float = cap / 10.0
 	var width: float = InkType.measure(title_text, cap)
-	var extrusion := Vector2(0.45, 0.65) * style.depth * cap / 10.0
+	var extrusion := Vector2(0.45, 0.65) * style.depth * u
 	var center: Vector2 = DESIGN * 0.5
 	var origin := Vector2(center.x - width * 0.5, center.y - cap * 0.5) - extrusion * 0.5
-	InkType.draw(self, title_text, origin, cap, style)
-	# The crack runs down through the letters and starts to glow.
-	var crack_k: float = clampf((t - 1.3) / 0.8, 0.0, 1.0)
+	var letters: String = title_text.to_upper()
+	var x: float = 0.0
+	for i in letters.length():
+		var ch: String = letters[i]
+		var w: float = InkType.measure(ch, cap)
+		var start: float = TITLE_DROP_START + float(i) * TITLE_DROP_GAP
+		var k: float = clampf((t - start) / TITLE_DROP_TIME, 0.0, 1.0)
+		if k > 0.0 and ch != " ":
+			# Falls with gravity, then a small bounce and squash as it lands.
+			var drop: float = -420.0 * (1.0 - k * k) if k < 1.0 else 0.0
+			var since: float = t - start - TITLE_DROP_TIME
+			var bounce: float = 0.0
+			var squash: float = 1.0
+			if since > 0.0 and since < 0.25:
+				bounce = -sin(since / 0.25 * PI) * 10.0 * (1.0 - since / 0.25)
+				squash = 1.0 - 0.12 * maxf(1.0 - since / 0.12, 0.0)
+			var tilt: float = (_h(i + 3000) - 0.5) * 0.08
+			var pivot: Vector2 = origin + Vector2(x + w * 0.5, cap)
+			style.base = Transform2D(0.0, _shake) * Transform2D(tilt, Vector2(1.0 / squash, squash), 0.0, pivot + Vector2(0, drop + bounce)) * Transform2D(0.0, -pivot)
+			InkType.draw(self, ch, origin + Vector2(x, 0), cap, style)
+			draw_set_transform(_shake, 0.0, Vector2.ONE)
+			# A puff of dust where it lands.
+			if since > 0.0 and since < 0.5:
+				var puff: float = since / 0.5
+				for d in 4:
+					var side: float = -1.0 if d % 2 == 0 else 1.0
+					var p: Vector2 = pivot + Vector2(side * (w * 0.3 + puff * 26.0 * (1.0 + float(d / 2))), 6.0 - puff * 10.0)
+					draw_circle(p, 5.0 + puff * 9.0, Color(0.6, 0.55, 0.48, 0.35 * (1.0 - puff)))
+		x += w + InkType.SPACING * u
+	# The crack opens top to bottom once every letter is down, then pulses yellow.
+	var landed: float = TITLE_DROP_START + float(letters.length() - 1) * TITLE_DROP_GAP + TITLE_DROP_TIME + 0.15
+	var crack_k: float = clampf((t - landed) / 0.4, 0.0, 1.0)
 	if crack_k > 0.0:
 		var pts := PackedVector2Array()
-		var x0: float = center.x
-		for k in 8:
-			var u: float = float(k) / 7.0
-			if u > crack_k:
+		var steps: int = 9
+		for k in steps:
+			var v: float = float(k) / float(steps - 1)
+			if v > crack_k:
 				break
-			pts.append(Vector2(x0 + sin(float(k) * 2.3) * 22.0, origin.y - 30.0 + u * (cap + 70.0)))
+			pts.append(Vector2(center.x + sin(float(k) * 2.3) * 20.0, origin.y - 34.0 + v * (cap + 78.0)))
 		if pts.size() > 1:
-			var pulse: float = 0.7 + 0.3 * sin(t * 8.0)
-			draw_polyline(pts, Color(STAR, 0.2 * pulse), 26.0, true)
+			var pulse: float = 0.6 + 0.4 * sin((t - landed) * 4.5)
+			var glow: float = smoothstep(0.0, 0.5, t - landed - 0.4)
+			draw_polyline(pts, Color(STAR, (0.12 + 0.18 * pulse) * glow + 0.05), 30.0, true)
 			draw_polyline(pts, INK, 7.0, true)
-			draw_polyline(pts, Color(1.0, 0.92, 0.5, pulse), 3.0, true)
+			draw_polyline(pts, Color(1.0, 0.92, 0.5, 0.4 + 0.6 * pulse * glow), 3.0, true)
+
+
+## Fine film grain over the whole frame, different every frame.
+func _grain(alpha: float) -> void:
+	var seed_t: int = int(t * 24.0)
+	for i in 240:
+		var a: float = fposmod(sin(float(i * 7 + seed_t * 131) * 12.9898) * 43758.5453, 1.0)
+		var b: float = fposmod(sin(float(i * 13 + seed_t * 71) * 78.233) * 43758.5453, 1.0)
+		var shade: float = 0.3 + 0.5 * fposmod(a * 7.0, 1.0)
+		draw_rect(Rect2(Vector2(a * DESIGN.x, b * DESIGN.y), Vector2(2, 2)), Color(shade, shade, shade, alpha))
+
+
+# =====================================================================================
+# 2b. The hero's portrait
+# =====================================================================================
+
+## The hero's portrait (~5 s), a full-screen comic panel like the grandfather's: purple rays
+## (the eye shot's light) and hard black diagonal shadows behind; the hero from below in a medium
+## shot, whole and centred (ruffled dark feathers, his red patched kimono, the sheathed katana over
+## his shoulder, eye bags, a small scar, dirt), looking a little to the side. It lands with a
+## panel hit, he breathes slowly, the wind stirs his feathers and his kimono, and his gaze turns to
+## the front. Then the view pushes slowly into his eye while the edges darken, and the cutscene
+## fades softly into the eye shot, which starts framed on the same spot.
+const PORTRAIT_LIGHT := Color("4a3ac4")
+const PORTRAIT_DARK := Color("22186a")
+const HERO_FEATHER := Color(0.85, 0.81, 0.66)
+const HERO_RED := Color(0.6, 0.21, 0.2)
+const HERO_HAIR := Color(0.12, 0.1, 0.16)
+const PORTRAIT_ENTER: float = 0.35
+const PORTRAIT_PUSH := Vector2(3.4, 4.9)
+
+
+func _portrait_shake() -> Vector2:
+	var since: float = t - PORTRAIT_ENTER * 0.8
+	if since < 0.0 or since > 0.25:
+		return Vector2.ZERO
+	return Vector2(sin(t * 95.0), cos(t * 80.0)) * 8.0 * (1.0 - since / 0.25)
+
+
+func _portrait_look() -> float:
+	return smoothstep(1.4, 2.6, t)
+
+
+func _portrait_head() -> Vector2:
+	return Vector2(640.0 - 18.0 * (1.0 - _portrait_look()), 292.0 + sin(t * 1.2) * 2.0)
+
+
+## The eye the camera pushes into (his near eye, once he looks to the front).
+func _portrait_eye() -> Vector2:
+	return _portrait_head() + Vector2(-42.0, -14.0)
+
+
+func _draw_portrait() -> void:
+	draw_rect(Rect2(Vector2(-30, -30), DESIGN + Vector2(60, 60)), Color(0.03, 0.02, 0.05))
+	# Entrance: the panel lands big and a little turned, then settles.
+	var hit: float = clampf(t / PORTRAIT_ENTER, 0.0, 1.0)
+	var land_scale: float = lerpf(1.18, 1.0, 1.0 - pow(1.0 - hit, 3.0))
+	var land_rot: float = sin(hit * 14.0) * 0.03 * (1.0 - hit)
+	# Push into the eye at the end, the eye drifting to where the eye shot puts it.
+	var push: float = smoothstep(PORTRAIT_PUSH.x, PORTRAIT_PUSH.y, t)
+	var zoom: float = land_scale * (1.0 + 3.2 * push * push)
+	var eye: Vector2 = _portrait_eye()
+	var anchor: Vector2 = DESIGN * 0.5
+	var focus: Vector2 = anchor.lerp(eye, smoothstep(0.0, 0.4, push))
+	var target: Vector2 = anchor.lerp(IRIS_C, push)
+	var xf: Transform2D = Transform2D(0.0, _shake) * Transform2D(land_rot, Vector2(zoom, zoom), 0.0, target) * Transform2D(0.0, -focus)
+	draw_set_transform_matrix(xf)
+	var panel := Rect2(30, 86, 1220, 548)
+	# Purple rays from behind his head and hard diagonal shadows.
+	draw_rect(panel, PORTRAIT_DARK)
+	var src: Vector2 = _portrait_head() + Vector2(0, -20)
+	for k in 22:
+		var a: float = TAU * float(k) / 22.0 + t * 0.03
+		var ray := PackedVector2Array([src, src + Vector2.from_angle(a - 0.07) * 1500.0, src + Vector2.from_angle(a + 0.07) * 1500.0])
+		for piece in Geometry2D.intersect_polygons(ray, _rect_poly(panel)):
+			draw_colored_polygon(piece, Color(PORTRAIT_LIGHT, 0.85 if k % 2 == 0 else 0.45))
+	draw_colored_polygon(PackedVector2Array([panel.position, Vector2(panel.position.x + 330, panel.position.y), Vector2(panel.position.x, panel.position.y + 300)]), Color(0, 0, 0, 0.8))
+	draw_colored_polygon(PackedVector2Array([Vector2(panel.end.x - 420, panel.end.y), panel.end, Vector2(panel.end.x, panel.end.y - 260)]), Color(0, 0, 0, 0.75))
+	_draw_hero_bust()
+	_ink_outline_on(self, _rect_poly(panel), 9.0)
+	draw_set_transform(_shake, 0.0, Vector2.ONE)
+	# The edges darken as the view closes in on the eye.
+	if push > 0.0:
+		for k in 20:
+			var f: float = 1.0 - float(k) * 0.035
+			var hole := _ellipse(IRIS_C, 900.0 * f * (1.0 - 0.45 * push), 560.0 * f * (1.0 - 0.45 * push), 40)
+			var ring := PackedVector2Array([Vector2(-60, -60), Vector2(1340, -60), Vector2(1340, 780), Vector2(-60, 780)])
+			for piece in Geometry2D.clip_polygons(ring, hole):
+				draw_colored_polygon(piece, Color(0, 0, 0, 0.05 * push))
+
+
+func _rect_poly(r: Rect2) -> PackedVector2Array:
+	return PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)])
+
+
+func _draw_hero_bust() -> void:
+	var look: float = _portrait_look()
+	var breath: float = sin(t * 1.2)
+	var head: Vector2 = _portrait_head()
+	var wind: float = sin(t * 2.6) * 0.5 + sin(t * 4.1) * 0.3
+	# The sheathed katana over his right shoulder: the grip and guard stick up past the shoulder.
+	var saya_a := Vector2(470, 700)
+	var saya_b := Vector2(900, 236)
+	var sdir: Vector2 = (saya_b - saya_a).normalized()
+	var snrm: Vector2 = sdir.orthogonal()
+	_tapered_on(self, PackedVector2Array([saya_a, saya_b]), 30.0, 30.0, INK)
+	_tapered_on(self, PackedVector2Array([saya_a, saya_b]), 22.0, 22.0, Color(0.14, 0.08, 0.1))
+	var tsuba: Vector2 = saya_b + sdir * 8.0
+	draw_colored_polygon(_ellipse(tsuba, 7.0, 26.0, 20, sdir.angle()), Color(0.42, 0.34, 0.12))
+	_ink_outline_on(self, _ellipse(tsuba, 7.0, 26.0, 20, sdir.angle()), 3.0)
+	var g0: Vector2 = tsuba + sdir * 8.0
+	var g1: Vector2 = g0 + sdir * 120.0
+	var grip := PackedVector2Array([g0 - snrm * 12.0, g1 - snrm * 11.0, g1 + snrm * 11.0, g0 + snrm * 12.0])
+	draw_colored_polygon(grip, Color(0.5, 0.08, 0.08))
+	for k in 6:
+		var c: Vector2 = g0.lerp(g1, (float(k) + 0.5) / 6.0)
+		draw_colored_polygon(PackedVector2Array([c - sdir * 10.0, c - snrm * 9.0, c + sdir * 10.0, c + snrm * 9.0]), Color(0.05, 0.03, 0.04))
+	_ink_outline_on(self, grip, 3.0)
+	var pommel := PackedVector2Array([g1 - snrm * 12.0, g1 + sdir * 14.0 - snrm * 10.0, g1 + sdir * 14.0 + snrm * 10.0, g1 + snrm * 12.0])
+	draw_colored_polygon(pommel, Color(0.55, 0.52, 0.48))
+	_ink_outline_on(self, pommel, 3.0)
+	# Kimono: broad shoulders spreading out of the bottom, seen from below, breathing.
+	var lift: float = breath * 3.0
+	var body := PackedVector2Array([Vector2(250, 760), Vector2(300, 520 - lift), Vector2(420, 440 - lift), Vector2(560, 408 - lift), Vector2(720, 408 - lift),
+			Vector2(860, 440 - lift), Vector2(980, 520 - lift), Vector2(1030, 760)])
+	draw_colored_polygon(body, HERO_RED)
+	# The sleeves flutter at the edges in the wind.
+	for side in [-1.0, 1.0]:
+		var edge := PackedVector2Array()
+		for k in 7:
+			var v: float = float(k) / 6.0
+			var base: Vector2 = Vector2(640.0 + side * (340.0 + v * 70.0), 520.0 + v * 130.0 - lift)
+			edge.append(base + Vector2(side * sin(t * 5.0 + v * 6.0) * 6.0 * (0.4 + wind * 0.5), 0))
+		draw_polyline(edge, Color(HERO_RED.darkened(0.35), 0.9), 5.0, true)
+	var collar_in := PackedVector2Array([Vector2(560, 410 - lift), Vector2(640, 560 - lift), Vector2(720, 410 - lift)])
+	draw_colored_polygon(collar_in, Color(0.88, 0.84, 0.74))
+	for side in [-1.0, 1.0]:
+		var collar := PackedVector2Array([Vector2(640.0 + side * 80.0, 408 - lift), Vector2(640.0 + side * 112.0, 414 - lift), Vector2(640.0 + side * 14.0, 600 - lift), Vector2(640, 560 - lift)])
+		draw_colored_polygon(collar, Color(0.2, 0.22, 0.32))
+		_ink_outline_on(self, collar, 4.0)
+	# The patch sewn on his left shoulder, with big stitches.
+	var patch := PackedVector2Array([Vector2(372, 470 - lift), Vector2(450, 458 - lift), Vector2(458, 530 - lift), Vector2(380, 540 - lift)])
+	draw_colored_polygon(patch, Color(0.72, 0.55, 0.38))
+	for k in 4:
+		var a: Vector2 = patch[k]
+		var b: Vector2 = patch[(k + 1) % 4]
+		for f in [0.3, 0.7]:
+			var p: Vector2 = a.lerp(b, f)
+			var n: Vector2 = (b - a).normalized().orthogonal() * 5.0
+			draw_line(p - n, p + n, INK, 2.0, true)
+	_ink_outline_on(self, patch, 3.0)
+	for k in 3:
+		draw_colored_polygon(_ellipse(Vector2(700 + k * 90, 520 + k * 30 - lift), 22.0, 10.0, 12, 0.3), Color(0.3, 0.12, 0.08, 0.35))
+	_ink_outline_on(self, body, 6.0)
+	# Neck and head.
+	draw_colored_polygon(_ellipse(head + Vector2(0, 104), 70.0, 46.0, 20), HERO_FEATHER.darkened(0.08))
+	var skull := _ellipse(head, 112.0, 104.0, 40)
+	draw_colored_polygon(skull, HERO_FEATHER)
+	draw_colored_polygon(_ellipse(head + Vector2(-58, 40), 18.0, 9.0, 12, 0.4), Color(0.35, 0.25, 0.18, 0.35))
+	_ink_outline_on(self, skull, 6.0)
+	# Ruffled dark feathers on top, stirred by the wind.
+	for k in 15:
+		var a: float = -PI + 0.15 + float(k) / 14.0 * (PI - 0.3)
+		var root: Vector2 = head + Vector2(cos(a) * 104.0, sin(a) * 96.0)
+		var length: float = 46.0 + _h(k + 3100) * 60.0
+		var bend: float = (_h(k + 3110) - 0.5) * 0.8 + wind * 0.25 + sin(t * 3.5 + float(k)) * 0.08
+		var d0 := Vector2.from_angle(a + bend * 0.4)
+		var d1 := Vector2.from_angle(a + bend)
+		var mid: Vector2 = root + d0 * length * 0.55
+		var lock := PackedVector2Array([root - d0 * 14.0, mid, mid + d1 * length * 0.5])
+		_tapered_on(self, lock, 34.0, 2.0, HERO_HAIR)
+		if k % 3 == 0:
+			draw_line(mid - d0 * 10.0, mid + d1 * 18.0, Color(0.4, 0.36, 0.55, 0.5), 2.0, true)
+	draw_colored_polygon(PackedVector2Array([head + Vector2(-112, -10), head + Vector2(-60, -98), head + Vector2(40, -108), head + Vector2(110, -40),
+			head + Vector2(90, -52), head + Vector2(10, -70), head + Vector2(-70, -48)]), HERO_HAIR)
+	# Eyes: tired, with dark bags, turning from the side to the front.
+	for side in [-1.0, 1.0]:
+		var e: Vector2 = head + Vector2(side * 42.0 + 22.0 * (1.0 - look), -14.0)
+		var far: bool = side > 0.0
+		var rx: float = 26.0 * (lerpf(0.75, 1.0, look) if far else 1.0)
+		draw_arc(e + Vector2(0, 16), rx * 1.05, 0.3, PI - 0.3, 12, Color(0.3, 0.18, 0.32, 0.8), 6.0, true)
+		draw_colored_polygon(_ellipse(e, rx, 15.0, 20), Color(0.95, 0.93, 0.86))
+		var gaze := Vector2(lerpf(9.0, 0.0, look) * 1.0, 1.0)
+		for piece in Geometry2D.intersect_polygons(_ellipse(e + gaze, 11.0, 11.0, 16), _ellipse(e, rx, 15.0, 20)):
+			draw_colored_polygon(piece, Color(0.45, 0.08, 0.12))
+		draw_circle(e + gaze, 5.0, Color(0.05, 0.02, 0.04))
+		draw_circle(e + gaze + Vector2(3, -4), 2.4, Color(1, 1, 1, 0.9))
+		_tapered_on(self, PackedVector2Array([e + Vector2(-rx - 2.0, 2.0), e + Vector2(0, -15.0), e + Vector2(rx + 4.0, -2.0)]), 4.0, 6.0, INK)
+	# The beak: from a side wedge to a front view as he turns.
+	var side_beak := PackedVector2Array([head + Vector2(60, 4), head + Vector2(110, 10), head + Vector2(162, 26), head + Vector2(150, 40),
+			head + Vector2(110, 50), head + Vector2(64, 46), head + Vector2(48, 30), head + Vector2(50, 12)])
+	var front_beak := PackedVector2Array()
+	for k in 8:
+		var a: float = -PI * 0.5 + TAU * float(k) / 8.0 + PI * 0.125
+		front_beak.append(head + Vector2(0, 40) + Vector2(cos(a) * 58.0, sin(a) * 26.0))
+	var beak := PackedVector2Array()
+	for k in 8:
+		beak.append(side_beak[k].lerp(front_beak[k], look))
+	draw_colored_polygon(beak, Color(0.9, 0.6, 0.27))
+	_ink_outline_on(self, beak, 4.0)
+	# A small scar over his left eye, stitched.
+	var scar_a: Vector2 = head + Vector2(-64, -48)
+	var scar_b: Vector2 = head + Vector2(-34, -24)
+	draw_line(scar_a, scar_b, Color(0.82, 0.45, 0.45), 4.0, true)
+	for f in [0.3, 0.65]:
+		var p: Vector2 = scar_a.lerp(scar_b, f)
+		draw_line(p + Vector2(-5, 5), p + Vector2(5, -5), INK, 1.6, true)
+	# Hard black shadow over his right side (light from the upper left).
+	var silhouette: PackedVector2Array = skull
+	var merged: Array = Geometry2D.merge_polygons(skull, body)
+	if merged.size() == 1:
+		silhouette = merged[0]
+	var dark := PackedVector2Array([head + Vector2(30, -140), head + Vector2(70, -40), head + Vector2(40, 60), Vector2(700, 470), Vector2(760, 760),
+			Vector2(1100, 760), Vector2(1100, 200)])
+	for piece in Geometry2D.intersect_polygons(dark, silhouette):
+		draw_colored_polygon(piece, Color(0.02, 0.0, 0.05, 0.6))
 
 
 # =====================================================================================
