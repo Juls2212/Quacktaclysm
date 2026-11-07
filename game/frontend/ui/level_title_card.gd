@@ -3,8 +3,8 @@ extends CanvasLayer
 ## The level's opening and closing, visual only. On load the screen starts black and opens in
 ## ~0.8 s while a big title appears in the middle ("NIVEL N" spaced out, the level name with an
 ## ink outline and a decorative line, and the intro line in italics). After ~2.2 s the title
-## shrinks and rises slowly to the top center and stays there small (it steps aside while the boss
-## bar is shown). The intro line is the text the level puts in IntroLayer/IntroLabel: that label
+## shrinks and rises slowly to the top center and stays there small (the boss bar is at the
+## bottom, so they never overlap). The intro line is the text the level puts in IntroLayer/IntroLabel: that label
 ## keeps existing and the level keeps driving its visibility; it is only made see-through
 ## (self_modulate) and the line here fades out when the level hides it.
 ## At the end the screen darkens over ~0.8 s before the scene changes: it reads the public
@@ -31,7 +31,6 @@ var _intro: Label = null
 var _time: float = 0.0
 var _phrase: String = ""
 var _phrase_alpha: float = 0.0
-var _small_alpha: float = 1.0
 ## < 0 while not closing; else seconds since the close began.
 var _closing: float = -1.0
 ## Countdown to start closing after the choice (< 0 when not scheduled).
@@ -79,9 +78,6 @@ func _process(delta: float) -> void:
 		_phrase_alpha = minf(_phrase_alpha + delta * 3.0, 1.0)
 	else:
 		_phrase_alpha = maxf(_phrase_alpha - delta * 2.0, 0.0)
-	var boss_bar: Variant = _level.get(&"boss_bar") if _level != null else null
-	var hide_small: bool = boss_bar is CanvasItem and (boss_bar as CanvasItem).visible
-	_small_alpha = move_toward(_small_alpha, 0.0 if hide_small else 1.0, delta * 2.5)
 	if _close_in >= 0.0:
 		_close_in -= delta
 		if _close_in < 0.0:
@@ -140,7 +136,7 @@ func _draw_card() -> void:
 	var small_c := Vector2(s.x * 0.5, 46.0)
 	var c: Vector2 = big_c.lerp(small_c, shrink)
 	var sc: float = lerpf(1.0, SMALL_SCALE, shrink) * (0.9 + 0.1 * _ease_back(appear))
-	var alpha: float = appear * lerpf(1.0, 0.85 * _small_alpha, shrink)
+	var alpha: float = appear * lerpf(1.0, 0.85, shrink)
 	if black > 0.001 and _closing < 0.0:
 		# Opening: the black sits under the title.
 		_canvas.draw_rect(Rect2(Vector2.ZERO, s), Color(0, 0, 0, black))
