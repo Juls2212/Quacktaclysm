@@ -190,7 +190,7 @@ func _build() -> void:
 	root.add_child(bars)
 	_subtitle = Label.new()
 	_subtitle.theme_type_variation = &"SceneLabel"
-	_subtitle.add_theme_font_size_override("font_size", 24)
+	_subtitle.add_theme_font_size_override("font_size", 28)
 	_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_subtitle.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
