@@ -116,7 +116,7 @@ static func spaced_text(ci: CanvasItem, at: Vector2, text: String, size: int, co
 		spaced += text[i]
 		if i < text.length() - 1:
 			spaced += " " if text[i] != " " else "   "
-	var font: Font = ThemeDB.fallback_font
+	var font: Font = GameFonts.BODY
 	var w: float = font.get_string_size(spaced, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 	var pos := Vector2(at.x - w * 0.5, at.y)
 	ci.draw_string_outline(font, pos, spaced, HORIZONTAL_ALIGNMENT_LEFT, -1, size, outline, INK)
