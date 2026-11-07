@@ -1,6 +1,8 @@
 class_name ArenaGate
 extends StaticBody2D
 ## Blocks the arena entrance while a boss fight runs. Starts open; close()/open() are idempotent.
+## The barrier is invisible: the Visual keeps its shape and visibility but is never drawn (the
+## fight's framing shows where the arena ends).
 
 signal state_changed(is_closed: bool)
 
@@ -20,6 +22,7 @@ func _ready() -> void:
 	collision.shape = RectangleShape2D.new()
 	_refresh_shape()
 	visual.color = color
+	visual.self_modulate.a = 0.0
 	_apply(false, true)
 
 
