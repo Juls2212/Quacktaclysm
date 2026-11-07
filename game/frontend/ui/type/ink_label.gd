@@ -1,7 +1,7 @@
 @tool
 class_name InkLabel
 extends Control
-## A line of text set in InkType ("Pato Tinta"), the game's display lettering.
+## A line of text set in InkType (Rubik Wet Paint dressed in ink), the game's display lettering.
 ## Sizes itself to the text; `wave` makes the letters bob in a travelling wave.
 
 enum Align { LEFT, CENTER, RIGHT }
