@@ -1,7 +1,7 @@
 class_name PrologueShots
 extends Control
 ## Paints the shots of the prologue, all in code with thick ink and brush texture:
-## CARD the series-style card ("BASADA EN / UNA PROFECÍA") on brushed orange with deformed wings
+## CARD the series-style card ("BASADA EN / UNA PROFECÍA" typed, then the tagline) on brushed orange with deformed wings
 ## and claws reaching in, TITLE the cracking QUACKTACLYSM title, EYE an anime-style close-up of
 ## the hero's eye with red stars falling in the iris, FALL the town seen from a rooftop through the
 ## hero's eyes as the sky turns red and the stars rain down on it, FOREST the dark pine
@@ -16,10 +16,15 @@ const INK := Color(0.07, 0.06, 0.08)
 const STAR := Color(1.0, 0.82, 0.32)
 const EMBER := Color(1.0, 0.45, 0.15)
 const DESIGN := Vector2(1280, 720)
+## Card typing: when it starts and keys per second.
+const CARD_TYPE_START: float = 0.45
+const CARD_TYPE_SPEED: float = 13.0
 
-## Shot 1: the series-style card, two lines at the left (small and spaced, then big and bold).
-@export var card_small_text: String = "BASADA EN"
-@export var card_big_text: String = "UNA PROFECÍA"
+## Shot 1: typed letter by letter on an old typewriter (one line per row; the first row small and
+## spaced, the rest big), then the tagline lands below in the title face.
+@export_multiline var card_typed_text: String = "BASADA EN
+UNA PROFECÍA"
+@export var card_tagline_text: String = "Una historia quacktástica"
 @export var title_text: String = "QUACKTACLYSM"
 @export var sound_text: String = "SHHNK!"
 
@@ -30,7 +35,6 @@ var line: int = -1
 var torch_point: Vector2 = Vector2.ZERO
 
 var _shake: Vector2 = Vector2.ZERO
-var _font: FontVariation
 var _actors: Array[Node] = []
 var _elder: DuckRig = null
 var _panels: Array[Control] = []
@@ -39,10 +43,6 @@ var _hero: DuckRig = null
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_font = FontVariation.new()
-	_font.base_font = ThemeDB.fallback_font
-	_font.spacing_glyph = 7
-	_font.variation_embolden = 0.6
 
 
 ## Switches to `next`, clearing the previous shot's nodes and building the new ones.
@@ -128,23 +128,81 @@ func _draw() -> void:
 
 func _draw_card() -> void:
 	_brush_fill(Rect2(Vector2.ZERO, DESIGN), Color(0.93, 0.42, 0.1), Color(0.98, 0.56, 0.16), 3)
-	var a: float = clampf((t - 0.5) / 0.8, 0.0, 1.0) * clampf((4.6 - t) / 0.5, 0.0, 1.0)
-	# Series-style card on two lines at the left: small and spaced, then big and bold.
-	var small_font := FontVariation.new()
-	small_font.base_font = ThemeDB.fallback_font
-	small_font.spacing_glyph = 12
-	var small_pos := Vector2(100, 318)
-	var big_pos := Vector2(96, 396)
-	draw_string(small_font, small_pos, card_small_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, Color(INK, a))
-	draw_string(_font, big_pos, card_big_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 66, Color(INK, a))
-	var text_right: float = maxf(small_pos.x + small_font.get_string_size(card_small_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 28).x,
-			big_pos.x + _font.get_string_size(card_big_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 66).x)
+	var fade: float = clampf((4.6 - t) / 0.5, 0.0, 1.0)
+	var paper := Color(0.98, 0.6, 0.22)
+	# 1. Typed on an old typewriter, letter by letter: each key lands a little off its line, the
+	# ink runs uneven (some letters struck twice, some worn), and a caret waits after the last one.
+	var font: Font = GameFonts.TYPEWRITER
+	var lines: PackedStringArray = card_typed_text.split("\n")
+	var typed: float = maxf(t - CARD_TYPE_START, 0.0) * CARD_TYPE_SPEED
+	var count: int = 0
+	var y: float = 300.0
+	var text_right: float = 0.0
+	var caret := Vector2(-1, -1)
+	for li in lines.size():
+		var line: String = lines[li]
+		var size: int = 30 if li == 0 and lines.size() > 1 else 54
+		var spacing: float = float(size) * (0.22 if size < 40 else 0.08)
+		var x: float = 100.0
+		for ci in line.length():
+			var ch: String = line[ci]
+			var adv: float = font.get_char_size(ch.unicode_at(0), size).x + spacing
+			if float(count) < typed and ch != " ":
+				var age: float = typed - float(count)
+				var jitter := Vector2((_h(count + 2700) - 0.5) * 1.6, (_h(count + 2710) - 0.5) * 2.6)
+				var ink: float = (0.72 + 0.28 * _h(count + 2720)) * fade
+				# The key strikes dark, then settles.
+				var strike: float = 1.0 + 0.25 * maxf(1.0 - age * 2.0, 0.0)
+				draw_char(font, Vector2(x, y) + jitter, ch, size, Color(INK.darkened(0.2), minf(ink * strike, 1.0)))
+				if _h(count + 2730) > 0.72:
+					draw_char(font, Vector2(x, y) + jitter + Vector2(0.9, 0.5), ch, size, Color(INK, 0.3 * fade))
+				if _h(count + 2740) > 0.5:
+					# Worn spots where the ribbon gave out.
+					var spot := Vector2(x + adv * (0.2 + 0.5 * _h(count + 2750)), y - float(size) * (0.2 + 0.4 * _h(count + 2760)))
+					draw_circle(spot, 1.0 + _h(count + 2770) * 1.2, Color(paper, 0.85 * fade))
+			if float(count) < typed:
+				caret = Vector2(x + adv, y)
+			x += adv
+			count += 1
+		text_right = maxf(text_right, x)
+		y += float(size) * (1.55 if li == 0 else 1.35)
+		count += 3
+	var done: float = float(count)
+	if typed < done and caret.x > 0.0 and fmod(t, 0.5) < 0.3:
+		draw_rect(Rect2(caret + Vector2(2, 4), Vector2(16, 3)), Color(INK, 0.8 * fade))
+	# 2. The tagline in the title face, landing with a thump on a splash of ink.
+	var land: float = CARD_TYPE_START + done / CARD_TYPE_SPEED + 0.35
+	var tag_size: int = 56
+	var tag_font: Font = GameFonts.TITLE
+	var tag_pos := Vector2(100.0, y + 30.0)
+	var tag_w: float = tag_font.get_string_size(card_tagline_text, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_size).x
+	text_right = maxf(text_right, tag_pos.x + tag_w)
+	var since: float = t - land
+	if since >= 0.0:
+		var splash: float = smoothstep(0.0, 0.12, since)
+		var c: Vector2 = tag_pos + Vector2(tag_w * 0.42, -18.0)
+		draw_colored_polygon(_splat(c, 90.0 * splash, 11), Color(0.36, 0.04, 0.05, 0.85 * fade))
+		draw_colored_polygon(_splat(c + Vector2(tag_w * 0.32, 10), 52.0 * splash, 12), Color(0.36, 0.04, 0.05, 0.85 * fade))
+		for d in 9:
+			var p: Vector2 = c + Vector2.from_angle(_h(d + 2780) * TAU) * (100.0 + _h(d + 2790) * 120.0) * splash
+			draw_circle(p, 3.0 + _h(d + 2800) * 7.0, Color(0.36, 0.04, 0.05, 0.85 * fade))
+		# The thump: big for an instant, a small overshoot, then still.
+		var k: float = clampf(since / 0.22, 0.0, 1.0)
+		var sc: float = lerpf(1.4, 1.0, smoothstep(0.0, 0.6, k)) - 0.06 * sin(clampf((k - 0.6) / 0.4, 0.0, 1.0) * PI)
+		var pivot: Vector2 = tag_pos + Vector2(tag_w * 0.5, -float(tag_size) * 0.3)
+		draw_set_transform(_shake + pivot - pivot * sc, 0.0, Vector2(sc, sc))
+		var cream := Color(0.98, 0.93, 0.8, fade)
+		draw_string_outline(tag_font, tag_pos + Vector2(4, 5), card_tagline_text, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_size, 12, Color(INK, fade))
+		draw_string(tag_font, tag_pos + Vector2(4, 5), card_tagline_text, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_size, Color(0.42, 0.06, 0.06, fade))
+		draw_string_outline(tag_font, tag_pos, card_tagline_text, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_size, 12, Color(INK, fade))
+		draw_string(tag_font, tag_pos, card_tagline_text, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_size, cream)
+		draw_set_transform(_shake, 0.0, Vector2.ONE)
 	# Wings and claws reach in from the right but stop short of the text.
 	var reach: float = 1.0 - pow(1.0 - clampf(t / 1.6, 0.0, 1.0), 3.0)
 	for i in 5:
-		var y: float = 90.0 + float(i) * 130.0 + sin(float(i) * 2.1) * 30.0
+		var cy: float = 90.0 + float(i) * 130.0 + sin(float(i) * 2.1) * 30.0
 		var tremble := Vector2(sin(t * 38.0 + i) * 2.0, cos(t * 33.0 + i * 2.0) * 2.0)
-		var root := Vector2(1340.0, y) + tremble
+		var root := Vector2(1340.0, cy) + tremble
 		var room: float = root.x - text_right - 60.0 - (95.0 if i % 2 == 1 else 0.0)
 		var length: float = minf(300.0 + float(i % 3) * 120.0, maxf(room, 0.0)) * reach
 		if i % 2 == 0:
@@ -201,20 +259,25 @@ func _draw_title() -> void:
 		else:
 			draw_line(p, p - Vector2(2, 10), Color(EMBER, 0.6), 2.0, true)
 	var grow: float = clampf(t / 0.9, 0.0, 1.0)
-	var cap: float = lerpf(70.0, 96.0, 1.0 - pow(1.0 - grow, 3.0))
+	var cap: float = lerpf(64.0, 84.0, 1.0 - pow(1.0 - grow, 3.0))
 	var style := InkType.Style.new()
 	style.fill = Color(0.95, 0.88, 0.66, grow)
 	style.extrude = Color(0.3, 0.2, 0.1, grow)
 	style.ink = Color(INK, grow)
 	style.depth = 1.1
+	style.base = Transform2D(0.0, _shake)
+	# Centred exactly on the screen from the real width of the set text; the extrusion hangs down
+	# and to the right, so the block is nudged back by half of it.
 	var width: float = InkType.measure(title_text, cap)
-	var origin := Vector2((DESIGN.x - width) * 0.5, DESIGN.y * 0.5 - cap * 0.5)
+	var extrusion := Vector2(0.45, 0.65) * style.depth * cap / 10.0
+	var center: Vector2 = DESIGN * 0.5
+	var origin := Vector2(center.x - width * 0.5, center.y - cap * 0.5) - extrusion * 0.5
 	InkType.draw(self, title_text, origin, cap, style)
 	# The crack runs down through the letters and starts to glow.
 	var crack_k: float = clampf((t - 1.3) / 0.8, 0.0, 1.0)
 	if crack_k > 0.0:
 		var pts := PackedVector2Array()
-		var x0: float = DESIGN.x * 0.55
+		var x0: float = center.x
 		for k in 8:
 			var u: float = float(k) / 7.0
 			if u > crack_k:
@@ -1760,7 +1823,10 @@ func _comic_katana(panel: Control, s: Vector2, since: float) -> void:
 		style.depth = 1.0
 		var b: float = clampf((since - 0.3) / 0.35, 0.0, 1.0)
 		var pop: float = 0.6 + 0.6 * smoothstep(0.0, 0.5, b) - 0.2 * smoothstep(0.5, 1.0, b) + 0.06 * sin(b * PI * 3.0) * (1.0 - b)
-		InkType.draw(panel, sound_text, Vector2(s.x * 0.18, 26), 70.0 * pop, style)
+		# Sized to the panel from its real width, centred, then the bounce on top.
+		var cap: float = minf(66.0, 66.0 * (s.x - 70.0) / maxf(InkType.measure(sound_text, 66.0), 1.0)) * pop
+		var w: float = InkType.measure(sound_text, cap)
+		InkType.draw(panel, sound_text, Vector2((s.x - w) * 0.5, 30.0 + (66.0 - cap) * 0.4), cap, style)
 
 
 func _ink_outline_on(ci: CanvasItem, pts: PackedVector2Array, width: float) -> void:
