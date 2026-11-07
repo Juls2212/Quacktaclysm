@@ -149,7 +149,7 @@ func _draw_card() -> void:
 		var y: float = lerpf(big_c.y + 96.0, small_c.y + 44.0, shrink)
 		# Italics: the default font has none, so the line is slanted by hand.
 		_canvas.draw_set_transform_matrix(Transform2D(Vector2(1.0, 0.0), Vector2(-0.2, 1.0), Vector2(0.2 * y, 0.0)))
-		_text_centered(Vector2(s.x * 0.5, y), _phrase, 24, Color(CREAM, a), 6, Color(INK, 0.8 * a), ThemeDB.fallback_font, s.x - 80.0)
+		_text_centered(Vector2(s.x * 0.5, y), _phrase, 28, Color(CREAM, a), 6, Color(INK, 0.8 * a), GameFonts.BODY, s.x - 80.0)
 		_canvas.draw_set_transform_matrix(Transform2D.IDENTITY)
 	if black > 0.001 and _closing >= 0.0:
 		# Closing: the black covers everything.
@@ -157,27 +157,28 @@ func _draw_card() -> void:
 
 
 func _draw_title(c: Vector2, sc: float, alpha: float) -> void:
-	var font: Font = ThemeDB.fallback_font
+	var font: Font = GameFonts.BODY
 	var number: Variant = _level.get(&"level_number") if _level != null else null
 	if number == null or int(number) <= 0:
 		# The tutorial (level 0) only gets the fades.
 		return
 	_canvas.draw_set_transform(c, 0.0, Vector2(sc, sc))
 	var header: String = "NIVEL %d" % int(number)
-	_text_centered(Vector2(0, -52), _spaced(header), 22, Color(CREAM, 0.9 * alpha), 6, Color(INK, 0.85 * alpha), font)
+	_text_centered(Vector2(0, -56), _spaced(header), 26, Color(CREAM, 0.9 * alpha), 6, Color(INK, 0.85 * alpha), font)
 	var title: String = level_name if not level_name.is_empty() else ""
 	if not title.is_empty():
-		_text_centered(Vector2(0, 14), title, 64, Color(CREAM, alpha), 14, Color(INK, alpha), font)
-		var w: float = font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 64).x * 0.5 + 20.0
+		# The level's name in the title face (Rubik Wet Paint).
+		_text_centered(Vector2(0, 18), title, 70, Color(CREAM, alpha), 14, Color(INK, alpha), GameFonts.TITLE)
+		var w: float = GameFonts.TITLE.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 70).x * 0.5 + 20.0
 		# Decorative line: two ink-edged strokes and a small diamond star in the middle.
 		for side in [-1.0, 1.0]:
-			var a := Vector2(side * 22.0, 40.0)
-			var b := Vector2(side * w, 40.0)
+			var a := Vector2(side * 22.0, 48.0)
+			var b := Vector2(side * w, 48.0)
 			_canvas.draw_line(a, b, Color(INK, alpha), 6.0, true)
 			_canvas.draw_line(a, b, Color(CREAM, 0.9 * alpha), 2.5, true)
 			_canvas.draw_circle(b, 4.0, Color(INK, alpha))
 			_canvas.draw_circle(b, 2.2, Color(STAR, alpha))
-		var d := PackedVector2Array([Vector2(0, 30), Vector2(10, 40), Vector2(0, 50), Vector2(-10, 40)])
+		var d := PackedVector2Array([Vector2(0, 38), Vector2(10, 48), Vector2(0, 58), Vector2(-10, 48)])
 		_canvas.draw_colored_polygon(d, Color(STAR, alpha))
 		var ring := PackedVector2Array(d)
 		ring.append(d[0])
