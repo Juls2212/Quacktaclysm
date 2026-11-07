@@ -1321,11 +1321,11 @@ func _pine(base: Vector2, h: float, color: Color) -> void:
 ## that lands with a short shake of the page. RED: a low-angle medium shot of the grandfather
 ## (head, beard, shoulders and kimono, his hard black shadow cast on the wall behind); it slides in from the left with speed
 ## lines, its ink border drawing itself and an ink splash in a corner. BLUE: his two tired eyes
-## painted like the prologue's eye (heavy upper lash line, curved lashes, dark bags, long messy
-## white brows, dark irises with a small glint; one slow blink); it drops from above and bounces,
-## with a white flash and halftone dots that come and go. YELLOW: the katana drawn from its dark
-## scabbard (a near-black blade wreathed in red fire, a dark red grip wrapped in black diamonds,
-## a small square guard, a metal pommel, his hand on the grip, a star flash at the mouth); it bursts out of the centre (0 -> 110 % -> 100 %) over
+## painted like the prologue's eye (heavy upper lash line with a few short lashes, dark bags,
+## fine wrinkles, thick bushy white brows, dark irises with a small glint; one slow blink); it drops from above and bounces,
+## with a white flash and halftone dots that come and go. YELLOW: the katana alone across the
+## panel (a near-black blade wreathed in red fire, a small square guard, a long red grip wrapped
+## in black diamonds, a metal pommel, a star flashing on the blade); it bursts out of the centre (0 -> 110 % -> 100 %) over
 ## radial impact lines, and "SHHNK!" pops with its own bounce. At the end of the page all the
 ## panels leave together under a sweep of ink.
 const COMIC_RECTS: Array = [Rect2(40, 50, 640, 570), Rect2(705, 50, 535, 270), Rect2(705, 345, 535, 275)]
@@ -1670,6 +1670,11 @@ func _comic_eyes(panel: Control, s: Vector2, since: float) -> void:
 	for side in [-1.0, 1.0]:
 		var c := Vector2(s.x * 0.5 + float(side) * 128.0, s.y * 0.56)
 		_old_eye(panel, c, float(side), open, since)
+	# Two frown lines between the brows.
+	for k in 2:
+		var x: float = s.x * 0.5 + (float(k) - 0.5) * 18.0
+		panel.draw_polyline(PackedVector2Array([Vector2(x, s.y * 0.56 - 96.0), Vector2(x + (float(k) - 0.5) * 6.0, s.y * 0.56 - 76.0), Vector2(x + (float(k) - 0.5) * 3.0, s.y * 0.56 - 56.0)]),
+				Color(EYE_INK, 0.3), 2.2, true)
 	# Blue shadow from the top-left, hard edged.
 	panel.draw_colored_polygon(PackedVector2Array([Vector2(0, 0), Vector2(s.x * 0.3, 0), Vector2(0, s.y * 0.55)]), Color(0.03, 0.16, 0.2, 0.75))
 
@@ -1719,30 +1724,60 @@ func _old_eye(panel: Control, c: Vector2, side: float, open: float, since: float
 	# Heavy upper lash line and curved lashes swinging out to the side.
 	_tapered_on(panel, upper, 4.0, 10.0, EYE_INK)
 	_tapered_on(panel, lower, 1.5, 2.5, Color(EYE_INK, 0.7))
-	for k in 8:
-		var u: float = lerpf(0.35, 1.0, float(k) / 7.0)
-		var base: Vector2 = upper[int(u * 20.0)]
-		var d0 := Vector2(side * (0.3 + u * 0.6), -1.0 * lerpf(-0.7, 1.0, open)).normalized()
-		var length: float = 12.0 + 16.0 * u * (0.7 + 0.5 * _h(k + 2520))
-		var mid: Vector2 = base + d0 * length * 0.55
-		_tapered_on(panel, PackedVector2Array([base, mid, mid + (d0 + Vector2(side * 0.5, 0.2)).normalized() * length * 0.5]), 4.0, 0.6, EYE_INK)
-	# Long messy white brows.
-	for k in 11:
-		var u: float = float(k) / 10.0
-		var root: Vector2 = c + Vector2(-side * 70.0 + side * u * 130.0, -74.0 - sin(u * PI) * 12.0)
-		var length: float = 36.0 + _h(k + 2530 + int(side) * 20) * 34.0
-		var droop: float = 0.3 + _h(k + 2540) * 0.9
-		var sway: float = sin(since * 1.3 + float(k)) * 2.0
-		var pts := PackedVector2Array([root, root + Vector2(side * length * 0.55, -6.0 + sway), root + Vector2(side * length, droop * 18.0 + sway)])
-		_tapered_on(panel, pts, 10.0, 1.5, EYE_INK)
-		_tapered_on(panel, pts, 7.0, 0.8, Color(0.96, 0.95, 0.9))
+	# Only two or three short lashes at the outer corner: an old man's eye.
+	for k in 3:
+		var base: Vector2 = upper[17 + k]
+		var d0 := Vector2(side * (0.6 + 0.15 * float(k)), -1.0 * lerpf(-0.7, 1.0, open)).normalized()
+		_tapered_on(panel, PackedVector2Array([base, base + d0 * 5.0, base + (d0 + Vector2(side * 0.4, 0.1)).normalized() * 9.0]), 3.4, 0.6, EYE_INK)
+	# Fine wrinkles: crow's feet at the outer corner and soft lines under the bags.
+	var crow: Vector2 = outer + Vector2(side * 10.0, 2.0)
+	for k in 3:
+		var a: float = (float(k) - 1.0) * 0.36
+		var d := Vector2(side, 0.0).rotated(a * side)
+		panel.draw_polyline(PackedVector2Array([crow, crow + d * 14.0 + Vector2(0, 2), crow + d * 28.0 + Vector2(0, float(k) - 1.0) * 4.0]), Color(EYE_INK, 0.3), 2.0, true)
+	for k in 2:
+		var line := PackedVector2Array()
+		for i in 9:
+			var u: float = float(i) / 8.0
+			line.append(_bezier(inner + Vector2(side * 14.0, 40.0), c + Vector2(0, 92.0 + float(k) * 13.0), outer + Vector2(-side * 6.0, 34.0), u) + Vector2(0, float(k) * 6.0))
+		panel.draw_polyline(line, Color(EYE_INK, 0.22 - float(k) * 0.06), 2.0, true)
+	# Thick bushy white brows: three layers of dense messy tufts, some long, falling a little
+	# over the eye.
+	var tufts: Array = []
+	for layer in 3:
+		for k in 16:
+			var salt: int = k + layer * 40 + int(side) * 9
+			var u: float = (float(k) + _h(salt + 2560) * 0.8) / 16.0
+			# Arched brow: low at the nose, high in the middle, dropping at the temple.
+			var arch: float = sin(u * PI * 0.9 + 0.2) * 18.0 + u * 6.0
+			var root: Vector2 = c + Vector2(-side * 86.0 + side * u * 164.0, -74.0 - arch + float(layer) * 6.0 + (_h(salt + 2565) - 0.5) * 12.0)
+			var length: float = 22.0 + _h(salt + 2570) * 26.0 + (30.0 if _h(salt + 2580) > 0.82 else 0.0)
+			# Each tuft points its own way: most sweep out and down over the eye, some stick up.
+			var up: bool = _h(salt + 2585) > 0.72
+			var angle: float = (-0.55 - _h(salt + 2590) * 0.5) if up else (0.15 + _h(salt + 2590) * 0.6 + float(layer) * 0.12)
+			var sway: float = sin(since * 1.3 + float(k) + float(layer)) * 0.05
+			var d0 := Vector2(side, 0.0).rotated((angle + sway) * side)
+			var d1 := Vector2(side, 0.0).rotated(clampf(angle * 1.4 + 0.15 + sway, -1.0, 0.85) * side)
+			var ctrl: Vector2 = root + d0 * length * 0.55
+			var end: Vector2 = ctrl + d1 * length * 0.5
+			var curve := PackedVector2Array()
+			for i in 6:
+				curve.append(_bezier(root, ctrl, end, float(i) / 5.0))
+			tufts.append([curve, layer])
+	for tuft in tufts:
+		_brush_on(panel, tuft[0], 14.0 - float(tuft[1]) * 2.0, 2.5, Color(EYE_INK, 0.85))
+	for tuft in tufts:
+		var layer: int = tuft[1]
+		var col: Color = [Color(0.74, 0.75, 0.71), Color(0.88, 0.88, 0.84), Color(0.98, 0.97, 0.93)][layer]
+		_brush_on(panel, tuft[0], 10.0 - float(layer) * 1.5, 1.2, col)
 
 
-## The katana drawn from its scabbard: a long near-black blade with a thin light edge and a glint
-## running along it, red flames licking off it in curved tongues (strongest near the guard) with
-## red drops around, a dark red grip wrapped in black diamonds, a small square dark guard, a metal
-## pommel, and a yellow-white star flashing where the blade leaves the scabbard. The blade comes
-## out over 0.6 s (the grip, in his hand, slides away from the mouth) and the fire grows with it.
+## The katana alone, whole and easy to read, across the panel from the tip (lower left) to the
+## pommel (upper right): a slightly curved near-black blade with a bright light edge, a small dark
+## guard, a long red grip wrapped in black diamonds and a metal pommel. Red fire licks off the
+## blade behind it, with red drops around and a yellow-white star flashing on the blade; a light
+## rim keeps the sword's silhouette clear of the flames. It slides in along its own length over
+## 0.6 s and the fire grows with it.
 const BLADE_BLACK := Color("1a0e10")
 const FLAME_DEEP := Color("d42a1a")
 const FLAME_HOT := Color("ff6a3a")
@@ -1751,124 +1786,112 @@ const FLAME_HOT := Color("ff6a3a")
 func _comic_katana(panel: Control, s: Vector2, since: float) -> void:
 	var draw_k: float = clampf(since / 0.6, 0.0, 1.0)
 	var fire: float = smoothstep(0.0, 1.0, clampf(since / 0.9, 0.0, 1.0))
-	var saya_a := Vector2(24, s.y * 0.94)
-	var mouth := Vector2(s.x * 0.3, s.y * 0.74)
-	var dir: Vector2 = (mouth - saya_a).normalized()
+	var tip_home := Vector2(34, s.y - 34)
+	var pommel_home := Vector2(s.x - 30, 34)
+	var dir: Vector2 = (pommel_home - tip_home).normalized()
 	var nrm: Vector2 = dir.orthogonal()
-	var blade_len: float = 240.0 * draw_k
-	var guard: Vector2 = mouth + dir * blade_len
-	# Motion lines along the draw.
+	var total: float = tip_home.distance_to(pommel_home)
+	# It slides in along its length (from the lower left), easing to a stop.
+	var slide: Vector2 = -dir * total * 0.8 * pow(1.0 - draw_k, 3.0)
+	var tip: Vector2 = tip_home + slide
+	var blade_len: float = total * 0.6
+	var guard: Vector2 = tip + dir * blade_len
+	var grip_a: Vector2 = guard + dir * 12.0
+	var grip_b: Vector2 = grip_a + dir * (total * 0.33)
+	# Motion lines along the draw, below the sword.
 	for k in 6:
-		var p: Vector2 = mouth + dir * (60.0 + float(k) * 40.0) - nrm * (40.0 + float(k % 3) * 14.0)
-		panel.draw_line(p, p - dir * (40.0 + 60.0 * draw_k), Color(INK, 0.4), 3.0, true)
+		var p: Vector2 = tip + dir * (80.0 + float(k) * 44.0) - nrm * (34.0 + float(k % 3) * 12.0)
+		panel.draw_line(p, p - dir * (40.0 + 70.0 * (1.0 - draw_k) + 20.0), Color(INK, 0.35), 3.0, true)
 	# Red drops spattered around the blade.
 	for k in 26:
 		var u: float = _h(k + 2900)
-		if u > draw_k + 0.05:
-			continue
 		var side: float = -1.0 if _h(k + 2910) > 0.45 else 1.0
-		var p: Vector2 = mouth + dir * blade_len * u + nrm * side * (30.0 + _h(k + 2920) * 90.0) * fire - dir * _h(k + 2930) * 30.0
+		var p: Vector2 = tip + dir * blade_len * u + nrm * side * (30.0 + _h(k + 2920) * 80.0) * fire - dir * _h(k + 2930) * 30.0
 		p += Vector2(sin(t * 2.0 + float(k)), cos(t * 1.7 + float(k))) * 1.5
 		panel.draw_circle(p, (1.5 + _h(k + 2940) * 3.5) * fire, FLAME_DEEP if k % 3 else FLAME_HOT)
-	# Flames: curved tongues licking off both sides of the blade and back toward the scabbard,
-	# bigger and hotter near the guard; they wave and grow as the blade comes out.
-	if blade_len > 8.0:
-		# A red glow hugging the blade, the bed the tongues rise from.
-		_brush_on(panel, PackedVector2Array([mouth, mouth.lerp(guard, 0.5), guard]), 22.0 * fire + 8.0, 40.0 * fire + 8.0, Color(FLAME_DEEP, 0.8))
-		for k in 13:
-			var u: float = (float(k) + 0.5) / 13.0
-			var base: Vector2 = mouth + dir * blade_len * u
+	# The blade's spine: slightly curved (the back bows away from the edge), pointed at the tip.
+	var back := PackedVector2Array()
+	var edge := PackedVector2Array()
+	for k in 15:
+		var u: float = float(k) / 14.0
+		var p: Vector2 = tip + dir * blade_len * u + nrm * sin(u * PI) * 9.0
+		var half: float = lerpf(1.5, 9.0, smoothstep(0.0, 0.12, u))
+		back.append(p + nrm * half)
+		edge.append(p - nrm * half)
+	var blade := PackedVector2Array(back)
+	var rev := PackedVector2Array(edge)
+	rev.reverse()
+	blade.append_array(rev)
+	# Fire behind the sword: a glow along the blade and tongues swept back toward the tip.
+	if fire > 0.02:
+		_brush_on(panel, PackedVector2Array([tip + dir * 30.0, tip.lerp(guard, 0.5), guard - dir * 10.0]), 16.0 * fire + 4.0, 30.0 * fire + 6.0, Color(FLAME_DEEP, 0.75))
+		for k in 12:
+			var u: float = 0.12 + 0.8 * (float(k) + 0.5) / 12.0
+			var base: Vector2 = tip + dir * blade_len * u + nrm * sin(u * PI) * 9.0
 			var side: float = -1.0 if (k * 7) % 3 == 0 else 1.0
 			var strength: float = (0.35 + 0.65 * u) * fire
-			var length: float = (55.0 + 120.0 * u) * strength * (0.6 + 0.7 * _h(k + 2950))
+			var length: float = (45.0 + 95.0 * u) * strength * (0.6 + 0.7 * _h(k + 2950))
 			if length < 14.0:
 				continue
 			var sway: float = sin(t * 5.5 + float(k) * 1.7) * 0.18
-			_flame_tongue(panel, base, dir, nrm * side, length, 18.0 + 22.0 * strength, sway, Color(FLAME_DEEP, 0.95))
-			_flame_tongue(panel, base, dir, nrm * side, length * 0.62, 10.0 + 12.0 * strength, sway * 1.4, Color(FLAME_HOT, 0.92))
-			if length > 50.0:
-				_flame_tongue(panel, base, dir, nrm * side, length * 0.3, 6.0 + 4.0 * strength, sway, Color(1.0, 0.84, 0.58, 0.85))
-	# Scabbard: dark lacquer, a metal end cap, the cord near the mouth.
-	_tapered_on(panel, PackedVector2Array([saya_a, saya_a.lerp(mouth, 0.5) + nrm * 3.0, mouth]), 26.0, 26.0, INK)
-	_tapered_on(panel, PackedVector2Array([saya_a, saya_a.lerp(mouth, 0.5) + nrm * 3.0, mouth]), 18.0, 18.0, Color(0.14, 0.06, 0.08))
-	panel.draw_colored_polygon(_ellipse(saya_a, 14.0, 11.0, 14, dir.angle()), Color(0.45, 0.4, 0.38))
-	for k in 3:
-		var p: Vector2 = mouth - dir * (40.0 + float(k) * 10.0)
-		panel.draw_line(p - nrm * 12.0, p + nrm * 12.0, Color(0.55, 0.12, 0.12), 4.0, true)
-	# The blade: near black, a thin light edge, a glint running along it.
-	if blade_len > 4.0:
-		var back := PackedVector2Array()
-		var edge := PackedVector2Array()
-		for k in 13:
-			var u: float = float(k) / 12.0
-			var p: Vector2 = mouth + dir * blade_len * u - nrm * sin(u * PI * 0.5) * 5.0 * draw_k
-			back.append(p - nrm * 8.0)
-			edge.append(p + nrm * 9.0)
-		var blade := PackedVector2Array(back)
-		var rev := PackedVector2Array(edge)
-		rev.reverse()
-		blade.append_array(rev)
-		panel.draw_colored_polygon(blade, BLADE_BLACK)
-		panel.draw_polyline(edge, Color(0.78, 0.6, 0.58), 1.8, true)
-		var ring := PackedVector2Array(blade)
-		ring.append(blade[0])
-		panel.draw_polyline(ring, INK, 2.4, true)
-		var g: float = fposmod(t * 0.9, 1.4)
-		if g < 1.0:
-			var a: Vector2 = edge[int(g * 11.0)]
-			panel.draw_line(a - dir * 18.0, a + dir * 18.0, Color(1.0, 0.92, 0.8, 0.85), 2.4, true)
-	# Small, almost square dark guard.
-	var tsuba: Vector2 = guard + dir * 6.0
-	var square := PackedVector2Array([tsuba + (-dir * 6.0 - nrm * 15.0), tsuba + (dir * 6.0 - nrm * 15.0), tsuba + (dir * 6.0 + nrm * 15.0), tsuba + (-dir * 6.0 + nrm * 15.0)])
+			_flame_tongue(panel, base, dir, nrm * side, length, 16.0 + 18.0 * strength, sway, Color(FLAME_DEEP, 0.92))
+			_flame_tongue(panel, base, dir, nrm * side, length * 0.6, 9.0 + 10.0 * strength, sway * 1.4, Color(FLAME_HOT, 0.9))
+	# A light rim round the whole sword so it reads before the fire.
+	var grip := PackedVector2Array([grip_a - nrm * 11.0, grip_b - nrm * 10.0, grip_b + nrm * 10.0, grip_a + nrm * 11.0])
+	var pommel := PackedVector2Array([grip_b - nrm * 11.0, grip_b - nrm * 9.0 + dir * 16.0, grip_b + nrm * 9.0 + dir * 16.0, grip_b + nrm * 11.0])
+	var tsuba: Vector2 = guard + dir * 5.0
+	var square := PackedVector2Array([tsuba + (-dir * 6.0 - nrm * 16.0), tsuba + (dir * 6.0 - nrm * 16.0), tsuba + (dir * 6.0 + nrm * 16.0), tsuba + (-dir * 6.0 + nrm * 16.0)])
+	for shape in [blade, grip, pommel, square]:
+		var ring := PackedVector2Array(shape)
+		ring.append(shape[0])
+		panel.draw_polyline(ring, Color(1.0, 0.95, 0.82, 0.95), 9.0, true)
+	# Blade: near black, the bright edge, a glint running along it.
+	panel.draw_colored_polygon(blade, BLADE_BLACK)
+	panel.draw_polyline(edge, Color(0.95, 0.82, 0.78), 2.2, true)
+	_ink_outline_on(panel, blade, 2.6)
+	var g: float = fposmod(t * 0.9, 1.4)
+	if g < 1.0:
+		var a: Vector2 = edge[clampi(int(g * 13.0), 1, 13)]
+		panel.draw_line(a - dir * 20.0, a + dir * 20.0, Color(1.0, 0.96, 0.88, 0.9), 2.6, true)
+	# Small dark guard.
 	panel.draw_colored_polygon(square, Color(0.12, 0.08, 0.08))
 	panel.draw_line(tsuba - nrm * 12.0, tsuba + nrm * 12.0, Color(0.45, 0.3, 0.26), 1.5, true)
 	_ink_outline_on(panel, square, 3.0)
-	# Grip: dark red wrapped in black diamonds; a metal pommel at the end.
-	var grip_a: Vector2 = tsuba + dir * 8.0
-	var grip_b: Vector2 = grip_a + dir * 120.0
-	var grip := PackedVector2Array([grip_a - nrm * 11.0, grip_b - nrm * 10.0, grip_b + nrm * 10.0, grip_a + nrm * 11.0])
-	panel.draw_colored_polygon(grip, Color(0.42, 0.06, 0.07))
-	for k in 7:
-		var c: Vector2 = grip_a.lerp(grip_b, (float(k) + 0.5) / 7.0)
-		panel.draw_colored_polygon(PackedVector2Array([c - dir * 8.0, c - nrm * 8.0, c + dir * 8.0, c + nrm * 8.0]), Color(0.05, 0.03, 0.04))
-		panel.draw_colored_polygon(PackedVector2Array([c - dir * 3.0, c - nrm * 3.0, c + dir * 3.0, c + nrm * 3.0]), Color(0.75, 0.15, 0.12))
+	# Long red grip wrapped in black diamonds.
+	panel.draw_colored_polygon(grip, Color(0.62, 0.1, 0.08))
+	var diamonds: int = 8
+	for k in diamonds:
+		var c: Vector2 = grip_a.lerp(grip_b, (float(k) + 0.5) / float(diamonds))
+		var step: float = grip_a.distance_to(grip_b) / float(diamonds) * 0.5
+		panel.draw_colored_polygon(PackedVector2Array([c - dir * step, c - nrm * 9.0, c + dir * step, c + nrm * 9.0]), Color(0.05, 0.03, 0.04))
+		panel.draw_colored_polygon(PackedVector2Array([c - dir * 3.0, c - nrm * 3.0, c + dir * 3.0, c + nrm * 3.0]), Color(0.85, 0.2, 0.14))
 	_ink_outline_on(panel, grip, 3.0)
-	var pommel := PackedVector2Array([grip_b - nrm * 11.0, grip_b - nrm * 9.0 + dir * 14.0, grip_b + nrm * 9.0 + dir * 14.0, grip_b + nrm * 11.0])
-	panel.draw_colored_polygon(pommel, Color(0.5, 0.48, 0.46))
-	panel.draw_line(grip_b + dir * 4.0 - nrm * 7.0, grip_b + dir * 4.0 + nrm * 7.0, Color(0.85, 0.85, 0.82), 2.0, true)
+	# Metal pommel.
+	panel.draw_colored_polygon(pommel, Color(0.55, 0.53, 0.5))
+	panel.draw_line(grip_b + dir * 5.0 - nrm * 7.0, grip_b + dir * 5.0 + nrm * 7.0, Color(0.9, 0.9, 0.86), 2.0, true)
 	_ink_outline_on(panel, pommel, 3.0)
-	# His hand round the grip.
-	var hand: Vector2 = grip_a.lerp(grip_b, 0.45)
-	var fist := _ellipse(hand, 34.0, 21.0, 20, dir.angle())
-	panel.draw_colored_polygon(fist, ELDER_SKIN)
-	for k in 3:
-		var p: Vector2 = hand + dir * (-15.0 + float(k) * 14.0)
-		panel.draw_line(p - nrm * 17.0, p - nrm * 3.0, Color(INK, 0.8), 2.4, true)
-	_ink_outline_on(panel, fist, 4.0)
-	# Yellow-white star flashing where the blade leaves the scabbard.
+	# Yellow-white star flashing on the blade.
+	var spark: Vector2 = tip + dir * blade_len * 0.62 + nrm * 9.0
 	var flash: float = (0.75 + 0.25 * sin(t * 9.0)) * (0.6 + 0.6 * (1.0 - draw_k)) * smoothstep(0.0, 0.1, since)
 	if flash > 0.15:
-		var r: float = 34.0 * flash
-		panel.draw_circle(mouth, r * 0.9, Color(1.0, 0.85, 0.4, 0.25))
+		var r: float = 32.0 * flash
+		panel.draw_circle(spark, r * 0.9, Color(1.0, 0.85, 0.4, 0.25))
 		var star := PackedVector2Array()
 		for k in 8:
-			var a: float = float(k) * PI * 0.25 + 0.3
-			star.append(mouth + Vector2.from_angle(a) * (r if k % 2 == 0 else r * 0.18))
+			var a2: float = float(k) * PI * 0.25 + 0.3
+			star.append(spark + Vector2.from_angle(a2) * (r if k % 2 == 0 else r * 0.18))
 		panel.draw_colored_polygon(star, Color(1.0, 0.92, 0.55))
-		panel.draw_circle(mouth, r * 0.16, Color(1, 1, 1))
+		panel.draw_circle(spark, r * 0.16, Color(1, 1, 1))
 	if since > 0.3:
-		# "SHHNK!" pops out with its own little bounce.
+		# "SHHNK!" pops out with its own little bounce, in the free corner above the sword.
 		var style := InkType.Style.new()
 		style.fill = Color(1.0, 0.86, 0.15)
 		style.extrude = Color(0.55, 0.25, 0.02)
 		style.depth = 1.0
 		var b: float = clampf((since - 0.3) / 0.35, 0.0, 1.0)
 		var pop: float = 0.6 + 0.6 * smoothstep(0.0, 0.5, b) - 0.2 * smoothstep(0.5, 1.0, b) + 0.06 * sin(b * PI * 3.0) * (1.0 - b)
-		# Sized to the panel from its real width, centred, then the bounce on top.
-		var cap: float = minf(66.0, 66.0 * (s.x - 70.0) / maxf(InkType.measure(sound_text, 66.0), 1.0)) * pop
-		var w: float = InkType.measure(sound_text, cap)
-		# Top left, out of the way of the grip.
-		InkType.draw(panel, sound_text, Vector2(28.0 + (66.0 - cap) * 0.5, 26.0 + (66.0 - cap) * 0.4), cap, style)
+		var cap: float = minf(56.0, 56.0 * (s.x * 0.5) / maxf(InkType.measure(sound_text, 56.0), 1.0)) * pop
+		InkType.draw(panel, sound_text, Vector2(26.0 + (56.0 - cap) * 0.5, 22.0 + (56.0 - cap) * 0.4), cap, style)
 
 
 ## A tongue of fire rising off the blade at `base`: a broad foot along the blade, an outer edge
