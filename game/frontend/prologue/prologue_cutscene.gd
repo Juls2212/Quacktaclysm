@@ -1,8 +1,8 @@
 class_name PrologueCutscene
 extends Node
-## Opening cinematic of a new game, played over the tutorial when it loads (~98 s unskipped):
-## the card, the title, the hero's portrait, his eye, the stars falling on the city, eyes in the
-## forest, the grandfather's comic page and the prophecy in the cave, then a fade into the tutorial.
+## Opening cinematic of a new game, played over the tutorial when it loads (~93 s unskipped):
+## the card, the title, the hero's eye, the stars falling on the city, eyes in the forest, the
+## grandfather's comic page and the prophecy in the cave, then a fade into the tutorial.
 ## Draws on its own canvas layers above the level (shots below, cinema bars / subtitles / skip on
 ## top). While it plays it keeps the player locked (player.set_input_locked(true) every frame) and
 ## hides the tutorial prompt and the grandfather's speech label; at the end or on skip it unlocks
@@ -18,10 +18,10 @@ const TYPE_SPEED: float = 38.0
 
 signal finished
 
-## Seconds each shot lasts (card, title, portrait, eye, fall, forest, comic, cave, out).
-@export var shot_durations: PackedFloat32Array = PackedFloat32Array([5.0, 3.4, 5.0, 13.0, 13.0, 14.0, 16.0, 26.0, 3.0])
+## Seconds each shot lasts (card, title, eye, fall, forest, comic, cave, out).
+@export var shot_durations: PackedFloat32Array = PackedFloat32Array([5.0, 3.4, 13.0, 13.0, 14.0, 16.0, 26.0, 3.0])
 ## Seconds into each shot before its first subtitle line.
-@export var line_leads: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0, 1.5, 1.6, 9.0, 1.0, 3.2, 0.0])
+@export var line_leads: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 1.5, 1.6, 9.0, 1.0, 3.2, 0.0])
 @export var eye_lines: Array[String] = [
 	"Mi abuelo decía que cuando un pato muere, nace una estrella.",
 	"Yo le creía. Todos le creíamos.",
@@ -244,8 +244,8 @@ func _show_shot(index: int) -> void:
 
 
 ## Ink splash, brush wipe or fade to black between shots — never a hard cut. Each shot has its
-## own way in: a wipe into the title, the fall, the comic and the end; a fade into the rest; a
-## slow soft fade from the hero's portrait into his eye (the same take, closer).
+## own way in: a wipe into the title, the fall, the comic and the end; a slow soft fade from the
+## title into the eye; a fade into the rest.
 func _go_next() -> void:
 	var next: int = _index + 1
 	if next >= shot_durations.size():
