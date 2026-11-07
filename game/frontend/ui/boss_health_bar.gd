@@ -5,6 +5,7 @@ extends CanvasLayer
 ## is hit the lost piece stays white for a moment before it drains away. Visible only while the
 ## encounter is active. The boss does not know about this bar. The name label, the fill and the
 ## marker keep their values (tests read them); the stone drawing on top replaces their look.
+## The drawn name is the one of the presentation (BossNames), not the boss data's.
 
 const PURPLE_LIGHT := Color("a66ae8")
 const PURPLE := Color("7a3ac2")
@@ -15,6 +16,8 @@ const CREAM := Color(0.98, 0.93, 0.8)
 const GHOST_HOLD: float = 0.4
 
 var displayed_name: String = ""
+## The name drawn on the bar (the presentation's name; the data name when there is none).
+var shown_name: String = ""
 var displayed_ratio: float = 0.0
 var marker_ratio: float = 0.0
 
@@ -47,6 +50,10 @@ func bind(boss: BossBase) -> void:
 	_boss = boss
 	displayed_name = boss.stats.display_name
 	name_label.text = displayed_name
+	var info: Dictionary = BossNames.info_for(boss, self)
+	shown_name = String(info.get("name", ""))
+	if shown_name.is_empty():
+		shown_name = displayed_name
 	marker_ratio = boss.stats.phase_2_health_ratio
 	marker.anchor_left = marker_ratio
 	marker.anchor_right = marker_ratio
@@ -98,7 +105,7 @@ func _draw_bar() -> void:
 	var bar: Rect2 = Rect2(_background.position, _background.size)
 	if bar.size.x <= 0.0:
 		return
-	StoneUi.spaced_text(_drawer, Vector2(bar.get_center().x, bar.position.y - 12.0), displayed_name.to_upper(), 20, CREAM, 6)
+	StoneUi.spaced_text(_drawer, Vector2(bar.get_center().x, bar.position.y - 12.0), shown_name.to_upper(), 20, CREAM, 6)
 	StoneUi.frame(_drawer, bar, 8.0, 77)
 	StoneUi.well(_drawer, bar)
 	var ghost_w: float = bar.size.x * clampf(_ghost_ratio, 0.0, 1.0)
