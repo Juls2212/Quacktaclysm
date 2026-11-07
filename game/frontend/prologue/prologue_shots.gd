@@ -18,9 +18,12 @@ const EMBER := Color(1.0, 0.45, 0.15)
 const DESIGN := Vector2(1280, 720)
 ## Card typing: when it starts and keys per second.
 const CARD_TYPE_START: float = 0.45
-const CARD_TYPE_SPEED: float = 13.0
-## Seconds the tagline takes to be scribbled across the card.
-const CARD_WRITE_TIME: float = 1.1
+const CARD_TYPE_SPEED: float = 35.0
+## Base lengths of the shots whose animation is laid out on a fixed timeline.
+const EYE_BASE: float = 13.0
+const FALL_BASE: float = 13.0
+const FOREST_BASE: float = 14.0
+const COMIC_BASE: float = 16.0
 
 ## Shot 1: typed letter by letter on an old typewriter (one line per row; the first row small and
 ## spaced, the rest big), then the tagline is scribbled below by hand (Rock Salt).
@@ -33,6 +36,10 @@ UNA PROFECÍA"
 var shot: Shot = Shot.CARD
 var t: float = 0.0
 var line: int = -1
+## Set by the cutscene before each shot: how long the shot really lasts (it grows to give every
+## line its reading time) and when each of its lines starts. 0 / empty: the shot's own timing.
+var length: float = 0.0
+var line_starts: PackedFloat32Array = PackedFloat32Array()
 ## Set by the cutscene while the cave plays: where the torch is (for the stone's glow).
 var torch_point: Vector2 = Vector2.ZERO
 
@@ -79,8 +86,11 @@ func advance(delta: float) -> void:
 	t += delta
 	var target := Vector2.ZERO
 	if shot == Shot.FALL:
-		# A short jolt on every impact.
+		# A short jolt on every impact (on the fall's own, stretched timeline).
+		var real_t: float = t
+		t = _fall_time()
 		target = _fall_shake()
+		t = real_t
 	elif shot == Shot.COMIC:
 		# A short jolt as each panel lands.
 		target = _comic_shake()
@@ -102,6 +112,39 @@ func cave_torch() -> Vector2:
 	return _elder.position + Vector2(9.5 * dir, -21.0) * absf(_elder.scale.y)
 
 
+## Length of the current shot as the cutscene set it, or `base` if it did not.
+func _shot_len(base: float) -> float:
+	return maxf(length, base) if length > 0.0 else base
+
+
+## The fall's time, slowed so its whole timeline fills the shot.
+func _fall_time() -> float:
+	return t * FALL_BASE / _shot_len(FALL_BASE)
+
+
+## How long the card must stay for its texts to be read (typed / scribbled, then held).
+func card_length() -> float:
+	var lines: PackedStringArray = card_typed_text.split("\n")
+	var count: float = 0.0
+	var end: float = 0.0
+	for row in lines:
+		var done: float = CARD_TYPE_START + (count + float(row.length())) / CARD_TYPE_SPEED
+		end = maxf(end, done + _read_hold(row))
+		count += float(row.length()) + 3.0
+	var land: float = CARD_TYPE_START + count / CARD_TYPE_SPEED + 0.3
+	end = maxf(end, land + _card_write_time() + _read_hold(card_tagline_text))
+	return end + 0.5
+
+
+## Reading time once a text is fully shown: 1 s plus 1 s per 15 characters, 2.5 s to 6 s.
+static func _read_hold(text: String) -> float:
+	return clampf(1.0 + float(text.length()) / 15.0, 2.5, 6.0)
+
+
+func _card_write_time() -> float:
+	return maxf(float(card_tagline_text.length()) / CARD_TYPE_SPEED, 0.3)
+
+
 func _draw() -> void:
 	draw_set_transform(_shake, 0.0, Vector2.ONE)
 	match shot:
@@ -112,7 +155,11 @@ func _draw() -> void:
 		Shot.EYE:
 			_draw_eye()
 		Shot.FALL:
+			# Its timeline (night, red sky, rain of stars, stepping back) stretches to the shot.
+			var real_t: float = t
+			t = _fall_time()
 			_draw_fall()
+			t = real_t
 		Shot.FOREST:
 			_draw_forest()
 		Shot.COMIC:
@@ -130,7 +177,7 @@ func _draw() -> void:
 
 func _draw_card() -> void:
 	_brush_fill(Rect2(Vector2.ZERO, DESIGN), Color(0.93, 0.42, 0.1), Color(0.98, 0.56, 0.16), 3)
-	var fade: float = clampf((4.6 - t) / 0.5, 0.0, 1.0)
+	var fade: float = clampf((_shot_len(5.0) - 0.4 - t) / 0.5, 0.0, 1.0)
 	var paper := Color(0.98, 0.6, 0.22)
 	# 1. Typed on an old typewriter, letter by letter: each key lands a little off its line, the
 	# ink runs uneven (some letters struck twice, some worn), and a caret waits after the last one.
@@ -184,9 +231,9 @@ func _draw_card() -> void:
 	var since: float = t - land
 	if since >= 0.0:
 		var n: int = card_tagline_text.length()
-		var written: float = since / CARD_WRITE_TIME * float(n)
+		var written: float = since / _card_write_time() * float(n)
 		var tremble := Vector2.ZERO
-		var after: float = since - CARD_WRITE_TIME
+		var after: float = since - _card_write_time()
 		if after > 0.0 and after < 0.3:
 			tremble = Vector2(sin(t * 75.0), cos(t * 61.0)) * 2.5 * (1.0 - after / 0.3)
 		draw_set_transform(_shake + tag_pos + tremble, tilt, Vector2.ONE)
@@ -368,8 +415,6 @@ const EYE_L := Vector2(330, 398)
 const EYE_R := Vector2(1000, 345)
 const IRIS_C := Vector2(690, 380)
 const IRIS_R: float = 118.0
-## Length of the eye shot (the cutscene's shot_durations[2]); the push-in spans all of it.
-const EYE_SHOT_TIME: float = 13.0
 
 
 ## The light on the face: brighter up and to the right, falling off down and to the left. Linear
@@ -427,7 +472,7 @@ func _draw_eye() -> void:
 	var breath: float = sin(t * 0.9)
 	# Slow continuous push-in toward the iris: ~130 % by the last seconds, then it eases on until
 	# the iris almost fills the screen for the cut to the town. The iris drifts to the centre.
-	var push: float = clampf(t / EYE_SHOT_TIME, 0.0, 1.0)
+	var push: float = clampf(t / _shot_len(EYE_BASE), 0.0, 1.0)
 	var zoom: float = 1.0 + 0.3 * push + 0.75 * pow(push, 8.0) + 0.008 * breath
 	var focus: Vector2 = IRIS_C.lerp(DESIGN * 0.5, smoothstep(0.0, 1.0, push))
 	draw_set_transform(_shake + Vector2(0, breath * 3.0) + focus - IRIS_C * zoom, 0.0, Vector2(zoom, zoom))
@@ -1148,8 +1193,10 @@ func _draw_forest() -> void:
 		_draw_red_void(clampf((t - 8.6) / 1.0, 0.0, 1.0))
 		dark = 1.0 - clampf((t - 8.6) / 1.0, 0.0, 1.0)
 	# The creatures close all at once at the end: total black.
-	if t > 13.45:
-		dark = maxf(dark, clampf((t - 13.45) / 0.15, 0.0, 1.0))
+	# Everything shuts at once at the end of the shot (the eyes hold until then).
+	var end: float = _shot_len(FOREST_BASE)
+	if t > end - 0.55:
+		dark = maxf(dark, clampf((t - (end - 0.55)) / 0.15, 0.0, 1.0))
 	if dark > 0.0:
 		draw_rect(Rect2(Vector2(-20, -20), DESIGN + Vector2(40, 40)), Color(0, 0, 0, dark))
 	# The first eye half-opens between the right-hand trees just before the dark.
@@ -1242,7 +1289,7 @@ func _draw_red_void(appear: float) -> void:
 		draw_rect(Rect2(p, Vector2(2, 2)), Color(1, 1, 1, 0.035 * appear))
 	if appear <= 0.0:
 		return
-	var shut: float = 1.0 - clampf((t - 13.4) / 0.08, 0.0, 1.0)
+	var shut: float = 1.0 - clampf((t - (_shot_len(FOREST_BASE) - 0.6)) / 0.08, 0.0, 1.0)
 	for i in FOREST_EYES.size():
 		var spec: Array = FOREST_EYES[i]
 		var open: float = smoothstep(float(spec[3]), float(spec[3]) + 0.5, t)
@@ -1409,7 +1456,8 @@ func _draw_forest_fx() -> void:
 		for k in 12:
 			var u: float = float(k) / 11.0
 			smoke.append(top + Vector2(sin(u * 7.0 + t * 1.5) * 6.0 * u, -u * 90.0))
-		_forest_fx.draw_polyline(smoke, Color(0.55, 0.55, 0.55, 0.5 * (1.0 - smoothstep(12.8, 13.45, t))), 2.0, true)
+		var end: float = _shot_len(FOREST_BASE)
+		_forest_fx.draw_polyline(smoke, Color(0.55, 0.55, 0.55, 0.5 * (1.0 - smoothstep(end - 1.2, end - 0.55, t))), 2.0, true)
 
 
 func _fog_band(y: float, alpha: float) -> void:
@@ -1457,8 +1505,6 @@ const COMIC_RECTS: Array = [Rect2(40, 50, 640, 570), Rect2(705, 50, 535, 270), R
 const COMIC_COLORS: Array = [Color(0.78, 0.12, 0.1), Color(0.05, 0.3, 0.33), Color(0.98, 0.78, 0.12)]
 const COMIC_STARTS: Array = [0.4, 5.4, 10.4]
 const COMIC_ENTER: Array = [0.4, 0.45, 0.4]
-## When the panels leave (the page lasts the cutscene's shot_durations[5] = 16 s).
-const COMIC_EXIT: Vector2 = Vector2(15.1, 15.9)
 const ELDER_SKIN := Color(0.72, 0.76, 0.68)
 
 var _comic_fx: Control = null
@@ -1475,7 +1521,7 @@ func _build_comic() -> void:
 		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		panel.visible = false
 		panel.set_meta("color", COMIC_COLORS[i])
-		panel.set_meta("start", COMIC_STARTS[i])
+		panel.set_meta("start", _comic_start(i))
 		panel.set_meta("kind", i)
 		panel.draw.connect(_draw_panel.bind(panel))
 		add_child(panel)
@@ -1503,18 +1549,31 @@ func _build_comic() -> void:
 	_actors.append(_comic_fx)
 
 
+## When panel `i` comes in: just before its line (or its fixed time without lines).
+func _comic_start(i: int) -> float:
+	if i < line_starts.size():
+		return maxf(float(line_starts[i]) - 0.6, float(COMIC_STARTS[0]))
+	return float(COMIC_STARTS[i])
+
+
+## When the panels leave: the end of the shot.
+func _comic_exit() -> Vector2:
+	var end: float = _shot_len(COMIC_BASE)
+	return Vector2(end - 0.9, end - 0.1)
+
+
 ## Short jolt of the whole page when a panel lands.
 func _comic_shake() -> Vector2:
 	var k: float = 0.0
 	for i in COMIC_STARTS.size():
-		var since: float = t - float(COMIC_STARTS[i]) - float(COMIC_ENTER[i]) * 0.8
+		var since: float = t - _comic_start(i) - float(COMIC_ENTER[i]) * 0.8
 		if since >= 0.0 and since < 0.25:
 			k = maxf(k, 1.0 - since / 0.25)
 	return Vector2(sin(t * 95.0), cos(t * 80.0)) * 7.0 * k
 
 
 func _animate_panels() -> void:
-	var leave: float = smoothstep(COMIC_EXIT.x, COMIC_EXIT.y, t)
+	var leave: float = smoothstep(_comic_exit().x, _comic_exit().y, t)
 	for panel in _panels:
 		var kind: int = panel.get_meta("kind")
 		var rect: Rect2 = COMIC_RECTS[kind]
@@ -1561,7 +1620,7 @@ func _bounce(u: float) -> float:
 func _draw_comic_page() -> void:
 	_brush_fill(Rect2(Vector2(-20, -20), DESIGN + Vector2(40, 40)), Color(0.9, 0.85, 0.72), Color(0.86, 0.8, 0.66), 41)
 	# Speed lines trailing the red panel as it slides in.
-	var red_since: float = t - float(COMIC_STARTS[0])
+	var red_since: float = t - _comic_start(0)
 	if red_since >= 0.0 and red_since < 0.6:
 		var fade: float = 1.0 - red_since / 0.6
 		var rect: Rect2 = COMIC_RECTS[0]
@@ -1571,7 +1630,7 @@ func _draw_comic_page() -> void:
 			var length: float = 120.0 + _h(k + 2400) * 240.0
 			draw_line(Vector2(lead - length, y), Vector2(lead - 8.0, y), Color(INK, 0.6 * fade), 3.0 + _h(k + 2410) * 3.0, true)
 	# Radial impact lines behind the yellow panel as it bursts out.
-	var y_since: float = t - float(COMIC_STARTS[2])
+	var y_since: float = t - _comic_start(2)
 	if y_since >= 0.0 and y_since < 0.9:
 		var fade2: float = 1.0 - y_since / 0.9
 		var c: Vector2 = (COMIC_RECTS[2] as Rect2).get_center()
@@ -1670,7 +1729,7 @@ func _splat(c: Vector2, r: float, salt: int) -> PackedVector2Array:
 
 ## The ink sweep that carries the panels off at the end of the page.
 func _draw_comic_sweep() -> void:
-	var k: float = smoothstep(COMIC_EXIT.x - 0.1, COMIC_EXIT.y, t)
+	var k: float = smoothstep(_comic_exit().x - 0.1, _comic_exit().y, t)
 	if k <= 0.0:
 		return
 	var front: float = -200.0 + 1700.0 * k
