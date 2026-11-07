@@ -30,7 +30,7 @@ var _font: Font
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label = get_node_or_null(source) as Label
-	_font = ThemeDB.fallback_font
+	_font = GameFonts.BODY
 	# Every key name bound in the input map, to draw them as keys inside the text.
 	for action in InputMap.get_actions():
 		for ev in InputMap.action_get_events(action):
