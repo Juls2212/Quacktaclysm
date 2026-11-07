@@ -56,6 +56,7 @@ func set_shot(next: Shot) -> void:
 	_hero = null
 	_hero_parts.clear()
 	_forest_fx = null
+	_comic_fx = null
 	shot = next
 	t = 0.0
 	line = -1
@@ -78,6 +79,9 @@ func advance(delta: float) -> void:
 	if shot == Shot.FALL:
 		# A short jolt on every impact.
 		target = _fall_shake()
+	elif shot == Shot.COMIC:
+		# A short jolt as each panel lands.
+		target = _comic_shake()
 	_shake = target
 	if shot == Shot.CAVE and _elder != null:
 		_animate_elder(delta)
@@ -244,6 +248,8 @@ const EYE_L := Vector2(330, 398)
 const EYE_R := Vector2(1010, 330)
 const IRIS_C := Vector2(690, 372)
 const IRIS_R: float = 128.0
+## Length of the eye shot (the cutscene's shot_durations[2]); the push-in spans all of it.
+const EYE_SHOT_TIME: float = 13.0
 
 
 ## The light on the face: brighter up and to the right, falling off down and to the left. Linear
@@ -275,6 +281,10 @@ func _bezier(a: Vector2, b: Vector2, c: Vector2, u: float) -> Vector2:
 
 ## A stroke that thins from `w0` to `w1` along `pts` (an ink brush line).
 func _tapered(pts: PackedVector2Array, w0: float, w1: float, color: Color) -> void:
+	_tapered_on(self, pts, w0, w1, color)
+
+
+func _tapered_on(ci: CanvasItem, pts: PackedVector2Array, w0: float, w1: float, color: Color) -> void:
 	var n: int = pts.size()
 	if n < 2:
 		return
@@ -289,13 +299,17 @@ func _tapered(pts: PackedVector2Array, w0: float, w1: float, color: Color) -> vo
 		right.append(pts[i] - dir.orthogonal() * w)
 	right.reverse()
 	left.append_array(right)
-	draw_colored_polygon(left, color)
+	ci.draw_colored_polygon(left, color)
 
 
 func _draw_eye() -> void:
 	var breath: float = sin(t * 0.9)
-	var zoom: float = 1.0 + 0.012 * breath + t * 0.004
-	draw_set_transform(_shake + Vector2(0, breath * 4.0) + DESIGN * 0.5 * (1.0 - zoom), 0.0, Vector2(zoom, zoom))
+	# Slow continuous push-in toward the iris: ~130 % by the last seconds, then it eases on until
+	# the iris almost fills the screen for the cut to the town. The iris drifts to the centre.
+	var push: float = clampf(t / EYE_SHOT_TIME, 0.0, 1.0)
+	var zoom: float = 1.0 + 0.3 * push + 0.75 * pow(push, 8.0) + 0.008 * breath
+	var focus: Vector2 = IRIS_C.lerp(DESIGN * 0.5, smoothstep(0.0, 1.0, push))
+	draw_set_transform(_shake + Vector2(0, breath * 3.0) + focus - IRIS_C * zoom, 0.0, Vector2(zoom, zoom))
 	# One soft blink: the lid slides down and back up.
 	var blink: float = smoothstep(6.2, 6.55, t) * (1.0 - smoothstep(6.6, 7.05, t))
 	var open: float = 1.0 - blink
@@ -446,9 +460,9 @@ func _draw_eye_feathers() -> void:
 
 ## The fall (~13 s), seen through the hero's eyes from a rooftop. a (0-4 s): a quiet night town,
 ## a blue sky with twinkling stars and a crescent moon, three rows of ink-drawn houses and a
-## cathedral on the hill, many lit windows; below, the dark edge of the roof and the tip of his
-## beak; the view rises and falls with his breath. b (4-7 s): the sky slides, with no cut, into
-## blood red and orange; the moon reddens, the houses darken and some windows go out. c (7-13 s):
+## cathedral on the hill, many lit windows; below, the dark edge of the roof; the view rises and falls with his breath. b (4-7 s): the sky slides, with no cut, into
+## blood red and orange; the moon reddens, the houses darken and windows go out one or a few at
+## a time all through the change, each flickering before it dies. c (7-13 s):
 ## red and radioactive green stars rain down diagonally (white core, coloured halo, long trail),
 ## few then many; two big ones streak past close by; each one that reaches the town bursts into an
 ## orange glow with smoke and jolts the view; at the end he steps back (the view drops and shakes).
@@ -565,7 +579,7 @@ func _draw_fall() -> void:
 	for s in _shooting:
 		if bool(s["big"]):
 			_draw_shooting_star(s)
-	# The rooftop he stands on, and the tip of his beak.
+	# The rooftop he stands on.
 	draw_set_transform(_shake + Vector2(0.0, breath * 4.5 - 34.0 - 60.0 * retreat), 0.0, Vector2.ONE)
 	_draw_rooftop(blood)
 	draw_set_transform(_shake, 0.0, Vector2.ONE)
@@ -685,12 +699,25 @@ func _draw_house(house: Dictionary, blood: float, burn: float) -> void:
 			var py: float = top + 8.0 + float(cy) * h / float(rows_n)
 			if py + wh > g + 4.0:
 				continue
-			var lit: bool = _h(id + 2200) > 0.3 and _h(id + 2210) > blood * 0.45
+			var lit: bool = _h(id + 2200) > 0.3 and _window_on(id)
 			var col: Color = WINDOW_LIT.lerp(Color(1.0, 0.55, 0.2), maxf(blood, burn)) if lit else wall.darkened(0.45)
 			if lit:
 				draw_rect(Rect2(px - 2.0, py - 2.0, ww + 4.0, wh + 4.0), Color(col, 0.25))
 			draw_rect(Rect2(px, py, ww, wh), col)
 			draw_rect(Rect2(px, py, ww, wh), Color(HOUSE_INK, 0.7), false, 1.0)
+
+
+## Whether a lit window is still on. One in five goes out at its own moment spread over the
+## whole change of sky (4-7.5 s), flickering for a moment first.
+func _window_on(id: int) -> bool:
+	if _h(id + 2220) > 0.2:
+		return true
+	var off_at: float = 4.0 + 3.5 * _h(id + 2210)
+	if t >= off_at:
+		return false
+	if t > off_at - 0.4:
+		return sin(t * 48.0 + float(id)) > -0.2
+	return true
 
 
 ## The cathedral on the hill: nave, a bell tower with its spire, a dome and a rose window.
@@ -796,7 +823,7 @@ func _draw_fall_impact(s: Dictionary) -> void:
 		draw_colored_polygon(_ellipse(puff, 12.0 + u * 30.0, 10.0 + u * 22.0, 12, u * 2.0), Color(0.16, 0.07, 0.07, 0.35 * (1.0 - u)))
 
 
-## The dark edge of the roof he stands on, a chimney at the side and the tip of his beak.
+## The dark edge of the roof he stands on, with a chimney at the side.
 func _draw_rooftop(blood: float) -> void:
 	var roof: Color = Color("141a30").lerp(Color("1c0a0c"), blood)
 	var ridge := PackedVector2Array([Vector2(-60, 800), Vector2(-60, 628), Vector2(180, 616), Vector2(420, 622), Vector2(700, 612),
@@ -812,22 +839,6 @@ func _draw_rooftop(blood: float) -> void:
 	var chimney := PackedVector2Array([Vector2(1110, 620), Vector2(1150, 520), Vector2(1200, 512), Vector2(1240, 616)])
 	draw_colored_polygon(chimney, roof.lightened(0.06))
 	_ink_outline(chimney, 3.0)
-	# The tip of the beak poking into view from below.
-	var beak := PackedVector2Array()
-	# A rounded beak tip seen from behind: a broad base narrowing to a blunt round end.
-	for k in 13:
-		var u: float = float(k) / 12.0
-		beak.append(Vector2(lerpf(470.0, 640.0, u), lerpf(720.0, 628.0, u) - sin(u * PI) * 10.0))
-	for k in 9:
-		var a: float = lerpf(-PI * 0.75, PI * 0.35, float(k) / 8.0)
-		beak.append(Vector2(668, 640) + Vector2.from_angle(a) * 30.0)
-	for k in 7:
-		var u: float = float(k) / 6.0
-		beak.append(Vector2(lerpf(690.0, 820.0, u), lerpf(664.0, 720.0, u) + sin(u * PI) * 6.0))
-	draw_colored_polygon(beak, Color("e8a640").lerp(Color("c46a2a"), blood * 0.5))
-	draw_line(Vector2(540, 690), Vector2(650, 640), Color(1.0, 0.9, 0.6, 0.55), 4.0, true)
-	draw_circle(Vector2(640, 662), 4.0, Color(HOUSE_INK, 0.7))
-	_ink_outline(beak, 4.0)
 
 
 # =====================================================================================
@@ -1239,63 +1250,147 @@ func _pine(base: Vector2, h: float, color: Color) -> void:
 # 6. The comic page
 # =====================================================================================
 
-func _draw_comic_page() -> void:
-	_brush_fill(Rect2(Vector2(-20, -20), DESIGN + Vector2(40, 40)), Color(0.9, 0.85, 0.72), Color(0.86, 0.8, 0.66), 41)
+## The grandfather's comic page (~16 s). Three panels, each with its own quick entrance (0.3-0.5 s)
+## that lands with a short shake of the page. RED: a low-angle medium shot of the grandfather
+## (head, beard, shoulders and kimono, his hard black shadow cast on the wall behind); it slides in from the left with speed
+## lines, its ink border drawing itself and an ink splash in a corner. BLUE: his two tired eyes
+## painted like the prologue's eye (heavy upper lash line, curved lashes, dark bags, long messy
+## white brows, dark irises with a small glint; one slow blink); it drops from above and bounces,
+## with a white flash and halftone dots that come and go. YELLOW: the katana drawn from its dark
+## scabbard (curved silver blade with a wavy temper line, dark gold guard, diamond-wrapped grip,
+## metal pommel, his hand on the grip); it bursts out of the centre (0 -> 110 % -> 100 %) over
+## radial impact lines, and "SHHNK!" pops with its own bounce. At the end of the page all the
+## panels leave together under a sweep of ink.
+const COMIC_RECTS: Array = [Rect2(40, 50, 640, 570), Rect2(705, 50, 535, 270), Rect2(705, 345, 535, 275)]
+const COMIC_COLORS: Array = [Color(0.78, 0.12, 0.1), Color(0.05, 0.3, 0.33), Color(0.98, 0.78, 0.12)]
+const COMIC_STARTS: Array = [0.4, 5.4, 10.4]
+const COMIC_ENTER: Array = [0.4, 0.45, 0.4]
+## When the panels leave (the page lasts the cutscene's shot_durations[5] = 16 s).
+const COMIC_EXIT: Vector2 = Vector2(15.1, 15.9)
+const ELDER_SKIN := Color(0.72, 0.76, 0.68)
+
+var _comic_fx: Control = null
 
 
 func _build_comic() -> void:
-	var specs: Array = [
-		[Rect2(40, 50, 640, 570), Color(0.78, 0.12, 0.1), 0.4],
-		[Rect2(705, 50, 535, 270), Color(0.05, 0.3, 0.33), 5.4],
-		[Rect2(705, 345, 535, 275), Color(0.98, 0.78, 0.12), 10.4],
-	]
-	for i in specs.size():
-		var spec: Array = specs[i]
+	for i in COMIC_RECTS.size():
+		var rect: Rect2 = COMIC_RECTS[i]
 		var panel := Control.new()
-		var rect: Rect2 = spec[0]
 		panel.position = rect.position
 		panel.size = rect.size
 		panel.pivot_offset = rect.size * 0.5
 		panel.clip_contents = true
 		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		panel.visible = false
-		panel.set_meta("color", spec[1])
-		panel.set_meta("start", spec[2])
+		panel.set_meta("color", COMIC_COLORS[i])
+		panel.set_meta("start", COMIC_STARTS[i])
 		panel.set_meta("kind", i)
 		panel.draw.connect(_draw_panel.bind(panel))
 		add_child(panel)
 		_actors.append(panel)
 		_panels.append(panel)
 		if i == 0:
-			var elder := DuckRig.new()
-			elder.look = DuckRig.Look.GRANDFATHER
-			elder.gesture = DuckRig.Gesture.TALK
-			# Close up from below: the old samurai towers over the reader, cut off by the panel.
-			elder.scale = Vector2(-8.0, 8.0)
-			elder.position = Vector2(300, 520)
-			elder.rotation = -0.08
-			elder.modulate = Color(1.0, 0.62, 0.55)
-			panel.add_child(elder)
 			var shade := Control.new()
 			shade.size = rect.size
 			shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			shade.draw.connect(_draw_hard_shadow.bind(shade))
 			panel.add_child(shade)
+		# On top of each panel: its border and its entrance effects.
+		var frame := Control.new()
+		frame.size = rect.size
+		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		frame.draw.connect(_draw_panel_frame.bind(frame, panel))
+		panel.add_child(frame)
+		panel.set_meta("frame", frame)
+	# Page-level effects over the panels (the ink sweep at the end).
+	_comic_fx = Control.new()
+	_comic_fx.size = DESIGN
+	_comic_fx.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_comic_fx.draw.connect(_draw_comic_sweep)
+	add_child(_comic_fx)
+	_actors.append(_comic_fx)
+
+
+## Short jolt of the whole page when a panel lands.
+func _comic_shake() -> Vector2:
+	var k: float = 0.0
+	for i in COMIC_STARTS.size():
+		var since: float = t - float(COMIC_STARTS[i]) - float(COMIC_ENTER[i]) * 0.8
+		if since >= 0.0 and since < 0.25:
+			k = maxf(k, 1.0 - since / 0.25)
+	return Vector2(sin(t * 95.0), cos(t * 80.0)) * 7.0 * k
 
 
 func _animate_panels() -> void:
+	var leave: float = smoothstep(COMIC_EXIT.x, COMIC_EXIT.y, t)
 	for panel in _panels:
-		var start: float = panel.get_meta("start")
-		var since: float = t - start
+		var kind: int = panel.get_meta("kind")
+		var rect: Rect2 = COMIC_RECTS[kind]
+		var since: float = t - float(panel.get_meta("start"))
+		var enter: float = COMIC_ENTER[kind]
+		var u: float = clampf(since / enter, 0.0, 1.0)
 		panel.visible = since >= 0.0
-		if since >= 0.0 and since < 0.35:
-			var k: float = 1.0 - since / 0.35
-			panel.scale = Vector2.ONE * (1.0 + 0.12 * k)
-			panel.rotation = sin(since * 60.0) * 0.03 * k
-		else:
-			panel.scale = Vector2.ONE
-			panel.rotation = 0.0
+		var pos: Vector2 = rect.position
+		var sc := Vector2.ONE
+		match kind:
+			0:
+				# Slides in from the left and squashes a little on the hit.
+				pos.x -= (rect.end.x + 80.0) * pow(1.0 - u, 3.0)
+				var hit: float = clampf((since - enter) / 0.2, 0.0, 1.0)
+				if since > enter * 0.85 and hit < 1.0:
+					sc = Vector2(1.0 - 0.05 * sin(hit * PI), 1.0 + 0.04 * sin(hit * PI))
+			1:
+				# Drops from above and bounces.
+				pos.y -= 420.0 * (1.0 - _bounce(u))
+			2:
+				# Bursts out of the centre: 0 -> 110 % -> 100 %.
+				var grow: float = 1.1 * smoothstep(0.0, 0.7, u) - 0.1 * smoothstep(0.7, 1.0, u)
+				sc = Vector2.ONE * maxf(grow, 0.001)
+		# All together off the page at the end, under the ink sweep.
+		pos.x += 1500.0 * leave * leave
+		panel.position = pos + _shake
+		panel.scale = sc * (1.0 - 0.15 * leave)
+		panel.rotation = -0.06 * leave
 		panel.queue_redraw()
+		var frame: Control = panel.get_meta("frame")
+		frame.queue_redraw()
+	if _comic_fx != null:
+		_comic_fx.queue_redraw()
+
+
+func _bounce(u: float) -> float:
+	if u < 0.6:
+		var a: float = u / 0.6
+		return a * a
+	var b: float = (u - 0.6) / 0.4
+	return 1.0 - 0.14 * sin(b * PI) * (1.0 - b)
+
+
+func _draw_comic_page() -> void:
+	_brush_fill(Rect2(Vector2(-20, -20), DESIGN + Vector2(40, 40)), Color(0.9, 0.85, 0.72), Color(0.86, 0.8, 0.66), 41)
+	# Speed lines trailing the red panel as it slides in.
+	var red_since: float = t - float(COMIC_STARTS[0])
+	if red_since >= 0.0 and red_since < 0.6:
+		var fade: float = 1.0 - red_since / 0.6
+		var rect: Rect2 = COMIC_RECTS[0]
+		var lead: float = rect.position.x - (rect.end.x + 80.0) * pow(1.0 - clampf(red_since / float(COMIC_ENTER[0]), 0.0, 1.0), 3.0)
+		for k in 12:
+			var y: float = rect.position.y + 30.0 + float(k) * (rect.size.y - 60.0) / 11.0
+			var length: float = 120.0 + _h(k + 2400) * 240.0
+			draw_line(Vector2(lead - length, y), Vector2(lead - 8.0, y), Color(INK, 0.6 * fade), 3.0 + _h(k + 2410) * 3.0, true)
+	# Radial impact lines behind the yellow panel as it bursts out.
+	var y_since: float = t - float(COMIC_STARTS[2])
+	if y_since >= 0.0 and y_since < 0.9:
+		var fade2: float = 1.0 - y_since / 0.9
+		var c: Vector2 = (COMIC_RECTS[2] as Rect2).get_center()
+		for k in 28:
+			var a: float = TAU * float(k) / 28.0 + _h(k + 2420) * 0.1
+			var r0: float = 160.0 + y_since * 220.0
+			var r1: float = r0 + 90.0 + _h(k + 2430) * 140.0
+			var w: float = 4.0 + _h(k + 2440) * 6.0
+			var d := Vector2.from_angle(a)
+			draw_colored_polygon(PackedVector2Array([c + d * r0 - d.orthogonal() * w * 0.2, c + d * r1 - d.orthogonal() * w, c + d * r1 + d.orthogonal() * w,
+					c + d * r0 + d.orthogonal() * w * 0.2]), Color(INK, 0.85 * fade2))
 
 
 func _draw_panel(panel: Control) -> void:
@@ -1304,6 +1399,13 @@ func _draw_panel(panel: Control) -> void:
 	var kind: int = panel.get_meta("kind")
 	var since: float = t - float(panel.get_meta("start"))
 	panel.draw_rect(Rect2(Vector2.ZERO, s), color)
+	if kind == 0:
+		# Low angle: light rays fanning up behind him.
+		var foot := Vector2(s.x * 0.5, s.y + 60.0)
+		for k in 9:
+			var a: float = -PI * 0.5 + (float(k) - 4.0) * 0.17
+			panel.draw_colored_polygon(PackedVector2Array([foot, foot + Vector2.from_angle(a - 0.05) * 900.0, foot + Vector2.from_angle(a + 0.05) * 900.0]),
+					Color(1.0, 0.5, 0.35, 0.18 if k % 2 == 0 else 0.08))
 	# Halftone dots in the shadow corner.
 	for i in 90:
 		var p := Vector2(_h(i + kind * 100) * s.x, _h(i + kind * 100 + 1) * s.y)
@@ -1311,63 +1413,360 @@ func _draw_panel(panel: Control) -> void:
 			continue
 		panel.draw_circle(p, 3.0 + _h(i) * 3.0, Color(0, 0, 0, 0.25))
 	match kind:
+		0:
+			_comic_elder(panel, s, since)
 		1:
-			_comic_eyes(panel, s)
+			_comic_eyes(panel, s, since)
 		2:
 			_comic_katana(panel, s, since)
-	panel.draw_rect(Rect2(Vector2(3, 3), s - Vector2(6, 6)), INK, false, 7.0)
+
+
+## Border and entrance effects drawn over a panel's content.
+func _draw_panel_frame(frame: Control, panel: Control) -> void:
+	var s: Vector2 = frame.size
+	var kind: int = panel.get_meta("kind")
+	var since: float = t - float(panel.get_meta("start"))
+	var border := Rect2(Vector2(3, 3), s - Vector2(6, 6))
+	if kind == 0:
+		# The border draws itself around the panel.
+		var k: float = clampf(since / 0.45, 0.0, 1.0)
+		var corners: Array[Vector2] = [border.position, Vector2(border.end.x, border.position.y), border.end, Vector2(border.position.x, border.end.y)]
+		var perimeter: float = (border.size.x + border.size.y) * 2.0
+		var left: float = perimeter * k
+		for e in 4:
+			var a: Vector2 = corners[e]
+			var b: Vector2 = corners[(e + 1) % 4]
+			var length: float = a.distance_to(b)
+			if left <= 0.0:
+				break
+			var part: float = minf(left / length, 1.0)
+			frame.draw_line(a, a.lerp(b, part), INK, 7.0, true)
+			left -= length
+		# Ink splash in the corner once it lands.
+		var splash: float = clampf((since - 0.3) / 0.15, 0.0, 1.0)
+		if splash > 0.0:
+			var c := Vector2(s.x - 34.0, 40.0)
+			frame.draw_colored_polygon(_splat(c, 30.0 * splash, 7), INK)
+			for d in 6:
+				var p: Vector2 = c + Vector2.from_angle(_h(d + 2450) * TAU) * (40.0 + _h(d + 2460) * 40.0) * splash
+				frame.draw_circle(p, 3.0 + _h(d + 2470) * 5.0, INK)
+	else:
+		frame.draw_rect(border, INK, false, 7.0)
+	if kind == 1:
+		# White flash on landing, then halftone dots that come and go.
+		var land: float = since - float(COMIC_ENTER[1]) * 0.6
+		if land >= 0.0 and land < 0.3:
+			frame.draw_rect(Rect2(Vector2.ZERO, s), Color(1, 1, 1, 0.85 * (1.0 - land / 0.3)))
+		var dots: float = clampf(land / 0.2, 0.0, 1.0) * (1.0 - clampf((land - 0.35) / 0.4, 0.0, 1.0))
+		if dots > 0.0:
+			var step: float = 14.0
+			for gy in int(s.y / step) + 1:
+				for gx in int(s.x / step) + 1:
+					var p := Vector2(float(gx) * step + (step * 0.5 if gy % 2 == 1 else 0.0), float(gy) * step)
+					var r: float = 1.0 + 4.0 * (p.x / s.x) * dots
+					frame.draw_circle(p, r, Color(0.05, 0.12, 0.2, 0.5 * dots))
+
+
+## A splotch of ink: a lumpy round blob.
+func _splat(c: Vector2, r: float, salt: int) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for k in 16:
+		var a: float = TAU * float(k) / 16.0
+		pts.append(c + Vector2.from_angle(a) * maxf(r, 1.0) * (0.75 + _h(salt * 16 + k + 2480) * 0.5))
+	return pts
+
+
+## The ink sweep that carries the panels off at the end of the page.
+func _draw_comic_sweep() -> void:
+	var k: float = smoothstep(COMIC_EXIT.x - 0.1, COMIC_EXIT.y, t)
+	if k <= 0.0:
+		return
+	var front: float = -200.0 + 1700.0 * k
+	var pts := PackedVector2Array([Vector2(-40, -40)])
+	for i in 13:
+		var y: float = lerpf(-40.0, 760.0, float(i) / 12.0)
+		pts.append(Vector2(front + sin(float(i) * 1.7) * 40.0 + _h(i + 2490) * 50.0, y))
+	pts.append(Vector2(-40, 760))
+	_comic_fx.draw_colored_polygon(pts, INK)
+	for i in 10:
+		var y: float = 60.0 + float(i) * 66.0
+		var tip: float = front + 40.0 + _h(i + 2500) * 120.0
+		_comic_fx.draw_line(Vector2(front - 20.0, y), Vector2(tip, y + 6.0), INK, 4.0 + _h(i + 2510) * 6.0, true)
 
 
 func _draw_hard_shadow(node: Control) -> void:
 	var s: Vector2 = node.size
-	node.draw_colored_polygon(PackedVector2Array([Vector2(0, s.y * 0.55), Vector2(s.x * 0.4, s.y), Vector2(0, s.y)]), Color(0, 0, 0, 0.75))
-	node.draw_colored_polygon(PackedVector2Array([Vector2(s.x * 0.72, 0), Vector2(s.x, 0), Vector2(s.x, s.y * 0.5)]), Color(0, 0, 0, 0.6))
+	node.draw_colored_polygon(PackedVector2Array([Vector2(0, s.y * 0.62), Vector2(s.x * 0.34, s.y), Vector2(0, s.y)]), Color(0, 0, 0, 0.8))
+	node.draw_colored_polygon(PackedVector2Array([Vector2(s.x * 0.78, 0), Vector2(s.x, 0), Vector2(s.x, s.y * 0.42)]), Color(0, 0, 0, 0.7))
+	node.draw_rect(Rect2(0, s.y - 46.0, s.x, 46.0), Color(0, 0, 0, 0.85))
 
 
-## Extreme close-up of the grandfather's tired eyes under heavy brows.
-func _comic_eyes(panel: Control, s: Vector2) -> void:
-	var c: Vector2 = s * 0.5
-	panel.draw_rect(Rect2(Vector2(0, c.y - 90), Vector2(s.x, 180)), Color(0.75, 0.78, 0.72))
+## The grandfather from below, facing the reader: a broad kimono with its collar and sash, a long
+## white beard, the beak seen from underneath, small tired eyes under bushy white brows; lit red
+## from the left, the right side cut out in hard black shadow, his shadow cast on the wall.
+func _comic_elder(panel: Control, s: Vector2, since: float) -> void:
+	var feather := Color(0.9, 0.86, 0.74)
+	var kimono := Color(0.42, 0.47, 0.55)
+	var shadow := Color(0.05, 0.01, 0.02)
+	var sway: float = sin(since * 1.4) * 4.0
+	var head := Vector2(s.x * 0.5, 232.0)
+	var skull := _ellipse(head, 104.0, 96.0, 40)
+	var beard := PackedVector2Array([head + Vector2(-86, 40), head + Vector2(-96, 120), head + Vector2(-60, 210), head + Vector2(-24 + sway, 300),
+			head + Vector2(0 + sway, 268), head + Vector2(22 + sway, 304), head + Vector2(58, 214), head + Vector2(96, 120), head + Vector2(86, 40)])
+	# Kimono: broad shoulders spreading out of the bottom (seen from below), a V collar, the sash.
+	var body := PackedVector2Array([Vector2(30, s.y + 10), Vector2(70, 430), Vector2(150, 362), Vector2(250, 330), Vector2(s.x - 250, 330),
+			Vector2(s.x - 150, 362), Vector2(s.x - 70, 430), Vector2(s.x - 30, s.y + 10)])
+	# Head and beard overlap, the beard overlaps the kimono: merged in that order they make one shape.
+	var silhouette: PackedVector2Array = _union_outline(skull, beard, body)
+	# His hard shadow cast on the wall behind, up and to the right.
+	panel.draw_colored_polygon(Transform2D(0.0, Vector2(1.1, 1.06), 0.0, Vector2(40, -40)) * silhouette, Color(0.12, 0.0, 0.02, 0.8))
+	panel.draw_colored_polygon(body, kimono)
+	var inner := PackedVector2Array([Vector2(head.x - 88, 336), Vector2(head.x, 500), Vector2(head.x + 88, 336)])
+	panel.draw_colored_polygon(inner, Color(0.86, 0.82, 0.72))
 	for side in [-1.0, 1.0]:
-		var e: Vector2 = c + Vector2(float(side) * 130.0, 8.0)
-		panel.draw_colored_polygon(_ellipse(e, 70.0, 40.0, 20), Color(0.95, 0.92, 0.82))
-		panel.draw_circle(e + Vector2(6, 4), 20.0, Color(0.15, 0.12, 0.1))
-		panel.draw_circle(e + Vector2(0, -2), 6.0, Color(1, 1, 1, 0.8))
-		var lid := PackedVector2Array([e + Vector2(-80, -60), e + Vector2(80, -60), e + Vector2(78, -6), e + Vector2(-78, -16)])
-		panel.draw_colored_polygon(lid, Color(0.7, 0.72, 0.66))
-		panel.draw_line(e + Vector2(-78, -16), e + Vector2(78, -6), INK, 6.0, true)
-		panel.draw_arc(e + Vector2(0, 30), 70.0, 0.3, PI - 0.3, 14, Color(0.25, 0.2, 0.3, 0.8), 10.0, true)
-		for k in 7:
-			var b: Vector2 = e + Vector2(-70.0 + float(k) * 24.0, -64.0)
-			panel.draw_line(b, b + Vector2(30, -18 + float(k % 2) * 10.0), Color(0.92, 0.9, 0.82), 7.0, true)
-			panel.draw_line(b, b + Vector2(30, -18 + float(k % 2) * 10.0), INK, 2.0, true)
-	panel.draw_colored_polygon(PackedVector2Array([Vector2(0, 0), Vector2(s.x * 0.35, 0), Vector2(0, s.y * 0.6)]), Color(0, 0, 0, 0.7))
+		var collar := PackedVector2Array([Vector2(head.x + side * 88.0, 334), Vector2(head.x + side * 118.0, 340), Vector2(head.x + side * 16.0, 520), Vector2(head.x, 500)])
+		panel.draw_colored_polygon(collar, Color(0.22, 0.24, 0.3))
+		_ink_outline_on(panel, collar, 5.0)
+	panel.draw_rect(Rect2(60, 520, s.x - 120, 40), Color(0.2, 0.12, 0.14))
+	panel.draw_line(Vector2(60, 520), Vector2(s.x - 60, 520), INK, 5.0, true)
+	# Fold lines in the sleeves.
+	for k in 4:
+		var x: float = 110.0 + float(k) * 34.0
+		panel.draw_line(Vector2(x, 450 + k * 10), Vector2(x + 30, 560), Color(INK, 0.6), 4.0, true)
+		panel.draw_line(Vector2(s.x - x, 450 + k * 10), Vector2(s.x - x - 30, 560), Color(INK, 0.6), 4.0, true)
+	_ink_outline_on(panel, body, 6.0)
+	# Head: round, ruffled feathers at the crown.
+	panel.draw_colored_polygon(skull, feather)
+	for k in 7:
+		var a: float = -PI * 0.5 + (float(k) - 3.0) * 0.28
+		var root: Vector2 = head + Vector2.from_angle(a) * 92.0
+		var tip: Vector2 = root + Vector2.from_angle(a + (_h(k + 2600) - 0.5) * 0.8) * (26.0 + _h(k + 2610) * 22.0)
+		var side_v: Vector2 = Vector2.from_angle(a).orthogonal() * 9.0
+		panel.draw_colored_polygon(PackedVector2Array([root - side_v, tip, root + side_v]), feather)
+		panel.draw_polyline(PackedVector2Array([root - side_v, tip, root + side_v]), INK, 4.0, true)
+	_ink_outline_on(panel, skull, 6.0)
+	# Long white beard falling from under the beak, swaying a little.
+	panel.draw_colored_polygon(beard, Color(0.96, 0.95, 0.9))
+	for k in 6:
+		var x: float = -60.0 + float(k) * 24.0
+		panel.draw_line(head + Vector2(x, 70), head + Vector2(x * 0.6 + sway * 0.5, 230 - absf(x) * 0.6), Color(0.62, 0.6, 0.56), 3.0, true)
+	_ink_outline_on(panel, beard, 5.0)
+	# The beak seen from below: wide and flat, the nostrils on top, the lower part darker.
+	var beak := _ellipse(head + Vector2(0, 28), 62.0, 30.0, 28)
+	panel.draw_colored_polygon(beak, Color(0.92, 0.58, 0.22))
+	panel.draw_colored_polygon(_ellipse(head + Vector2(0, 40), 50.0, 16.0, 20), Color(0.7, 0.38, 0.14))
+	panel.draw_circle(head + Vector2(-16, 18), 5.0, INK)
+	panel.draw_circle(head + Vector2(16, 18), 5.0, INK)
+	_ink_outline_on(panel, beak, 5.0)
+	# Small tired eyes under bushy white brows.
+	for side in [-1.0, 1.0]:
+		var e: Vector2 = head + Vector2(side * 46.0, -26.0)
+		panel.draw_colored_polygon(_ellipse(e, 18.0, 10.0, 16), Color(0.97, 0.95, 0.88))
+		panel.draw_circle(e + Vector2(side * -2.0, 2.0), 7.0, INK)
+		panel.draw_circle(e + Vector2(side * -2.0 + 3.0, -1.0), 2.0, Color(1, 1, 1))
+		panel.draw_line(e + Vector2(-20, -4), e + Vector2(20, -6), INK, 6.0, true)
+		panel.draw_arc(e + Vector2(0, 12), 18.0, 0.3, PI - 0.3, 10, Color(0.3, 0.2, 0.25, 0.8), 4.0, true)
+		for k in 6:
+			var b: Vector2 = e + Vector2(side * (-16.0 + float(k) * 8.0), -24.0)
+			var tip: Vector2 = b + Vector2(side * (18.0 + _h(k + 2620) * 14.0), -10.0 + _h(k + 2630) * 12.0)
+			panel.draw_line(b, tip, INK, 9.0, true)
+			panel.draw_line(b, tip, Color(0.97, 0.96, 0.92), 5.0, true)
+	# Hard black shadow over his right side (light from the left).
+	var dark := PackedVector2Array([head + Vector2(30, -110), head + Vector2(70, -60), head + Vector2(40, 0), head + Vector2(80, 80),
+			head + Vector2(50, 170), Vector2(head.x + 70, 400), Vector2(s.x - 140, 480), Vector2(s.x - 40, s.y + 10), Vector2(s.x + 20, s.y + 10),
+			Vector2(s.x + 20, 300), head + Vector2(130, -120)])
+	var shade_pieces: Array = Geometry2D.intersect_polygons(dark, silhouette)
+	for piece in shade_pieces:
+		panel.draw_colored_polygon(piece, Color(shadow, 0.88))
 
 
-## The hand drawing the katana, with the sound in big yellow letters.
+## The silhouette of head, kimono and beard together (for clipping his shadow to him).
+func _union_outline(a: PackedVector2Array, b: PackedVector2Array, c: PackedVector2Array) -> PackedVector2Array:
+	var merged: Array = Geometry2D.merge_polygons(a, b)
+	var out: PackedVector2Array = merged[0] if not merged.is_empty() else a
+	var more: Array = Geometry2D.merge_polygons(out, c)
+	return more[0] if not more.is_empty() else out
+
+
+## The grandfather's two tired eyes, painted like the prologue's eye: grey-green feathers lit
+## from the upper right, almond eyes with a heavy upper lash line and curved lashes, dark bags,
+## long messy white brows, dark irises with a small glint. One slow blink.
+func _comic_eyes(panel: Control, s: Vector2, since: float) -> void:
+	var light := ELDER_SKIN.lightened(0.14)
+	var dark := ELDER_SKIN.darkened(0.3)
+	panel.draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(s.x, 0), Vector2(s.x, s.y), Vector2(0, s.y)]),
+			PackedColorArray([ELDER_SKIN, light, ELDER_SKIN, dark]))
+	var blink: float = smoothstep(2.4, 2.9, since) * (1.0 - smoothstep(3.0, 3.6, since))
+	var open: float = 1.0 - blink
+	for side in [-1.0, 1.0]:
+		var c := Vector2(s.x * 0.5 + float(side) * 128.0, s.y * 0.56)
+		_old_eye(panel, c, float(side), open, since)
+	# Blue shadow from the top-left, hard edged.
+	panel.draw_colored_polygon(PackedVector2Array([Vector2(0, 0), Vector2(s.x * 0.3, 0), Vector2(0, s.y * 0.55)]), Color(0.03, 0.16, 0.2, 0.75))
+
+
+func _old_eye(panel: Control, c: Vector2, side: float, open: float, since: float) -> void:
+	# Inner corner toward the nose (the middle of the panel).
+	var inner := c + Vector2(-side * 78.0, 8.0)
+	var outer := c + Vector2(side * 82.0, -4.0)
+	var up_ctrl := c + Vector2(side * 6.0, -62.0)
+	var low_ctrl := c + Vector2(side * 4.0, 40.0)
+	var upper := PackedVector2Array()
+	var lower := PackedVector2Array()
+	for k in 21:
+		var u: float = float(k) / 20.0
+		var lo: Vector2 = _bezier(inner, low_ctrl, outer, u)
+		lower.append(lo)
+		upper.append(lo.lerp(_bezier(inner, up_ctrl, outer, u), open))
+	# Dark bags: soft shading and two heavy arcs under the eye.
+	for k in 6:
+		var f: float = 1.0 - float(k) * 0.12
+		panel.draw_colored_polygon(_ellipse(c + Vector2(0, 46), 86.0 * f, 26.0 * f, 24), Color(0.25, 0.18, 0.3, 0.07))
+	for k in 2:
+		var bag := PackedVector2Array()
+		for i in 13:
+			var u: float = float(i) / 12.0
+			bag.append(_bezier(inner, low_ctrl + Vector2(0, 30.0 + float(k) * 16.0), outer, u) + Vector2(0, 10.0 + float(k) * 8.0))
+		_tapered_on(panel, bag, 5.0 - float(k) * 2.0, 1.0, Color(0.22, 0.14, 0.26, 0.75 - float(k) * 0.25))
+	if open > 0.15:
+		var white := PackedVector2Array(upper)
+		for k in range(19, 0, -1):
+			white.append(lower[k])
+		panel.draw_colored_polygon(white, Color(0.93, 0.92, 0.85))
+		var shade := PackedVector2Array(upper)
+		for k in range(19, 0, -1):
+			var u: float = float(k) / 20.0
+			shade.append(upper[k] + Vector2(0, 18.0 * sin(u * PI) * open))
+		panel.draw_colored_polygon(shade, Color(0.6, 0.62, 0.6, 0.7))
+		# Dark iris clipped to the eye, with a small glint.
+		var gaze := Vector2(side * 4.0 + sin(since * 0.7) * 3.0, 4.0)
+		for ring in 6:
+			var r: float = 30.0 * (1.0 - float(ring) * 0.12)
+			var col: Color = Color(0.2, 0.15, 0.12).lerp(Color(0.06, 0.04, 0.04), float(ring) / 5.0)
+			for piece in Geometry2D.intersect_polygons(_ellipse(c + gaze, r, r, 24), white):
+				panel.draw_colored_polygon(piece, col)
+		panel.draw_circle(c + gaze + Vector2(9, -9), 5.0, Color(1, 1, 1, 0.9))
+		panel.draw_circle(c + gaze + Vector2(-8, 8), 2.0, Color(1, 1, 1, 0.5))
+	# Heavy upper lash line and curved lashes swinging out to the side.
+	_tapered_on(panel, upper, 4.0, 10.0, EYE_INK)
+	_tapered_on(panel, lower, 1.5, 2.5, Color(EYE_INK, 0.7))
+	for k in 8:
+		var u: float = lerpf(0.35, 1.0, float(k) / 7.0)
+		var base: Vector2 = upper[int(u * 20.0)]
+		var d0 := Vector2(side * (0.3 + u * 0.6), -1.0 * lerpf(-0.7, 1.0, open)).normalized()
+		var length: float = 12.0 + 16.0 * u * (0.7 + 0.5 * _h(k + 2520))
+		var mid: Vector2 = base + d0 * length * 0.55
+		_tapered_on(panel, PackedVector2Array([base, mid, mid + (d0 + Vector2(side * 0.5, 0.2)).normalized() * length * 0.5]), 4.0, 0.6, EYE_INK)
+	# Long messy white brows.
+	for k in 11:
+		var u: float = float(k) / 10.0
+		var root: Vector2 = c + Vector2(-side * 70.0 + side * u * 130.0, -74.0 - sin(u * PI) * 12.0)
+		var length: float = 36.0 + _h(k + 2530 + int(side) * 20) * 34.0
+		var droop: float = 0.3 + _h(k + 2540) * 0.9
+		var sway: float = sin(since * 1.3 + float(k)) * 2.0
+		var pts := PackedVector2Array([root, root + Vector2(side * length * 0.55, -6.0 + sway), root + Vector2(side * length, droop * 18.0 + sway)])
+		_tapered_on(panel, pts, 10.0, 1.5, EYE_INK)
+		_tapered_on(panel, pts, 7.0, 0.8, Color(0.96, 0.95, 0.9))
+
+
+## The katana drawn from its scabbard, and the sound in big yellow letters. The blade comes out
+## over 0.6 s: the grip (in his hand) slides away from the mouth of the scabbard and the blade
+## shows between them.
 func _comic_katana(panel: Control, s: Vector2, since: float) -> void:
 	var draw_k: float = clampf(since / 0.6, 0.0, 1.0)
-	var saya_a := Vector2(40, s.y * 0.7)
-	var saya_b := Vector2(s.x * 0.55, s.y * 0.45)
-	panel.draw_line(saya_a, saya_b, INK, 30.0, true)
-	panel.draw_line(saya_a, saya_b, Color(0.18, 0.12, 0.14), 22.0, true)
-	var dir: Vector2 = (saya_b - saya_a).normalized()
-	var blade_end: Vector2 = saya_b + dir * 260.0 * draw_k
-	panel.draw_line(saya_b, blade_end, INK, 18.0, true)
-	panel.draw_line(saya_b, blade_end, Color(0.9, 0.92, 0.94), 11.0, true)
+	var saya_a := Vector2(30, s.y * 0.8)
+	var mouth := Vector2(s.x * 0.4, s.y * 0.56)
+	var dir: Vector2 = (mouth - saya_a).normalized()
+	var nrm: Vector2 = dir.orthogonal()
+	# Motion lines along the draw.
 	for k in 6:
-		var p: Vector2 = saya_b + dir * (40.0 + float(k) * 40.0) * draw_k
-		panel.draw_line(p + dir.orthogonal() * 30.0, p + dir.orthogonal() * 60.0 - dir * 30.0, Color(INK, 0.5), 3.0, true)
-	var hand: Vector2 = blade_end - dir * 30.0
-	panel.draw_colored_polygon(_ellipse(hand, 46.0, 34.0, 16, dir.angle()), Color(0.88, 0.85, 0.72))
-	panel.draw_arc(hand, 40.0, 0.0, TAU, 20, INK, 6.0, true)
+		var p: Vector2 = mouth + dir * (60.0 + float(k) * 36.0) + nrm * (36.0 + float(k % 3) * 14.0)
+		panel.draw_line(p, p - dir * (40.0 + 60.0 * draw_k), Color(INK, 0.45), 3.0, true)
+	# Scabbard: dark lacquer, a metal end cap, the cord tied near the mouth.
+	_tapered_on(panel, PackedVector2Array([saya_a, saya_a.lerp(mouth, 0.5) + nrm * 3.0, mouth]), 30.0, 30.0, INK)
+	_tapered_on(panel, PackedVector2Array([saya_a, saya_a.lerp(mouth, 0.5) + nrm * 3.0, mouth]), 22.0, 22.0, Color(0.14, 0.08, 0.1))
+	panel.draw_line(saya_a + nrm * 6.0, mouth + nrm * 6.0, Color(0.5, 0.35, 0.4, 0.5), 2.0, true)
+	panel.draw_colored_polygon(_ellipse(saya_a, 16.0, 13.0, 14, dir.angle()), Color(0.45, 0.36, 0.14))
+	for k in 3:
+		var p: Vector2 = mouth - dir * (40.0 + float(k) * 10.0)
+		panel.draw_line(p - nrm * 14.0, p + nrm * 14.0, Color(0.55, 0.2, 0.25), 4.0, true)
+	# The blade between the scabbard and the guard: slightly curved, silver, a lighter edge and the
+	# wavy temper line.
+	var blade_len: float = 210.0 * draw_k
+	var guard: Vector2 = mouth + dir * blade_len
+	if blade_len > 4.0:
+		var back := PackedVector2Array()
+		var edge := PackedVector2Array()
+		var hamon := PackedVector2Array()
+		for k in 13:
+			var u: float = float(k) / 12.0
+			var p: Vector2 = mouth + dir * blade_len * u - nrm * sin(u * PI * 0.5) * 6.0 * draw_k
+			back.append(p - nrm * 7.0)
+			edge.append(p + nrm * 8.0)
+			hamon.append(p + nrm * (2.0 + sin(u * 26.0) * 2.2))
+		var blade := PackedVector2Array(back)
+		var rev := PackedVector2Array(edge)
+		rev.reverse()
+		blade.append_array(rev)
+		panel.draw_colored_polygon(blade, Color(0.72, 0.75, 0.8))
+		var bright := PackedVector2Array(hamon)
+		bright.append_array(rev)
+		panel.draw_colored_polygon(bright, Color(0.93, 0.95, 0.98))
+		panel.draw_polyline(hamon, Color(0.55, 0.6, 0.68), 1.6, true)
+		panel.draw_polyline(back, Color(1, 1, 1, 0.5), 1.2, true)
+		var ring := PackedVector2Array(blade)
+		ring.append(blade[0])
+		panel.draw_polyline(ring, INK, 3.0, true)
+	# Habaki (brass collar), then the oval dark gold guard.
+	panel.draw_colored_polygon(PackedVector2Array([guard - nrm * 9.0, guard - nrm * 9.0 + dir * 10.0, guard + nrm * 10.0 + dir * 10.0, guard + nrm * 10.0]), Color(0.78, 0.6, 0.22))
+	var tsuba: Vector2 = guard + dir * 14.0
+	var tsuba_pts := _ellipse(tsuba, 7.0, 34.0, 24, dir.angle())
+	panel.draw_colored_polygon(tsuba_pts, Color(0.48, 0.36, 0.1))
+	panel.draw_colored_polygon(_ellipse(tsuba - nrm * 8.0, 3.0, 14.0, 12, dir.angle()), Color(0.75, 0.6, 0.25, 0.6))
+	_ink_outline_on(panel, tsuba_pts, 3.0)
+	# Grip: light ray-skin under a dark cord crossing in diamonds; a metal pommel at the end.
+	var grip_a: Vector2 = tsuba + dir * 8.0
+	var grip_b: Vector2 = grip_a + dir * 128.0
+	var grip := PackedVector2Array([grip_a - nrm * 13.0, grip_b - nrm * 12.0, grip_b + nrm * 12.0, grip_a + nrm * 13.0])
+	panel.draw_colored_polygon(grip, Color(0.93, 0.9, 0.8))
+	for k in 7:
+		var a: Vector2 = grip_a.lerp(grip_b, float(k) / 7.0)
+		var b: Vector2 = grip_a.lerp(grip_b, float(k + 1) / 7.0)
+		panel.draw_line(a - nrm * 12.0, b + nrm * 12.0, Color(0.12, 0.1, 0.16), 5.0, true)
+		panel.draw_line(a + nrm * 12.0, b - nrm * 12.0, Color(0.12, 0.1, 0.16), 5.0, true)
+	_ink_outline_on(panel, grip, 3.0)
+	var pommel := PackedVector2Array([grip_b - nrm * 13.0, grip_b - nrm * 11.0 + dir * 16.0, grip_b + nrm * 11.0 + dir * 16.0, grip_b + nrm * 13.0])
+	panel.draw_colored_polygon(pommel, Color(0.5, 0.4, 0.16))
+	_ink_outline_on(panel, pommel, 3.0)
+	# His hand wrapped round the grip.
+	var hand: Vector2 = grip_a.lerp(grip_b, 0.42)
+	var fist := _ellipse(hand, 40.0, 24.0, 20, dir.angle())
+	panel.draw_colored_polygon(fist, ELDER_SKIN)
+	for k in 3:
+		var p: Vector2 = hand + dir * (-18.0 + float(k) * 16.0)
+		panel.draw_line(p - nrm * 20.0, p - nrm * 4.0, Color(INK, 0.8), 2.4, true)
+	panel.draw_colored_polygon(_ellipse(hand + nrm * 16.0 + dir * 14.0, 12.0, 8.0, 12, dir.angle()), ELDER_SKIN.lightened(0.08))
+	_ink_outline_on(panel, fist, 4.0)
+	# His other hand steadying the scabbard at the mouth.
+	var hold: Vector2 = mouth - dir * 22.0
+	var palm := _ellipse(hold, 30.0, 22.0, 18, dir.angle() + 0.3)
+	panel.draw_colored_polygon(palm, ELDER_SKIN.darkened(0.08))
+	_ink_outline_on(panel, palm, 4.0)
 	if since > 0.3:
+		# "SHHNK!" pops out with its own little bounce.
 		var style := InkType.Style.new()
 		style.fill = Color(1.0, 0.86, 0.15)
 		style.extrude = Color(0.55, 0.25, 0.02)
 		style.depth = 1.0
-		var pop: float = 1.0 + 0.25 * maxf(0.0, 1.0 - (since - 0.3) / 0.25)
+		var b: float = clampf((since - 0.3) / 0.35, 0.0, 1.0)
+		var pop: float = 0.6 + 0.6 * smoothstep(0.0, 0.5, b) - 0.2 * smoothstep(0.5, 1.0, b) + 0.06 * sin(b * PI * 3.0) * (1.0 - b)
 		InkType.draw(panel, sound_text, Vector2(s.x * 0.18, 26), 70.0 * pop, style)
+
+
+func _ink_outline_on(ci: CanvasItem, pts: PackedVector2Array, width: float) -> void:
+	var ring := PackedVector2Array(pts)
+	ring.append(pts[0])
+	ci.draw_polyline(ring, INK, width, true)
 
 
 # =====================================================================================
