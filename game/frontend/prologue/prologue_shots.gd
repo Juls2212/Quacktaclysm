@@ -3,15 +3,14 @@ extends Control
 ## Paints the shots of the prologue, all in code with thick ink and brush texture:
 ## CARD the series-style card ("BASADA EN / UNA PROFECÍA" typed, then the tagline scribbled) on
 ## brushed orange with deformed wings and claws reaching in, TITLE QUACKTACLYSM dropping in letter
-## by letter and cracking, PORTRAIT the hero in a full-screen comic panel, EYE an anime-style
-## close-up of his eye with red stars falling in the iris, FALL the town seen from a rooftop
-## through his eyes as the sky turns red and the stars rain down on it, FOREST the dark pine wood
-## with huge amber eyes, COMIC the grandfather's comic page, CAVE the prophecy stone lit by a
-## torch, OUT the fade to the tutorial. The cutscene sets `shot`, `t` (seconds into the shot) and
-## `line` (current subtitle); some shots add their own nodes (ducks, comic panels, the torchlight).
-## Visual only.
+## by letter and cracking, EYE an extreme close-up of the hero's duck eye with red stars falling
+## in the iris, FALL the town seen from a rooftop through his eyes as the sky turns red and the
+## stars rain down on it, FOREST the dark pine wood with huge amber eyes, COMIC the grandfather's
+## comic page, CAVE the prophecy stone lit by a torch, OUT the fade to the tutorial. The cutscene
+## sets `shot`, `t` (seconds into the shot) and `line` (current subtitle); some shots add their
+## own nodes (ducks, comic panels, the torchlight). Visual only.
 
-enum Shot { CARD, TITLE, PORTRAIT, EYE, FALL, FOREST, COMIC, CAVE, OUT }
+enum Shot { CARD, TITLE, EYE, FALL, FOREST, COMIC, CAVE, OUT }
 
 const INK := Color(0.07, 0.06, 0.08)
 const STAR := Color(1.0, 0.82, 0.32)
@@ -82,8 +81,6 @@ func advance(delta: float) -> void:
 	if shot == Shot.FALL:
 		# A short jolt on every impact.
 		target = _fall_shake()
-	elif shot == Shot.PORTRAIT:
-		target = _portrait_shake()
 	elif shot == Shot.COMIC:
 		# A short jolt as each panel lands.
 		target = _comic_shake()
@@ -112,8 +109,6 @@ func _draw() -> void:
 			_draw_card()
 		Shot.TITLE:
 			_draw_title()
-		Shot.PORTRAIT:
-			_draw_portrait()
 		Shot.EYE:
 			_draw_eye()
 		Shot.FALL:
@@ -260,7 +255,7 @@ func _claw_reach(root: Vector2, length: float, angle: float, color: Color) -> vo
 ## The title (~3.4 s): black with a fine grain, sparks and small stars drifting down behind; the
 ## letters drop in one by one (0.06 s apart), each landing with a little bounce and a puff of dust;
 ## once they are all down the crack opens from top to bottom (~0.4 s) and glows yellow in soft
-## pulses; it holds, then the cutscene fades it into the hero's portrait. Centred exactly.
+## pulses; it holds, then the cutscene fades it into the hero's eye. Centred exactly.
 const TITLE_CAP: float = 80.0
 const TITLE_DROP_START: float = 0.25
 const TITLE_DROP_GAP: float = 0.06
@@ -349,232 +344,30 @@ func _grain(alpha: float) -> void:
 
 
 # =====================================================================================
-# 2b. The hero's portrait
-# =====================================================================================
-
-## The hero's portrait (~5 s), a full-screen comic panel like the grandfather's: purple rays
-## (the eye shot's light) and hard black diagonal shadows behind; the hero from below in a medium
-## shot, whole and centred (ruffled dark feathers, his red patched kimono, the sheathed katana over
-## his shoulder, eye bags, a small scar, dirt), looking a little to the side. It lands with a
-## panel hit, he breathes slowly, the wind stirs his feathers and his kimono, and his gaze turns to
-## the front. Then the view pushes slowly into his eye while the edges darken, and the cutscene
-## fades softly into the eye shot, which starts framed on the same spot.
-const PORTRAIT_LIGHT := Color("4a3ac4")
-const PORTRAIT_DARK := Color("22186a")
-const HERO_FEATHER := Color(0.85, 0.81, 0.66)
-const HERO_RED := Color(0.6, 0.21, 0.2)
-const HERO_HAIR := Color(0.12, 0.1, 0.16)
-const PORTRAIT_ENTER: float = 0.35
-const PORTRAIT_PUSH := Vector2(3.4, 4.9)
-
-
-func _portrait_shake() -> Vector2:
-	var since: float = t - PORTRAIT_ENTER * 0.8
-	if since < 0.0 or since > 0.25:
-		return Vector2.ZERO
-	return Vector2(sin(t * 95.0), cos(t * 80.0)) * 8.0 * (1.0 - since / 0.25)
-
-
-func _portrait_look() -> float:
-	return smoothstep(1.4, 2.6, t)
-
-
-func _portrait_head() -> Vector2:
-	return Vector2(640.0 - 18.0 * (1.0 - _portrait_look()), 292.0 + sin(t * 1.2) * 2.0)
-
-
-## The eye the camera pushes into (his near eye, once he looks to the front).
-func _portrait_eye() -> Vector2:
-	return _portrait_head() + Vector2(-42.0, -14.0)
-
-
-func _draw_portrait() -> void:
-	draw_rect(Rect2(Vector2(-30, -30), DESIGN + Vector2(60, 60)), Color(0.03, 0.02, 0.05))
-	# Entrance: the panel lands big and a little turned, then settles.
-	var hit: float = clampf(t / PORTRAIT_ENTER, 0.0, 1.0)
-	var land_scale: float = lerpf(1.18, 1.0, 1.0 - pow(1.0 - hit, 3.0))
-	var land_rot: float = sin(hit * 14.0) * 0.03 * (1.0 - hit)
-	# Push into the eye at the end, the eye drifting to where the eye shot puts it.
-	var push: float = smoothstep(PORTRAIT_PUSH.x, PORTRAIT_PUSH.y, t)
-	var zoom: float = land_scale * (1.0 + 3.2 * push * push)
-	var eye: Vector2 = _portrait_eye()
-	var anchor: Vector2 = DESIGN * 0.5
-	var focus: Vector2 = anchor.lerp(eye, smoothstep(0.0, 0.4, push))
-	var target: Vector2 = anchor.lerp(IRIS_C, push)
-	var xf: Transform2D = Transform2D(0.0, _shake) * Transform2D(land_rot, Vector2(zoom, zoom), 0.0, target) * Transform2D(0.0, -focus)
-	draw_set_transform_matrix(xf)
-	var panel := Rect2(30, 86, 1220, 548)
-	# Purple rays from behind his head and hard diagonal shadows.
-	draw_rect(panel, PORTRAIT_DARK)
-	var src: Vector2 = _portrait_head() + Vector2(0, -20)
-	for k in 22:
-		var a: float = TAU * float(k) / 22.0 + t * 0.03
-		var ray := PackedVector2Array([src, src + Vector2.from_angle(a - 0.07) * 1500.0, src + Vector2.from_angle(a + 0.07) * 1500.0])
-		for piece in Geometry2D.intersect_polygons(ray, _rect_poly(panel)):
-			draw_colored_polygon(piece, Color(PORTRAIT_LIGHT, 0.85 if k % 2 == 0 else 0.45))
-	draw_colored_polygon(PackedVector2Array([panel.position, Vector2(panel.position.x + 330, panel.position.y), Vector2(panel.position.x, panel.position.y + 300)]), Color(0, 0, 0, 0.8))
-	draw_colored_polygon(PackedVector2Array([Vector2(panel.end.x - 420, panel.end.y), panel.end, Vector2(panel.end.x, panel.end.y - 260)]), Color(0, 0, 0, 0.75))
-	_draw_hero_bust()
-	_ink_outline_on(self, _rect_poly(panel), 9.0)
-	draw_set_transform(_shake, 0.0, Vector2.ONE)
-	# The edges darken as the view closes in on the eye.
-	if push > 0.0:
-		for k in 20:
-			var f: float = 1.0 - float(k) * 0.035
-			var hole := _ellipse(IRIS_C, 900.0 * f * (1.0 - 0.45 * push), 560.0 * f * (1.0 - 0.45 * push), 40)
-			var ring := PackedVector2Array([Vector2(-60, -60), Vector2(1340, -60), Vector2(1340, 780), Vector2(-60, 780)])
-			for piece in Geometry2D.clip_polygons(ring, hole):
-				draw_colored_polygon(piece, Color(0, 0, 0, 0.05 * push))
-
-
-func _rect_poly(r: Rect2) -> PackedVector2Array:
-	return PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)])
-
-
-func _draw_hero_bust() -> void:
-	var look: float = _portrait_look()
-	var breath: float = sin(t * 1.2)
-	var head: Vector2 = _portrait_head()
-	var wind: float = sin(t * 2.6) * 0.5 + sin(t * 4.1) * 0.3
-	# The sheathed katana over his right shoulder: the grip and guard stick up past the shoulder.
-	var saya_a := Vector2(470, 700)
-	var saya_b := Vector2(900, 236)
-	var sdir: Vector2 = (saya_b - saya_a).normalized()
-	var snrm: Vector2 = sdir.orthogonal()
-	_tapered_on(self, PackedVector2Array([saya_a, saya_b]), 30.0, 30.0, INK)
-	_tapered_on(self, PackedVector2Array([saya_a, saya_b]), 22.0, 22.0, Color(0.14, 0.08, 0.1))
-	var tsuba: Vector2 = saya_b + sdir * 8.0
-	draw_colored_polygon(_ellipse(tsuba, 7.0, 26.0, 20, sdir.angle()), Color(0.42, 0.34, 0.12))
-	_ink_outline_on(self, _ellipse(tsuba, 7.0, 26.0, 20, sdir.angle()), 3.0)
-	var g0: Vector2 = tsuba + sdir * 8.0
-	var g1: Vector2 = g0 + sdir * 120.0
-	var grip := PackedVector2Array([g0 - snrm * 12.0, g1 - snrm * 11.0, g1 + snrm * 11.0, g0 + snrm * 12.0])
-	draw_colored_polygon(grip, Color(0.5, 0.08, 0.08))
-	for k in 6:
-		var c: Vector2 = g0.lerp(g1, (float(k) + 0.5) / 6.0)
-		draw_colored_polygon(PackedVector2Array([c - sdir * 10.0, c - snrm * 9.0, c + sdir * 10.0, c + snrm * 9.0]), Color(0.05, 0.03, 0.04))
-	_ink_outline_on(self, grip, 3.0)
-	var pommel := PackedVector2Array([g1 - snrm * 12.0, g1 + sdir * 14.0 - snrm * 10.0, g1 + sdir * 14.0 + snrm * 10.0, g1 + snrm * 12.0])
-	draw_colored_polygon(pommel, Color(0.55, 0.52, 0.48))
-	_ink_outline_on(self, pommel, 3.0)
-	# Kimono: broad shoulders spreading out of the bottom, seen from below, breathing.
-	var lift: float = breath * 3.0
-	var body := PackedVector2Array([Vector2(250, 760), Vector2(300, 520 - lift), Vector2(420, 440 - lift), Vector2(560, 408 - lift), Vector2(720, 408 - lift),
-			Vector2(860, 440 - lift), Vector2(980, 520 - lift), Vector2(1030, 760)])
-	draw_colored_polygon(body, HERO_RED)
-	# The sleeves flutter at the edges in the wind.
-	for side in [-1.0, 1.0]:
-		var edge := PackedVector2Array()
-		for k in 7:
-			var v: float = float(k) / 6.0
-			var base: Vector2 = Vector2(640.0 + side * (340.0 + v * 70.0), 520.0 + v * 130.0 - lift)
-			edge.append(base + Vector2(side * sin(t * 5.0 + v * 6.0) * 6.0 * (0.4 + wind * 0.5), 0))
-		draw_polyline(edge, Color(HERO_RED.darkened(0.35), 0.9), 5.0, true)
-	var collar_in := PackedVector2Array([Vector2(560, 410 - lift), Vector2(640, 560 - lift), Vector2(720, 410 - lift)])
-	draw_colored_polygon(collar_in, Color(0.88, 0.84, 0.74))
-	for side in [-1.0, 1.0]:
-		var collar := PackedVector2Array([Vector2(640.0 + side * 80.0, 408 - lift), Vector2(640.0 + side * 112.0, 414 - lift), Vector2(640.0 + side * 14.0, 600 - lift), Vector2(640, 560 - lift)])
-		draw_colored_polygon(collar, Color(0.2, 0.22, 0.32))
-		_ink_outline_on(self, collar, 4.0)
-	# The patch sewn on his left shoulder, with big stitches.
-	var patch := PackedVector2Array([Vector2(372, 470 - lift), Vector2(450, 458 - lift), Vector2(458, 530 - lift), Vector2(380, 540 - lift)])
-	draw_colored_polygon(patch, Color(0.72, 0.55, 0.38))
-	for k in 4:
-		var a: Vector2 = patch[k]
-		var b: Vector2 = patch[(k + 1) % 4]
-		for f in [0.3, 0.7]:
-			var p: Vector2 = a.lerp(b, f)
-			var n: Vector2 = (b - a).normalized().orthogonal() * 5.0
-			draw_line(p - n, p + n, INK, 2.0, true)
-	_ink_outline_on(self, patch, 3.0)
-	for k in 3:
-		draw_colored_polygon(_ellipse(Vector2(700 + k * 90, 520 + k * 30 - lift), 22.0, 10.0, 12, 0.3), Color(0.3, 0.12, 0.08, 0.35))
-	_ink_outline_on(self, body, 6.0)
-	# Neck and head.
-	draw_colored_polygon(_ellipse(head + Vector2(0, 104), 70.0, 46.0, 20), HERO_FEATHER.darkened(0.08))
-	var skull := _ellipse(head, 112.0, 104.0, 40)
-	draw_colored_polygon(skull, HERO_FEATHER)
-	draw_colored_polygon(_ellipse(head + Vector2(-58, 40), 18.0, 9.0, 12, 0.4), Color(0.35, 0.25, 0.18, 0.35))
-	_ink_outline_on(self, skull, 6.0)
-	# Ruffled dark feathers on top, stirred by the wind.
-	for k in 15:
-		var a: float = -PI + 0.15 + float(k) / 14.0 * (PI - 0.3)
-		var root: Vector2 = head + Vector2(cos(a) * 104.0, sin(a) * 96.0)
-		var length: float = 46.0 + _h(k + 3100) * 60.0
-		var bend: float = (_h(k + 3110) - 0.5) * 0.8 + wind * 0.25 + sin(t * 3.5 + float(k)) * 0.08
-		var d0 := Vector2.from_angle(a + bend * 0.4)
-		var d1 := Vector2.from_angle(a + bend)
-		var mid: Vector2 = root + d0 * length * 0.55
-		var lock := PackedVector2Array([root - d0 * 14.0, mid, mid + d1 * length * 0.5])
-		_tapered_on(self, lock, 34.0, 2.0, HERO_HAIR)
-		if k % 3 == 0:
-			draw_line(mid - d0 * 10.0, mid + d1 * 18.0, Color(0.4, 0.36, 0.55, 0.5), 2.0, true)
-	draw_colored_polygon(PackedVector2Array([head + Vector2(-112, -10), head + Vector2(-60, -98), head + Vector2(40, -108), head + Vector2(110, -40),
-			head + Vector2(90, -52), head + Vector2(10, -70), head + Vector2(-70, -48)]), HERO_HAIR)
-	# Eyes: tired, with dark bags, turning from the side to the front.
-	for side in [-1.0, 1.0]:
-		var e: Vector2 = head + Vector2(side * 42.0 + 22.0 * (1.0 - look), -14.0)
-		var far: bool = side > 0.0
-		var rx: float = 26.0 * (lerpf(0.75, 1.0, look) if far else 1.0)
-		draw_arc(e + Vector2(0, 16), rx * 1.05, 0.3, PI - 0.3, 12, Color(0.3, 0.18, 0.32, 0.8), 6.0, true)
-		draw_colored_polygon(_ellipse(e, rx, 15.0, 20), Color(0.95, 0.93, 0.86))
-		var gaze := Vector2(lerpf(9.0, 0.0, look) * 1.0, 1.0)
-		for piece in Geometry2D.intersect_polygons(_ellipse(e + gaze, 11.0, 11.0, 16), _ellipse(e, rx, 15.0, 20)):
-			draw_colored_polygon(piece, Color(0.45, 0.08, 0.12))
-		draw_circle(e + gaze, 5.0, Color(0.05, 0.02, 0.04))
-		draw_circle(e + gaze + Vector2(3, -4), 2.4, Color(1, 1, 1, 0.9))
-		_tapered_on(self, PackedVector2Array([e + Vector2(-rx - 2.0, 2.0), e + Vector2(0, -15.0), e + Vector2(rx + 4.0, -2.0)]), 4.0, 6.0, INK)
-	# The beak: from a side wedge to a front view as he turns.
-	var side_beak := PackedVector2Array([head + Vector2(60, 4), head + Vector2(110, 10), head + Vector2(162, 26), head + Vector2(150, 40),
-			head + Vector2(110, 50), head + Vector2(64, 46), head + Vector2(48, 30), head + Vector2(50, 12)])
-	var front_beak := PackedVector2Array()
-	for k in 8:
-		var a: float = -PI * 0.5 + TAU * float(k) / 8.0 + PI * 0.125
-		front_beak.append(head + Vector2(0, 40) + Vector2(cos(a) * 58.0, sin(a) * 26.0))
-	var beak := PackedVector2Array()
-	for k in 8:
-		beak.append(side_beak[k].lerp(front_beak[k], look))
-	draw_colored_polygon(beak, Color(0.9, 0.6, 0.27))
-	_ink_outline_on(self, beak, 4.0)
-	# A small scar over his left eye, stitched.
-	var scar_a: Vector2 = head + Vector2(-64, -48)
-	var scar_b: Vector2 = head + Vector2(-34, -24)
-	draw_line(scar_a, scar_b, Color(0.82, 0.45, 0.45), 4.0, true)
-	for f in [0.3, 0.65]:
-		var p: Vector2 = scar_a.lerp(scar_b, f)
-		draw_line(p + Vector2(-5, 5), p + Vector2(5, -5), INK, 1.6, true)
-	# Hard black shadow over his right side (light from the upper left).
-	var silhouette: PackedVector2Array = skull
-	var merged: Array = Geometry2D.merge_polygons(skull, body)
-	if merged.size() == 1:
-		silhouette = merged[0]
-	var dark := PackedVector2Array([head + Vector2(30, -140), head + Vector2(70, -40), head + Vector2(40, 60), Vector2(700, 470), Vector2(760, 760),
-			Vector2(1100, 760), Vector2(1100, 200)])
-	for piece in Geometry2D.intersect_polygons(dark, silhouette):
-		draw_colored_polygon(piece, Color(0.02, 0.0, 0.05, 0.6))
-
-
-# =====================================================================================
 # 3. The eye
 # =====================================================================================
 
-## The eye (anime style, painted): a face lit purple-blue from the upper right with soft shadows,
-## dark ink feathers falling from above, an almond eye with a heavy upper lash line, curved lashes
-## of different lengths and fine lower ones, a lilac white shaded under the lid, and an iris going
-## red to magenta to dark purple with a dark pupil and a rounded pink glint, where red stars fall
-## with their trails. It blinks once, softly, while the camera breathes.
-const EYE_LIGHT := Color("6a58e6")
-const EYE_DARK := Color("22186a")
-const EYE_SCLERA := Color("d6cdf4")
-const EYE_LID_SHADOW := Color("8a7cc8")
-const EYE_INK := Color(0.05, 0.03, 0.1)
-const IRIS_RED := Color("ff3b30")
-const IRIS_MAGENTA := Color("c21f7a")
-const IRIS_PURPLE := Color("2a0b45")
+## The eye of the hero, a duck (extreme close-up): his greyish-white, faintly green feathers with
+## soft grey dirt, cool night shadows at the edges and a faint warm light from one side; only the
+## start of his short dark head feathers, out of focus, at the top; a thick, tidy, dark brow,
+## slightly frowning; a tired, half-drooping upper lid with a heavy ink line and just two short
+## lashes; grey-purple bags; a dark amber iris with a black pupil and a small white glint, where
+## red stars fall with their trails; and his stitched scar crossing the brow and running past the
+## outer corner down to the cheek. It blinks once, softly, while the camera pushes slowly in.
+const HERO_LIGHT := Color("e6e8d8")
+const HERO_BASE := Color("cfd2bc")
+const HERO_SHADE := Color("9ea38c")
+const EYE_SCLERA := Color(0.9, 0.89, 0.84)
+const EYE_LID_SHADOW := Color(0.6, 0.61, 0.56)
+const EYE_INK := Color(0.07, 0.06, 0.06)
+const BROW := Color("2a2420")
+const IRIS_RIM := Color(0.16, 0.09, 0.04)
+const IRIS_AMBER := Color(0.56, 0.33, 0.1)
+const IRIS_GOLD := Color(0.82, 0.56, 0.2)
 const EYE_L := Vector2(330, 398)
-const EYE_R := Vector2(1010, 330)
-const IRIS_C := Vector2(690, 372)
-const IRIS_R: float = 128.0
+const EYE_R := Vector2(1000, 345)
+const IRIS_C := Vector2(690, 380)
+const IRIS_R: float = 118.0
 ## Length of the eye shot (the cutscene's shot_durations[2]); the push-in spans all of it.
 const EYE_SHOT_TIME: float = 13.0
 
@@ -582,8 +375,8 @@ const EYE_SHOT_TIME: float = 13.0
 ## The light on the face: brighter up and to the right, falling off down and to the left. Linear
 ## in x and y, so per-vertex colours rebuild it exactly on any polygon.
 func _face_light(p: Vector2) -> Color:
-	var u: float = clampf(p.y / 720.0 * 0.8 + (1.0 - p.x / 1280.0) * 0.35, 0.0, 1.0)
-	return EYE_LIGHT.lerp(EYE_DARK, u)
+	var u: float = clampf(p.y / 720.0 * 0.75 + (1.0 - p.x / 1280.0) * 0.4, 0.0, 1.0)
+	return HERO_LIGHT.lerp(HERO_SHADE, u)
 
 
 func _face_poly(pts: PackedVector2Array) -> void:
@@ -593,13 +386,14 @@ func _face_poly(pts: PackedVector2Array) -> void:
 	draw_polygon(pts, colors)
 
 
+## Upper lid: a tired, flatter arc than a wide-open eye.
 func _lid_upper(u: float, open: float) -> Vector2:
-	var up: Vector2 = _bezier(EYE_L, Vector2(640, 168), EYE_R, u)
+	var up: Vector2 = _bezier(EYE_L, Vector2(650, 205), EYE_R, u)
 	return _lid_lower(u).lerp(up, open)
 
 
 func _lid_lower(u: float) -> Vector2:
-	return _bezier(EYE_L, Vector2(700, 520), EYE_R, u)
+	return _bezier(EYE_L, Vector2(690, 505), EYE_R, u)
 
 
 func _bezier(a: Vector2, b: Vector2, c: Vector2, u: float) -> Vector2:
@@ -648,15 +442,15 @@ func _draw_eye() -> void:
 		for k in range(23, 0, -1):
 			white.append(_lid_lower(float(k) / 24.0))
 		draw_colored_polygon(white, EYE_SCLERA)
-		# Shadow of the lid over the top of the white.
+		_draw_iris()
+		# The heavy lid's shadow over the top of the eye.
 		var shade := PackedVector2Array()
 		for k in 25:
 			shade.append(_lid_upper(float(k) / 24.0, open))
 		for k in range(23, 0, -1):
 			var u: float = float(k) / 24.0
-			shade.append(_lid_upper(u, open) + Vector2(0, 40.0 * sin(u * PI) * open))
-		draw_colored_polygon(shade, Color(EYE_LID_SHADOW, 0.75))
-		_draw_iris()
+			shade.append(_lid_upper(u, open) + Vector2(0, 46.0 * sin(u * PI) * open))
+		draw_colored_polygon(shade, Color(0.36, 0.37, 0.32, 0.32))
 	# The face again over everything outside the almond (it hides the iris under the lids).
 	var upper := PackedVector2Array([Vector2(-80, -80), Vector2(1360, -80), Vector2(1360, EYE_R.y)])
 	for k in range(24, -1, -1):
@@ -668,33 +462,59 @@ func _draw_eye() -> void:
 		lower.append(_lid_lower(float(k) / 24.0))
 	lower.append_array(PackedVector2Array([Vector2(1360, EYE_R.y), Vector2(1360, 800), Vector2(-80, 800)]))
 	_face_poly(lower)
-	# Soft shadows: under the eye, down the cheek and at the temple.
-	for k in 12:
-		var f: float = 1.0 - float(k) * 0.07
-		draw_colored_polygon(_ellipse(Vector2(560, 560), 420.0 * f, 70.0 * f, 32, -0.08), Color(0.08, 0.04, 0.24, 0.025))
-		draw_colored_polygon(_ellipse(Vector2(120, 520), 260.0 * f, 300.0 * f, 32), Color(0.06, 0.03, 0.2, 0.028))
-	draw_polyline(PackedVector2Array([Vector2(1110, 470), Vector2(1150, 560), Vector2(1170, 640)]), Color(EYE_INK, 0.35), 2.0, true)
-	draw_polyline(PackedVector2Array([Vector2(430, 610), Vector2(560, 600), Vector2(640, 606)]), Color(EYE_INK, 0.3), 2.4, true)
+	# Soft grey dirt on the feathers.
+	for d in [[Vector2(380, 590), 70.0, 34.0], [Vector2(180, 300), 60.0, 40.0], [Vector2(880, 560), 50.0, 22.0], [Vector2(560, 140), 44.0, 18.0]]:
+		for k in 4:
+			var f: float = 1.0 - float(k) * 0.2
+			draw_colored_polygon(_ellipse(d[0], float(d[1]) * f, float(d[2]) * f, 20, 0.2), Color(0.45, 0.45, 0.42, 0.07))
+	# Grey-purple bags under the eye.
+	for k in 8:
+		var f: float = 1.0 - float(k) * 0.09
+		draw_colored_polygon(_ellipse(Vector2(660, 500), 330.0 * f, 58.0 * f, 32, -0.06), Color(0.4, 0.34, 0.48, 0.045))
+	for k in 2:
+		var bag := PackedVector2Array()
+		for i in 17:
+			var u: float = lerpf(0.12, 0.92, float(i) / 16.0)
+			bag.append(_lid_lower(u) + Vector2(0, 34.0 + float(k) * 26.0) * sin(u * PI))
+		_tapered(bag, 7.0 - float(k) * 3.0, 2.0, Color(0.36, 0.28, 0.42, 0.55 - float(k) * 0.2))
+	# The fold of the heavy lid above the eye.
+	var fold := PackedVector2Array()
+	for k in 17:
+		var u: float = lerpf(0.08, 0.95, float(k) / 16.0)
+		fold.append(_lid_upper(u, 1.0) + Vector2(0, -30.0 * sin(u * PI) - 6.0))
+	_tapered(fold, 2.0, 5.0, Color(EYE_INK, 0.3))
 	_draw_lashes(open)
-	_draw_eye_feathers()
+	_draw_brow()
+	_draw_scar()
+	_draw_head_feathers()
+	# Cool night shadows at the edges, a faint warm light from the right.
+	for k in 6:
+		var f: float = 1.0 - float(k) * 0.1
+		draw_colored_polygon(_ellipse(Vector2(1180, 330), 300.0 * f, 380.0 * f, 28), Color(1.0, 0.78, 0.5, 0.018))
+	var night := Color(0.1, 0.13, 0.28)
+	var edge := Color(night, 0.55)
+	var clear := Color(night, 0.0)
+	draw_polygon(PackedVector2Array([Vector2(-80, -80), Vector2(380, -80), Vector2(380, 800), Vector2(-80, 800)]), PackedColorArray([edge, clear, clear, edge]))
+	draw_polygon(PackedVector2Array([Vector2(-80, 520), Vector2(1360, 520), Vector2(1360, 800), Vector2(-80, 800)]), PackedColorArray([clear, clear, edge, edge]))
+	draw_polygon(PackedVector2Array([Vector2(1080, -80), Vector2(1360, -80), Vector2(1360, 800), Vector2(1080, 800)]), PackedColorArray([clear, Color(night, 0.3), Color(night, 0.3), clear]))
 
 
 func _draw_iris() -> void:
 	var c: Vector2 = IRIS_C
-	# Radial gradient: dark purple rim, magenta, red toward the pupil.
+	# Radial gradient: dark brown rim, amber, gold toward the pupil.
 	var rings: int = 22
 	for k in rings:
 		var u: float = float(k) / float(rings - 1)
-		var col: Color = IRIS_PURPLE.lerp(IRIS_MAGENTA, smoothstep(0.0, 0.55, u)).lerp(IRIS_RED, smoothstep(0.5, 1.0, u))
+		var col: Color = IRIS_RIM.lerp(IRIS_AMBER, smoothstep(0.0, 0.5, u)).lerp(IRIS_GOLD, smoothstep(0.55, 1.0, u))
 		draw_circle(c, IRIS_R * (1.0 - u * 0.6), col)
-	for i in 40:
-		var a: float = TAU * float(i) / 40.0 + _h(i + 1500) * 0.1
+	for i in 44:
+		var a: float = TAU * float(i) / 44.0 + _h(i + 1500) * 0.1
 		draw_line(c + Vector2.from_angle(a) * IRIS_R * 0.42, c + Vector2.from_angle(a) * IRIS_R * (0.8 + _h(i + 1510) * 0.15),
-				Color(IRIS_PURPLE, 0.25), 2.0, true)
-	draw_arc(c, IRIS_R, 0.0, TAU, 64, Color(IRIS_PURPLE.darkened(0.4), 0.95), 5.0, true)
+				Color(IRIS_RIM, 0.3), 2.0, true)
+	draw_arc(c, IRIS_R, 0.0, TAU, 64, Color(0.08, 0.04, 0.02, 0.95), 5.0, true)
 	var pupil: float = IRIS_R * 0.36
-	draw_circle(c, pupil * 1.15, Color(0.1, 0.02, 0.1, 0.5))
-	draw_circle(c, pupil, Color(0.07, 0.01, 0.07))
+	draw_circle(c, pupil * 1.12, Color(0.05, 0.03, 0.02, 0.5))
+	draw_circle(c, pupil, Color(0.02, 0.01, 0.01))
 	# Red stars falling across the iris, with their trails.
 	var dir := Vector2(-0.45, 1.0).normalized()
 	for i in 8:
@@ -702,31 +522,24 @@ func _draw_iris() -> void:
 		var p: Vector2 = c + Vector2((_h(i + 1540) - 0.3) * IRIS_R * 1.6, -IRIS_R * 1.1) + dir * u * IRIS_R * 2.4
 		if p.distance_to(c) < IRIS_R * 0.92:
 			var tail: Vector2 = p - dir * 42.0
-			draw_line(tail, p, Color(1.0, 0.45, 0.4, 0.45), 3.0, true)
-			draw_line(tail.lerp(p, 0.5), p, Color(1.0, 0.7, 0.65, 0.6), 2.0, true)
-			draw_circle(p, 4.0, Color(1.0, 0.86, 0.82))
-	# Rounded pink glint and a small white one.
-	draw_colored_polygon(_ellipse(c + Vector2(IRIS_R * 0.42, -IRIS_R * 0.42), 24.0, 15.0, 20, -0.45), Color("ffb2d2"))
-	draw_circle(c + Vector2(-IRIS_R * 0.3, IRIS_R * 0.34), 6.0, Color(1.0, 0.85, 0.92, 0.8))
+			draw_line(tail, p, Color(1.0, 0.35, 0.28, 0.5), 3.0, true)
+			draw_line(tail.lerp(p, 0.5), p, Color(1.0, 0.6, 0.5, 0.65), 2.0, true)
+			draw_circle(p, 4.0, Color(1.0, 0.8, 0.72))
+	# A small white glint.
+	draw_circle(c + Vector2(IRIS_R * 0.36, -IRIS_R * 0.34), 11.0, Color(1, 1, 1, 0.92))
+	draw_circle(c + Vector2(-IRIS_R * 0.3, IRIS_R * 0.3), 4.0, Color(1, 1, 1, 0.45))
 
 
-## Heavy upper lash line with a flick at the outer corner, curved lashes of different lengths,
-## a thin lower line and fine lower lashes.
+## A heavy ink line on the upper lid, a thin lower line, and only two short lashes at the outer
+## corner: a tired man's eye.
 func _draw_lashes(open: float) -> void:
 	var lower := PackedVector2Array()
 	for k in 21:
 		lower.append(_lid_lower(lerpf(0.06, 0.97, float(k) / 20.0)))
-	_tapered(lower, 2.0, 3.0, Color(EYE_INK, 0.85))
-	for k in 10:
-		var u: float = lerpf(0.28, 0.92, float(k) / 9.0)
-		var base: Vector2 = _lid_lower(u)
-		var dir: Vector2 = Vector2(0.15 + u * 0.25, 1.0).normalized()
-		var length: float = 10.0 + _h(k + 1600) * 10.0
-		_tapered(PackedVector2Array([base, base + dir * length * 0.5 + Vector2(1.5, 0), base + dir * length]), 2.2, 0.4, Color(EYE_INK, 0.8))
+	_tapered(lower, 2.0, 3.0, Color(EYE_INK, 0.75))
 	var line := PackedVector2Array()
 	for k in 31:
 		line.append(_lid_upper(float(k) / 30.0, open))
-	# Thick in the middle and toward the outer corner, thin at the inner one.
 	var left := PackedVector2Array()
 	var right := PackedVector2Array()
 	for i in line.size():
@@ -734,51 +547,103 @@ func _draw_lashes(open: float) -> void:
 		var a: Vector2 = line[maxi(i - 1, 0)]
 		var b: Vector2 = line[mini(i + 1, line.size() - 1)]
 		var nrm: Vector2 = (b - a).normalized().orthogonal()
-		var w: float = 3.0 + 13.0 * pow(sin(u * PI * 0.92 + 0.08), 0.7) + 6.0 * smoothstep(0.7, 1.0, u)
+		var w: float = 4.0 + 12.0 * pow(sin(u * PI * 0.94 + 0.06), 0.7)
 		left.append(line[i] + nrm * w * 0.5)
 		right.append(line[i] - nrm * w * 0.5)
 	right.reverse()
 	left.append_array(right)
 	draw_colored_polygon(left, EYE_INK)
-	# The flick past the outer corner.
-	var corner: Vector2 = line[line.size() - 1]
-	_tapered(PackedVector2Array([corner + Vector2(-14, 4), corner + Vector2(22, -12), corner + Vector2(54, -34)]), 14.0, 1.0, EYE_INK)
-	# Upper lashes: curved strokes, longer toward the outer corner.
-	for k in 22:
-		var u: float = lerpf(0.1, 0.98, float(k) / 21.0)
+	for k in 2:
+		var u: float = 0.88 + 0.06 * float(k)
 		var base: Vector2 = _lid_upper(u, open)
-		var bend: float = lerpf(-0.5, 0.95, u)
-		var length: float = (26.0 + 44.0 * smoothstep(0.2, 1.0, u)) * (0.65 + 0.6 * _h(k + 1620)) * lerpf(0.55, 1.0, open)
-		var d0: Vector2 = Vector2.from_angle(-PI * 0.5 + bend * 0.6)
-		var d1: Vector2 = Vector2.from_angle(-PI * 0.5 + bend * 1.25)
-		# Closing, the lashes swing down with the lid.
-		var flip: float = lerpf(-0.75, 1.0, open)
-		d0.y *= flip
-		d1.y *= flip
-		var mid: Vector2 = base + d0 * length * 0.55
-		_tapered(PackedVector2Array([base, mid, mid + d1 * length * 0.5]), 5.5, 0.6, EYE_INK)
+		var d := Vector2(0.75, lerpf(0.4, -0.75, open)).normalized()
+		_tapered(PackedVector2Array([base, base + d * 7.0, base + (d + Vector2(0.3, 0.15)).normalized() * 14.0]), 4.5, 0.8, EYE_INK)
 
 
-## Dark feathers (or locks) falling from the top in ink strokes of varying width, swaying a little.
-func _draw_eye_feathers() -> void:
-	var band := PackedVector2Array([Vector2(-80, -80), Vector2(1360, -80), Vector2(1360, 40), Vector2(-80, 70)])
-	draw_polygon(band, PackedColorArray([Color("0b0618"), Color("0b0618"), Color(0.04, 0.02, 0.09, 0.9), Color(0.04, 0.02, 0.09, 0.9)]))
-	for i in 34:
-		var x: float = -60.0 + float(i) * 42.0 + (_h(i + 1700) - 0.5) * 30.0
-		var length: float = 170.0 + _h(i + 1710) * 220.0 * (1.25 - float(i) / 40.0)
-		var sway: float = sin(t * 0.8 + float(i) * 0.7) * 4.0
-		var lean: float = -18.0 + _h(i + 1720) * 26.0
-		var pts := PackedVector2Array()
-		for k in 7:
-			var u: float = float(k) / 6.0
-			pts.append(Vector2(x + lean * u * u + sway * u, -20.0 + length * u))
-		var w: float = 16.0 + _h(i + 1730) * 22.0
-		_tapered(pts, w, 1.0, Color("0b0618") if i % 3 != 0 else Color("1a1033"))
-		if i % 2 == 0:
-			var shine := PackedVector2Array()
-			for k in 4:
-				shine.append(pts[k + 1] + Vector2(w * 0.12, 0))
-			draw_polyline(shine, Color(0.42, 0.34, 0.8, 0.35), 1.6, true)
+## A thick, tidy, dark brow, slightly frowning: a solid mass combed with dense strokes all
+## running the same way.
+func _draw_brow() -> void:
+	var a := Vector2(300, 262)
+	var ctrl := Vector2(600, 150)
+	var b := Vector2(1110, 196)
+	var top := PackedVector2Array()
+	var bottom := PackedVector2Array()
+	for k in 25:
+		var u: float = float(k) / 24.0
+		var p: Vector2 = _bezier(a, ctrl, b, u)
+		var w: float = _brow_width(u)
+		top.append(p + Vector2(0, -w * 0.58))
+		bottom.append(p + Vector2(0, w * 0.42))
+	# The inner end rounded and pulled down (the frown), the tail drawn to a point.
+	var mass := PackedVector2Array(top)
+	var rev := PackedVector2Array(bottom)
+	rev.reverse()
+	mass.append_array(rev)
+	for k in range(1, 6):
+		var ang: float = PI * 0.5 + PI * float(k) / 6.0
+		mass.append(a + Vector2(cos(ang) * 12.0, sin(ang) * _brow_width(0.0) * 0.5) + Vector2(0, -_brow_width(0.0) * 0.08))
+	draw_colored_polygon(mass, BROW)
+	# Hairs breaking out along the top and the bottom edges, all combed the same way.
+	for k in 46:
+		var u: float = (float(k) + 0.5) / 46.0
+		var p: Vector2 = _bezier(a, ctrl, b, u)
+		var w: float = _brow_width(u)
+		var along: Vector2 = (_bezier(a, ctrl, b, minf(u + 0.02, 1.0)) - _bezier(a, ctrl, b, maxf(u - 0.02, 0.0))).normalized()
+		var edge_top: bool = k % 2 == 0
+		var start: Vector2 = p + Vector2(0, -w * 0.5 if edge_top else w * 0.36)
+		var hair: Vector2 = (along + Vector2(0, -0.45 if edge_top else 0.18)).normalized() * (12.0 + _h(k + 3230) * 10.0)
+		_tapered(PackedVector2Array([start, start + hair * 0.5, start + hair]), 4.0, 0.8, BROW)
+	# Combed hairs: short strokes slanting toward the tail, in rows, lighter and darker.
+	for k in 90:
+		var u: float = (float(k) + _h(k + 3200) * 0.8) / 90.0
+		var p: Vector2 = _bezier(a, ctrl, b, u)
+		var w: float = _brow_width(u)
+		var along: Vector2 = (_bezier(a, ctrl, b, minf(u + 0.02, 1.0)) - _bezier(a, ctrl, b, maxf(u - 0.02, 0.0))).normalized()
+		var off: float = (_h(k + 3210) - 0.5) * w * 0.7
+		var start: Vector2 = p + Vector2(0, off + w * 0.2)
+		var hair: Vector2 = (along + Vector2(0, -0.35)).normalized() * (16.0 + _h(k + 3220) * 12.0)
+		var col: Color = Color(0.36, 0.3, 0.26, 0.8) if k % 3 == 0 else Color(0.08, 0.06, 0.05, 0.85)
+		draw_line(start, start + hair, col, 2.4, true)
+	var ring := PackedVector2Array(mass)
+	ring.append(mass[0])
+	draw_polyline(ring, Color(EYE_INK, 0.7), 2.5, true)
+
+
+## Thickness of the brow along it: full at the inner end, drawn to a point at the tail.
+func _brow_width(u: float) -> float:
+	return lerpf(54.0, 4.0, pow(u, 1.6))
+
+
+## His stitched scar: from above the brow, across its tail, past the outer corner of the eye
+## (not touching it) and down onto the cheek. Pale pink with a darker rim and black stitches.
+func _draw_scar() -> void:
+	var pts := PackedVector2Array()
+	for k in 13:
+		pts.append(_bezier(Vector2(1062, 118), Vector2(1140, 320), Vector2(1090, 548), float(k) / 12.0))
+	_tapered(pts, 20.0, 12.0, Color(0.62, 0.36, 0.36, 0.9))
+	_tapered(pts, 13.0, 7.0, Color(0.92, 0.74, 0.72))
+	draw_polyline(pts, Color(0.75, 0.48, 0.48, 0.8), 2.0, true)
+	for k in 5:
+		var u: float = 0.14 + 0.18 * float(k)
+		var p: Vector2 = _bezier(Vector2(1062, 118), Vector2(1140, 320), Vector2(1090, 548), u)
+		var q: Vector2 = _bezier(Vector2(1062, 118), Vector2(1140, 320), Vector2(1090, 548), u + 0.02)
+		var n: Vector2 = (q - p).normalized().orthogonal()
+		draw_line(p - n * 16.0, p + n * 16.0, EYE_INK, 3.4, true)
+
+
+## Only the start of his short dark head feathers at the top, soft and out of focus.
+func _draw_head_feathers() -> void:
+	var dark := Color(0.14, 0.13, 0.16)
+	# Out of focus: each feather drawn several times, growing and fading, so its edge goes soft.
+	for blur in 4:
+		var grow: float = float(3 - blur) * 6.0
+		var alpha: float = 0.22 if blur < 3 else 0.55
+		for i in 15:
+			var x: float = -60.0 + float(i) * 98.0 + (_h(i + 3300) - 0.5) * 40.0
+			var tip: Vector2 = Vector2(x + (_h(i + 3320) - 0.5) * 30.0, 92.0 + _h(i + 3310) * 46.0 + sin(t * 0.7 + float(i)) * 2.0)
+			var feather := _ellipse(Vector2(x, tip.y - 70.0), 58.0 + grow, 70.0 + grow, 22, (_h(i + 3330) - 0.5) * 0.5)
+			draw_colored_polygon(feather, Color(dark, alpha))
+	draw_rect(Rect2(-80, -80, 1440, 110), dark)
 
 
 # =====================================================================================
