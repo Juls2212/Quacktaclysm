@@ -1,13 +1,27 @@
 @tool
 class_name TerrainSkin
 extends Node2D
-## Organic look for a level block, drawn in code with the same thick ink as the ducks.
+## Organic look for a level block, drawn in code with the same thick ink as the ducks. Parched
+## biomes crack the earth, wither the tufts and scatter junk from the old world (Biome.rubble).
 ## GROUND is a slab of earth that keeps going below the screen, ISLAND a floating clod with a
 ## tapered underside and hanging roots, WALL a rock pillar, CEILING a rock overhang, PLANK a bridge.
 ## The collision box (`size`, centered) is the walkable top: grass lips overhang it a little.
 ## Visual only. Shapes are seeded from the global position, so a block always looks the same.
 
-enum Kind { AUTO, GROUND, ISLAND, WALL, CEILING, PLANK }
+## Swamp kinds (level 2): MOSS_SLAB a long slab of stone bricks with grass on top and vines
+## hanging off the edges; MOSS_BROKEN the same with cut ends and a missing chunk; MOSS_STONES a
+## pile of big mossy boulders; CAR a rusted car on a mound of mud; CAR_SUNK a car tilted and half
+## under dirty water; DOOR a door floating flat on the water. Outside the marsh, CAR sits on a heap
+## of rubble instead of mud.
+## Decay kinds (levels 1 and 3): BUS a long rusted school bus; CONTAINER a rusted cargo container;
+## GIRDER a steel lattice girder; CRANE_HOOK a plate hanging from a crane hook on a chain that
+## sways a little (only the chain and hook move: the plate stays where its collision is).
+## Raised blocks of these kinds (outside the marsh) never float: below them, down to the ground
+## found once with a ray, stand drawn supports (rubble piles with rebar, a crushed car, wooden
+## posts, steel props, a container stood on end). They are drawing only, darker, behind the
+## player, and leave the middle open where the player walks under.
+enum Kind { AUTO, GROUND, ISLAND, WALL, CEILING, PLANK, MOSS_SLAB, MOSS_BROKEN, MOSS_STONES, CAR, CAR_SUNK, DOOR,
+		BUS, CONTAINER, GIRDER, CRANE_HOOK }
 
 const INK := Color(0.106, 0.098, 0.122)
 const INK_W := 2.8
@@ -29,10 +43,44 @@ const GROUND_DEPTH: float = 420.0
 		queue_redraw()
 
 var _seed: int = 0
+var _time: float = 0.0
+## World y of the ground under this block (NAN: none found, e.g. over a pit).
+var _ground_y: float = NAN
+var _ground_checked: bool = false
 
 
 func _ready() -> void:
 	set_notify_transform(true)
+	if Engine.is_editor_hint():
+		# No physics queries in the editor: assume the levels' floor top.
+		_ground_y = 600.0 if global_position.y + size.y * 0.5 < 590.0 else NAN
+	else:
+		set_physics_process(true)
+
+
+## Looks once for the ground straight below (world layer only, read only).
+func _physics_process(_delta: float) -> void:
+	set_physics_process(false)
+	if _ground_checked or not is_inside_tree() or Engine.is_editor_hint():
+		return
+	_ground_checked = true
+	var from: Vector2 = global_position + Vector2(0.0, size.y * 0.5 + 1.0)
+	var query := PhysicsRayQueryParameters2D.create(from, from + Vector2(0.0, 700.0), 1)
+	query.collide_with_areas = false
+	var body := get_parent() as CollisionObject2D
+	if body != null:
+		query.exclude = [body.get_rid()]
+	var hit: Dictionary = get_world_2d().direct_space_state.intersect_ray(query)
+	_ground_y = float((hit["position"] as Vector2).y) if not hit.is_empty() else NAN
+	queue_redraw()
+
+
+func _process(delta: float) -> void:
+	# Only the kinds with swaying vines, drips or ripples redraw every frame.
+	var k: Kind = resolved_kind()
+	if k in [Kind.MOSS_SLAB, Kind.MOSS_BROKEN, Kind.MOSS_STONES, Kind.CAR_SUNK, Kind.DOOR, Kind.CRANE_HOOK]:
+		_time += delta
+		queue_redraw()
 
 
 func _notification(what: int) -> void:
@@ -54,6 +102,7 @@ func resolved_kind() -> Kind:
 func _draw() -> void:
 	var b: Biome = biome if biome != null else DEFAULT_BIOME
 	_seed = int(roundf(global_position.x * 0.37 + global_position.y * 1.91)) + b.scenery_seed * 7919
+	_draw_supports(resolved_kind(), b)
 	match resolved_kind():
 		Kind.GROUND:
 			_draw_ground(b)
@@ -65,6 +114,26 @@ func _draw() -> void:
 			_draw_ceiling(b)
 		Kind.PLANK:
 			_draw_plank(b)
+		Kind.MOSS_SLAB:
+			_draw_moss_slab(false)
+		Kind.MOSS_BROKEN:
+			_draw_moss_slab(true)
+		Kind.MOSS_STONES:
+			_draw_moss_stones()
+		Kind.CAR:
+			_draw_car(false, b)
+		Kind.CAR_SUNK:
+			_draw_car(true, b)
+		Kind.DOOR:
+			_draw_door()
+		Kind.BUS:
+			_draw_bus()
+		Kind.CONTAINER:
+			_draw_container()
+		Kind.GIRDER:
+			_draw_girder(-size.x * 0.5, size.x * 0.5, -size.y * 0.5, maxf(size.y, 20.0))
+		Kind.CRANE_HOOK:
+			_draw_crane_hook()
 
 
 # =====================================================================================
@@ -213,15 +282,20 @@ func _draw_earth(b: Biome, body: PackedVector2Array, top: float, bottom: float) 
 			draw_colored_polygon(poly, Color(b.soil_dark, 0.16))
 	for poly in Geometry2D.intersect_polygons(body, _rect(Vector2(-half.x - 30, top), Vector2(half.x + 30, top + 16))):
 		draw_colored_polygon(poly, Color(b.soil_dark, 0.35))
-	# Buried stones.
+	# Buried stones (with rubble, some of them are bricks and broken pipes from the old world).
 	var stones: int = maxi(int(size.x / 85.0), 1)
 	for i in stones:
 		var c := Vector2(lerpf(-half.x + 18, half.x - 18, _rand(i * 5 + 200)), top + 26.0 + _rand(i * 5 + 201) * minf(110.0, bottom - top - 40.0))
 		var r := Vector2(5.0 + _rand(i * 5 + 202) * 10.0, 4.0 + _rand(i * 5 + 203) * 7.0)
+		if _rand(i * 5 + 204) < b.rubble * 0.6:
+			_draw_brick(c, r.x + 3.0, (_rand(i * 5 + 205) - 0.5) * 0.8, b)
+			continue
 		var stone := _blob(c, r, 10, i + 300)
 		draw_colored_polygon(stone, b.rock)
-		draw_line(c + Vector2(-r.x * 0.5, -r.y * 0.4), c + Vector2(r.x * 0.2, -r.y * 0.6), Color(1, 1, 1, 0.35), 1.6, true)
+		draw_line(c + Vector2(-r.x * 0.5, -r.y * 0.4), c + Vector2(r.x * 0.2, -r.y * 0.6), Color(1, 1, 1, 0.25), 1.6, true)
 		_outline(stone, 2.0)
+	if b.dry_ground:
+		_draw_cracks(b, top, bottom)
 	# Rootlets near the top.
 	for i in maxi(int(size.x / 120.0), 1):
 		var x: float = lerpf(-half.x + 20, half.x - 20, _rand(i * 3 + 400))
@@ -269,14 +343,24 @@ func _draw_grass_lip(b: Biome, left: float, right: float, top: float) -> void:
 		highlight.append(p + Vector2(0, 2.5))
 	draw_polyline(highlight, b.grass.lightened(0.3), 2.0, true)
 	_outline(lip)
-	# Tufts and the odd flower.
+	# Junk lying on the walkable top: drawn first so the tufts grow over it.
+	if b.rubble > 0.0:
+		var junk: int = int((r - l) / 110.0 * b.rubble * 1.6)
+		for i in junk:
+			var x: float = lerpf(l + 14, r - 14, (float(i) + _rand(i + 700)) / float(maxi(junk, 1)))
+			_draw_junk(Vector2(x, top - 3.0), b, i)
+	# Tufts and the odd flower (on parched ground, a shard of a fallen star instead).
 	var tufts: int = int((r - l) / 26.0)
 	for i in tufts:
 		var x: float = lerpf(l + 10, r - 10, (float(i) + _rand(i + 500)) / float(maxi(tufts, 1)))
 		var h: float = 5.0 + _rand(i + 520) * 9.0
 		_tuft(Vector2(x, top - 4.0), h, b, i)
 		if _rand(i + 540) > 0.82:
-			_flower(Vector2(x + 6.0, top - 6.0 - h * 0.6), b.accent)
+			if b.dry_ground:
+				if _rand(i + 560) > 0.5:
+					_shard(Vector2(x + 6.0, top - 4.0), b.accent)
+			else:
+				_flower(Vector2(x + 6.0, top - 6.0 - h * 0.6), b.accent)
 
 
 func _draw_roots(b: Biome, body: PackedVector2Array, under_y: float) -> void:
@@ -309,6 +393,76 @@ func _tuft(at: Vector2, h: float, b: Biome, salt: int) -> void:
 				at + Vector2(1.6 + k * 2.2, 1)])
 		draw_colored_polygon(blade, b.grass_dark if k == 1 else b.grass)
 		draw_polyline(PackedVector2Array([blade[0], blade[1], blade[2]]), INK, 1.6, true)
+		if b.dry_ground and k != 1:
+			# Withered: the tip has given up and folds over.
+			var fold: float = -1.0 if k == 0 else 1.0
+			var tip: Vector2 = blade[1]
+			var droop := PackedVector2Array([tip, tip + Vector2(fold * h * 0.35, h * 0.12), tip + Vector2(fold * h * 0.5, h * 0.38)])
+			draw_polyline(droop, INK, 3.2, true)
+			draw_polyline(droop, b.grass_dark, 1.4, true)
+
+
+## Glowing sliver of a fallen star stuck in the ground.
+func _shard(at: Vector2, color: Color) -> void:
+	draw_circle(at + Vector2(0, -4), 7.0, Color(color, 0.18))
+	var pts := PackedVector2Array([at + Vector2(-2.6, 1), at + Vector2(-0.6, -9), at + Vector2(2.8, -3.5), at + Vector2(2.2, 1)])
+	draw_colored_polygon(pts, color)
+	draw_line(at + Vector2(-0.4, -6.5), at + Vector2(0.8, -2.5), Color(1, 0.95, 0.8, 0.9), 1.2, true)
+	_outline(pts, 1.6)
+
+
+## Dry earth splitting: a few branching ink cracks running down from under the turf.
+func _draw_cracks(b: Biome, top: float, bottom: float) -> void:
+	var half: Vector2 = size * 0.5
+	var count: int = maxi(int(size.x / 90.0), 1)
+	for i in count:
+		var x: float = lerpf(-half.x + 22, half.x - 22, (float(i) + _rand(i + 800)) / float(count))
+		var p := Vector2(x, top + 18.0)
+		var pts := PackedVector2Array([p])
+		var steps: int = 3 + int(_rand(i + 810) * 3.0)
+		for j in steps:
+			p += Vector2((_rand(i * 7 + j + 820) - 0.5) * 12.0, 7.0 + _rand(i * 7 + j + 830) * 6.0)
+			if p.y > bottom - 6.0:
+				break
+			pts.append(p)
+		if pts.size() < 2:
+			continue
+		draw_polyline(pts, Color(INK, 0.7), 1.8, true)
+		# One short split off the middle.
+		var mid: Vector2 = pts[int(pts.size() * 0.5)]
+		draw_line(mid, mid + Vector2((_rand(i + 840) - 0.5) * 16.0, 8.0), Color(INK, 0.55), 1.3, true)
+		draw_line(pts[0] + Vector2(1.5, 0), pts[1] + Vector2(1.5, 0), Color(b.soil.lightened(0.2), 0.5), 1.0, true)
+
+
+## Brick or concrete chunk buried in the earth.
+func _draw_brick(c: Vector2, w: float, rot: float, b: Biome) -> void:
+	var brick: Color = b.soil.lerp(Color(0.62, 0.3, 0.2), 0.45) if _rand(int(c.x) + 3) > 0.4 else b.rock
+	var pts := PackedVector2Array()
+	for p in [Vector2(-w, -w * 0.45), Vector2(w, -w * 0.45), Vector2(w, w * 0.45), Vector2(-w, w * 0.45)]:
+		pts.append(c + (p as Vector2).rotated(rot))
+	draw_colored_polygon(pts, brick)
+	draw_line(c + Vector2(-w * 0.2, -w * 0.45).rotated(rot), c + Vector2(-w * 0.2, w * 0.45).rotated(rot), Color(INK, 0.45), 1.2, true)
+	_outline(pts, 2.0)
+
+
+## Small junk on the walkable top: a brick, a concrete lump, a rusty can or a bent rod.
+func _draw_junk(at: Vector2, b: Biome, salt: int) -> void:
+	match int(_rand(salt + 720) * 4.0):
+		0:
+			_draw_brick(at + Vector2(0, -2.5), 5.5, (_rand(salt + 730) - 0.5) * 0.5, b)
+		1:
+			var lump := _blob(at + Vector2(0, -3.0), Vector2(7.0, 4.5), 9, salt + 740)
+			draw_colored_polygon(lump, b.rock)
+			_outline(lump, 2.0)
+		2:
+			var can := PackedVector2Array([at + Vector2(-3.5, 0.5), at + Vector2(-3.5, -9.0), at + Vector2(3.5, -9.0), at + Vector2(3.5, 0.5)])
+			draw_colored_polygon(can, b.rock_dark.lerp(Color(0.55, 0.32, 0.18), 0.5))
+			draw_line(at + Vector2(-3.5, -6.0), at + Vector2(3.5, -6.0), Color(INK, 0.5), 1.0, true)
+			_outline(can, 1.8)
+		_:
+			var rod := PackedVector2Array([at + Vector2(-8.0, 0.0), at + Vector2(2.0, -3.0), at + Vector2(7.0, -10.0)])
+			draw_polyline(rod, INK, 3.4, true)
+			draw_polyline(rod, b.rock_dark, 1.6, true)
 
 
 func _flower(at: Vector2, color: Color) -> void:
@@ -361,3 +515,449 @@ func _wave(x: float, freq: float, amp: float, salt: int) -> float:
 func _rand(salt: int) -> float:
 	var v: float = sin(float(_seed) * 12.9898 + float(salt) * 78.233) * 43758.5453
 	return v - floorf(v)
+
+
+# =====================================================================================
+# Swamp kinds (level 2)
+# =====================================================================================
+
+const BRICK := Color("8a7e80")
+const MORTAR := Color("3a2e2a")
+const MOSS := Color("5aa83a")
+const MOSS_LIGHT := Color("8fd06a")
+const SWAMP_WATER := Color(0.33, 0.4, 0.28, 0.85)
+
+
+## A slab of stone bricks; `broken` cuts the ends diagonally and bites a chunk off the bottom.
+func _draw_moss_slab(broken: bool) -> void:
+	var half: Vector2 = size * 0.5
+	var top: float = -half.y
+	var bottom: float = half.y + 4.0
+	var body := PackedVector2Array()
+	if broken:
+		body.append_array([Vector2(-half.x + 10, top), Vector2(half.x - 4, top), Vector2(half.x + 2, top + 6), Vector2(half.x - 14, bottom),
+				Vector2(size.x * 0.12, bottom), Vector2(size.x * 0.06, bottom - 9), Vector2(-size.x * 0.1, bottom - 9),
+				Vector2(-size.x * 0.14, bottom), Vector2(-half.x + 4, bottom), Vector2(-half.x - 2, top + 8)])
+	else:
+		body.append_array([Vector2(-half.x, top), Vector2(half.x, top), Vector2(half.x + 2, bottom - 4), Vector2(half.x - 4, bottom), Vector2(-half.x + 3, bottom), Vector2(-half.x - 2, top + 6)])
+	draw_colored_polygon(body, MORTAR)
+	# Bricks in staggered rows, clipped to the slab.
+	var rows: int = maxi(int((bottom - top) / 11.0), 2)
+	var row_h: float = (bottom - top) / float(rows)
+	for r in rows:
+		var y0: float = top + float(r) * row_h + 1.5
+		var x: float = -half.x - (14.0 if r % 2 == 1 else 0.0)
+		var i: int = 0
+		while x < half.x:
+			var w: float = 22.0 + _rand(r * 31 + i) * 14.0
+			var brick := _rect(Vector2(x + 1.5, y0), Vector2(x + w - 1.5, y0 + row_h - 3.0))
+			for clipped in Geometry2D.intersect_polygons(brick, body):
+				draw_colored_polygon(clipped, BRICK.darkened(_rand(r * 17 + i) * 0.15))
+			x += w
+			i += 1
+	_outline(body, 2.6)
+	_draw_grass_top(-half.x + (10.0 if broken else 0.0), half.x - (4.0 if broken else 0.0), top)
+	var vines: int = 1 if broken else maxi(int(size.x / 70.0), 2)
+	for v in vines:
+		var x: float = lerpf(-half.x + 12.0, half.x - 12.0, _rand(v + 900))
+		_draw_vine_hang(Vector2(x, bottom - 2.0), 18.0 + _rand(v + 910) * 24.0, v)
+
+
+## A pile of big mossy boulders with dark gaps between them.
+func _draw_moss_stones() -> void:
+	var half: Vector2 = size * 0.5
+	var top: float = -half.y
+	var count: int = clampi(int(size.x / 50.0), 3, 5)
+	var w: float = size.x / float(count)
+	var depth: float = maxf(size.y, 30.0) + 18.0
+	# Dark gaps: a shadowed lump behind the stones (never a box).
+	draw_colored_polygon(_blob(Vector2(0, top + depth * 0.5 + 2.0), Vector2(half.x - 4.0, depth * 0.5), 16, 690), Color(0.1, 0.09, 0.08))
+	for i in count:
+		var x0: float = -half.x + w * float(i) + 2.0
+		var h: float = depth - 6.0 - _rand(i + 700) * 12.0
+		var c := Vector2(x0 + w * 0.5, top + h * 0.5 + 2.0)
+		var stone := _blob(c, Vector2(w * 0.55, h * 0.55), 12, i + 720)
+		draw_colored_polygon(stone, BRICK.lightened(0.05 * float(i % 2)))
+		draw_line(c + Vector2(-w * 0.2, -h * 0.25), c + Vector2(w * 0.1, -h * 0.3), Color(1, 1, 1, 0.25), 2.0, true)
+		_outline(stone, 2.4)
+		_draw_grass_top(x0 + 4.0, x0 + w - 6.0, top)
+	_draw_vine_hang(Vector2(-half.x + w * 1.0, top + depth * 0.6), 20.0, 3)
+
+
+## Rusted car: on a mound of mud, or tilted and half under the water.
+func _draw_car(sunk: bool, b: Biome = null) -> void:
+	var half: Vector2 = size * 0.5
+	var top: float = -half.y
+	var tilt: float = -0.1 if sunk else 0.0
+	var rust := Color(0.5, 0.32, 0.2)
+	var marsh: bool = b == null or b.kind == Biome.Kind.SWAMP or b.kind == Biome.Kind.FLOODED_SUBURB
+	if not sunk and marsh:
+		draw_colored_polygon(_blob(Vector2(0, top + 46), Vector2(half.x + 16, 30), 14, 41), Color(0.2, 0.17, 0.12))
+	elif not sunk and _support_gap(top + 34.0) <= 0.0:
+		_draw_rubble_heap(half.x, top)
+	var w: float = size.x * 0.5
+	var pts := PackedVector2Array([Vector2(-w, top + 22), Vector2(-w * 0.95, top + 8), Vector2(-w * 0.55, top + 4), Vector2(-w * 0.35, top),
+			Vector2(w * 0.4, top), Vector2(w * 0.6, top + 5), Vector2(w * 0.97, top + 9), Vector2(w, top + 22), Vector2(w * 0.9, top + 34), Vector2(-w * 0.92, top + 34)])
+	var car := PackedVector2Array()
+	for p in pts:
+		car.append(p.rotated(tilt))
+	draw_colored_polygon(car, rust)
+	for window in [[-0.3, 0.05], [0.1, 0.38]]:
+		var win := PackedVector2Array([Vector2(w * float(window[0]), top + 3), Vector2(w * float(window[1]), top + 3), Vector2(w * float(window[1]) + 4, top + 12), Vector2(w * float(window[0]) - 3, top + 12)])
+		var rot := PackedVector2Array()
+		for p in win:
+			rot.append(p.rotated(tilt))
+		draw_colored_polygon(rot, Color(0.08, 0.1, 0.08))
+	for k in 3:
+		draw_circle(Vector2(-w * 0.5 + float(k) * w * 0.45, top + 18).rotated(tilt), 4.0, Color(0.68, 0.38, 0.18, 0.7))
+	_outline(car, 2.6)
+	for sx in [-0.6, 0.6]:
+		draw_arc(Vector2(w * float(sx), top + 32).rotated(tilt), 9.0, PI, TAU, 10, INK, 3.0, true)
+	if sunk:
+		# The murky water it sinks into: a flat lens of water with ripples, no box.
+		var lens := PackedVector2Array()
+		for i in 17:
+			var a: float = PI * float(i) / 16.0
+			lens.append(Vector2(cos(a) * (w + 22.0), top + 22.0 + sin(a) * 16.0))
+		draw_colored_polygon(lens, SWAMP_WATER)
+		draw_line(Vector2(-w - 22, top + 22), Vector2(w + 22, top + 22), Color(0.75, 0.85, 0.6, 0.7), 2.0, true)
+		for k in 2:
+			var rx: float = w * (0.5 + 0.35 * float(k)) + sin(_time * 1.5 + float(k)) * 4.0
+			draw_line(Vector2(-rx, top + 27 + k * 5), Vector2(-rx + 16, top + 27 + k * 5), Color(0.75, 0.85, 0.6, 0.5), 1.6, true)
+			draw_line(Vector2(rx - 16, top + 27 + k * 5), Vector2(rx, top + 27 + k * 5), Color(0.75, 0.85, 0.6, 0.5), 1.6, true)
+	draw_line(Vector2(-w * 0.35, top).rotated(tilt), Vector2(w * 0.4, top).rotated(tilt), MOSS, 3.0, true)
+
+
+## A wooden door floating flat on the water.
+func _draw_door() -> void:
+	var half: Vector2 = size * 0.5
+	var top: float = -half.y
+	var door := _rect(Vector2(-half.x, top), Vector2(half.x, top + maxf(size.y, 12.0)))
+	draw_colored_polygon(door, Color(0.45, 0.3, 0.18))
+	for k in 4:
+		var x: float = lerpf(-half.x, half.x, float(k + 1) / 5.0)
+		draw_line(Vector2(x, top + 2), Vector2(x, top + maxf(size.y, 12.0) - 2), Color(0.25, 0.16, 0.1), 1.6, true)
+	draw_circle(Vector2(half.x - 10, top + size.y * 0.5), 2.6, Color(0.7, 0.6, 0.3))
+	_outline(door, 2.4)
+	# Wet moss and water dripping off its edge.
+	var bottom: float = top + maxf(size.y, 12.0)
+	for k in 3:
+		var x: float = lerpf(-half.x + 12, half.x - 20, float(k) / 2.0)
+		var fall: float = fposmod(_time * 0.7 + float(k) * 0.37, 1.0)
+		draw_circle(Vector2(x, bottom + 2 + fall * 26.0), 2.0, Color(SWAMP_WATER, 0.9 * (1.0 - fall)))
+	_draw_vine_hang(Vector2(half.x * 0.3, bottom - 2), 16.0, 5)
+	draw_line(Vector2(-half.x + 8, top), Vector2(-half.x + 30, top), MOSS, 3.0, true)
+
+
+## A row of grass blades sticking up along a walkable top.
+func _draw_grass_top(l: float, r: float, top: float) -> void:
+	draw_line(Vector2(l, top + 1), Vector2(r, top + 1), MOSS.darkened(0.3), 4.0, true)
+	var blades: int = maxi(int((r - l) / 7.0), 2)
+	for i in blades:
+		var x: float = lerpf(l, r, (float(i) + _rand(i + 800)) / float(blades))
+		var h: float = 4.0 + _rand(i + 810) * 7.0
+		var lean: float = (_rand(i + 820) - 0.5) * 6.0
+		var col: Color = MOSS_LIGHT if i % 3 == 0 else MOSS
+		draw_line(Vector2(x, top + 2), Vector2(x + lean, top - h), INK, 2.6, true)
+		draw_line(Vector2(x, top + 2), Vector2(x + lean, top - h), col, 1.4, true)
+
+
+## A vine hanging from `from`, with little leaves, swaying a bit.
+func _draw_vine_hang(from: Vector2, length: float, salt: int) -> void:
+	var sway: float = sin(_time * 1.3 + float(salt)) * 3.0
+	var pts := PackedVector2Array()
+	for j in 7:
+		var u: float = float(j) / 6.0
+		pts.append(from + Vector2(sin(u * 4.0 + float(salt)) * 3.0 + sway * u * u, u * length))
+	draw_polyline(pts, INK, 3.2, true)
+	draw_polyline(pts, Color(0.25, 0.45, 0.18), 1.6, true)
+	for j in range(1, 7, 2):
+		var p: Vector2 = pts[j]
+		var side: float = 1.0 if j % 4 == 1 else -1.0
+		draw_colored_polygon(_blob(p + Vector2(side * 4.0, 0), Vector2(3.5, 2.2), 8, salt * 7 + j), MOSS_LIGHT)
+
+
+# =====================================================================================
+# Decay kinds (levels 1 and 3)
+# =====================================================================================
+
+const RUST := Color(0.5, 0.29, 0.17)
+const RUST_LIGHT := Color(0.7, 0.4, 0.2)
+const BUS_YELLOW := Color(0.82, 0.62, 0.2)
+const STEEL_DARK := Color(0.3, 0.3, 0.32)
+const GLASS_DARK := Color(0.1, 0.11, 0.12)
+
+
+## A heap of broken concrete under a car, with a bent rebar or two sticking out.
+func _draw_rubble_heap(half_w: float, top: float) -> void:
+	draw_colored_polygon(_blob(Vector2(0, top + 44), Vector2(half_w + 14, 26), 14, 43), Color(0.24, 0.22, 0.21))
+	for i in 6:
+		var x: float = lerpf(-half_w, half_w, (float(i) + 0.5) / 6.0) + (_rand(i + 500) - 0.5) * 12.0
+		var chunk := _blob(Vector2(x, top + 40 + _rand(i + 510) * 14.0), Vector2(10 + _rand(i + 520) * 8.0, 7 + _rand(i + 530) * 5.0), 6, i + 540)
+		draw_colored_polygon(chunk, Color(0.55, 0.53, 0.5).darkened(_rand(i + 550) * 0.3))
+		_outline(chunk, 2.0)
+	for k in 2:
+		var x: float = (_rand(k + 560) - 0.5) * half_w * 1.4
+		draw_polyline(PackedVector2Array([Vector2(x, top + 44), Vector2(x + 6, top + 28), Vector2(x + 14, top + 24)]), RUST, 2.2, true)
+
+
+## Long rusted school bus: its roof is the walkable top.
+func _draw_bus() -> void:
+	var half: Vector2 = size * 0.5
+	var top: float = -half.y
+	var depth: float = 38.0
+	var body := PackedVector2Array([Vector2(-half.x + 6, top), Vector2(half.x - 14, top), Vector2(half.x - 2, top + 8), Vector2(half.x, top + depth - 6),
+			Vector2(half.x - 6, top + depth), Vector2(-half.x + 4, top + depth), Vector2(-half.x, top + depth - 6), Vector2(-half.x, top + 6)])
+	draw_colored_polygon(body, BUS_YELLOW)
+	# Black stripe, a row of windows (some smashed), rust bleeding down from the seams.
+	draw_line(Vector2(-half.x + 2, top + 24), Vector2(half.x - 2, top + 24), INK, 3.0, true)
+	var windows: int = maxi(int((size.x - 40.0) / 30.0), 2)
+	for i in windows:
+		var x0: float = -half.x + 14.0 + float(i) * (size.x - 40.0) / float(windows)
+		var win := _rect(Vector2(x0, top + 6), Vector2(x0 + 20, top + 19))
+		draw_colored_polygon(win, GLASS_DARK if _rand(i + 600) > 0.3 else Color(0.32, 0.36, 0.38))
+		if _rand(i + 610) > 0.65:
+			draw_line(Vector2(x0 + 3, top + 7), Vector2(x0 + 14, top + 17), Color(0.6, 0.64, 0.66, 0.8), 1.2, true)
+		_outline(win, 1.6)
+	for i in 5:
+		var x: float = -half.x + _rand(i + 620) * size.x
+		draw_colored_polygon(_blob(Vector2(x, top + 28 + _rand(i + 630) * 6.0), Vector2(8 + _rand(i + 640) * 10.0, 4.0), 8, i + 650), Color(RUST, 0.85))
+		draw_line(Vector2(x, top + 26), Vector2(x + 1, top + 36), Color(RUST, 0.7), 1.6, true)
+	# Front: a cracked windscreen and a dead headlight.
+	draw_colored_polygon(PackedVector2Array([Vector2(half.x - 12, top + 4), Vector2(half.x - 4, top + 10), Vector2(half.x - 4, top + 20), Vector2(half.x - 12, top + 20)]), GLASS_DARK)
+	draw_circle(Vector2(half.x - 4, top + 30), 3.0, Color(0.85, 0.8, 0.6))
+	_outline(body, 2.8)
+	for wx in [-half.x + 34.0, half.x - 40.0]:
+		draw_colored_polygon(_blob(Vector2(wx, top + depth + 2), Vector2(11, 7), 10, int(wx)), Color(0.12, 0.12, 0.13))
+		draw_arc(Vector2(wx, top + depth), 11.0, PI, TAU, 12, INK, 3.0, true)
+	draw_line(Vector2(-half.x + 8, top + 1), Vector2(half.x - 16, top + 1), BUS_YELLOW.lightened(0.25), 2.0, true)
+
+
+## Rusted cargo container: corrugated walls, door bars at one end, corner castings.
+func _draw_container() -> void:
+	var half: Vector2 = size * 0.5
+	var top: float = -half.y
+	# Not much deeper than its collision: the player walks under some of them.
+	var depth: float = maxf(size.y, 30.0)
+	var base: Color = Color(0.6, 0.24, 0.17) if _rand(700) > 0.5 else Color(0.2, 0.4, 0.43)
+	var box := _rect(Vector2(-half.x, top), Vector2(half.x, top + depth))
+	draw_colored_polygon(box, base)
+	var ribs: int = maxi(int(size.x / 9.0), 4)
+	for i in ribs:
+		var x: float = lerpf(-half.x + 6, half.x - 6, float(i) / float(ribs - 1))
+		draw_line(Vector2(x, top + 4), Vector2(x, top + depth - 4), base.darkened(0.3), 2.0, true)
+		draw_line(Vector2(x + 2, top + 4), Vector2(x + 2, top + depth - 4), base.lightened(0.12), 1.0, true)
+	for i in 4:
+		var x: float = -half.x + _rand(i + 710) * size.x
+		var streak := PackedVector2Array([Vector2(x - 4, top + 3), Vector2(x + 5, top + 3), Vector2(x + 2, top + 10 + _rand(i + 720) * (depth - 14)), Vector2(x - 2, top + 8)])
+		draw_colored_polygon(streak, Color(RUST_LIGHT, 0.75))
+	# Door bars on the right end.
+	for k in 2:
+		var x: float = half.x - 8.0 - float(k) * 9.0
+		draw_line(Vector2(x, top + 3), Vector2(x, top + depth - 3), STEEL_DARK, 3.0, true)
+		draw_rect(Rect2(x - 2.5, top + depth * 0.5 - 3, 5, 6), STEEL_DARK)
+	for corner in [Vector2(-half.x, top), Vector2(half.x - 8, top), Vector2(-half.x, top + depth - 7), Vector2(half.x - 8, top + depth - 7)]:
+		draw_rect(Rect2(corner, Vector2(8, 7)), base.darkened(0.45))
+	draw_line(Vector2(-half.x, top + 1.5), Vector2(half.x, top + 1.5), base.lightened(0.25), 2.0, true)
+	_outline(box, 2.8)
+
+
+## Steel lattice girder between x0 and x1: two chords and a zig-zag web, bolted.
+func _draw_girder(x0: float, x1: float, top: float, depth: float) -> void:
+	var steel := Color(0.46, 0.42, 0.4)
+	var bottom: float = top + depth
+	var top_chord := _rect(Vector2(x0, top), Vector2(x1, top + 6))
+	var bottom_chord := _rect(Vector2(x0, bottom - 5), Vector2(x1, bottom))
+	var bays: int = maxi(int((x1 - x0) / 22.0), 2)
+	for i in bays:
+		var a: float = lerpf(x0 + 3, x1 - 3, float(i) / float(bays))
+		var b2: float = lerpf(x0 + 3, x1 - 3, float(i + 1) / float(bays))
+		var from := Vector2(a, top + 5) if i % 2 == 0 else Vector2(a, bottom - 4)
+		var to := Vector2(b2, bottom - 4) if i % 2 == 0 else Vector2(b2, top + 5)
+		draw_line(from, to, INK, 5.0, true)
+		draw_line(from, to, steel.darkened(0.1), 3.0, true)
+	for chord in [top_chord, bottom_chord]:
+		draw_colored_polygon(chord, steel)
+		_outline(chord, 2.2)
+	for i in bays + 1:
+		var x: float = lerpf(x0 + 3, x1 - 3, float(i) / float(bays))
+		draw_circle(Vector2(x, top + 3), 1.4, STEEL_DARK)
+		draw_circle(Vector2(x, bottom - 2.5), 1.4, STEEL_DARK)
+	for i in 3:
+		var x: float = lerpf(x0, x1, _rand(i + 760))
+		draw_colored_polygon(_blob(Vector2(x, top + 3), Vector2(6, 2.4), 7, i + 770), Color(RUST_LIGHT, 0.7))
+	draw_line(Vector2(x0 + 2, top + 1), Vector2(x1 - 2, top + 1), steel.lightened(0.3), 1.5, true)
+
+
+## A short girder plate hanging from a crane hook on a long chain that sways a little.
+func _draw_crane_hook() -> void:
+	var half: Vector2 = size * 0.5
+	var top: float = -half.y
+	_draw_girder(-half.x, half.x, top, maxf(size.y, 18.0))
+	var sway: float = sin(_time * 0.9 + _rand(800) * TAU) * 6.0
+	var hook := Vector2(sway * 0.5, top - 46.0)
+	# Two slings from the plate's ends up to the hook.
+	for side in [-1.0, 1.0]:
+		var end := Vector2(side * (half.x - 10.0), top + 2.0)
+		draw_line(end, hook + Vector2(side * 3.0, 6.0), INK, 3.6, true)
+		draw_line(end, hook + Vector2(side * 3.0, 6.0), Color(0.55, 0.52, 0.48), 1.8, true)
+	# The hook: a curved steel claw under a pulley block.
+	draw_arc(hook + Vector2(0, 2), 7.0, 0.0, PI * 1.3, 12, INK, 5.5, true)
+	draw_arc(hook + Vector2(0, 2), 7.0, 0.0, PI * 1.3, 12, Color(0.85, 0.65, 0.2), 3.0, true)
+	var block := _rect(hook + Vector2(-9, -26), hook + Vector2(9, -8))
+	draw_colored_polygon(block, Color(0.85, 0.62, 0.18))
+	draw_line(hook + Vector2(-9, -17), hook + Vector2(9, -17), INK, 1.6, true)
+	_outline(block, 2.2)
+	# The chain up to the top of the world, bending with the sway.
+	var chain_top: float = -global_position.y - 40.0
+	var from := hook + Vector2(0, -26)
+	var links: int = maxi(int((from.y - chain_top) / 9.0), 2)
+	for i in links:
+		var u: float = float(i) / float(links)
+		var p := Vector2(from.x * (1.0 - u) + sin(u * PI) * sway * 0.4, lerpf(from.y, chain_top, u))
+		var vertical: bool = i % 2 == 0
+		var link := Rect2(p - (Vector2(3, 5) if vertical else Vector2(1.5, 5)), Vector2(6, 10) if vertical else Vector2(3, 10))
+		draw_rect(link, INK, false, 2.2)
+		draw_rect(link, Color(0.5, 0.48, 0.46), false, 1.0)
+
+
+# =====================================================================================
+# Supports under raised decay blocks (drawing only)
+# =====================================================================================
+
+## How far (px) the ground lies below local y `bottom`; 0 when there is none or it is close.
+func _support_gap(bottom: float) -> float:
+	if is_nan(_ground_y):
+		return 0.0
+	var gap: float = (_ground_y - global_position.y) - bottom
+	return gap if gap > 6.0 else 0.0
+
+
+func _draw_supports(k: Kind, b: Biome) -> void:
+	if b.kind == Biome.Kind.SWAMP or b.kind == Biome.Kind.FLOODED_SUBURB:
+		return
+	var half: Vector2 = size * 0.5
+	var top: float = -half.y
+	match k:
+		Kind.BUS:
+			var bottom: float = top + 38.0
+			var gap: float = _support_gap(bottom)
+			if gap > 0.0:
+				var ground: float = bottom + gap
+				# A crushed car on a heap under one end, a pile of rubble under the other.
+				var lx: float = -half.x + 46.0
+				var car_h: float = minf(22.0, gap * 0.45)
+				_rubble_pillar(lx, bottom + car_h, ground, 38.0, 1)
+				_crushed_car(lx, bottom, car_h, 74.0)
+				_rubble_pillar(half.x - 40.0, bottom, ground, 40.0, 2)
+		Kind.CAR:
+			var bottom: float = top + 34.0
+			var gap: float = _support_gap(bottom)
+			if gap > 0.0:
+				_rubble_pillar(-half.x + 22.0, bottom - 4.0, bottom + gap, 34.0, 3)
+				_rubble_pillar(half.x - 22.0, bottom - 4.0, bottom + gap, 32.0, 4)
+		Kind.PLANK:
+			var bottom: float = half.y + 4.0
+			var gap: float = _support_gap(bottom)
+			if gap > 0.0:
+				_posts(-half.x + 12.0, half.x - 12.0, bottom - 4.0, bottom + gap)
+		Kind.GIRDER:
+			var bottom: float = top + maxf(size.y, 20.0)
+			var gap: float = _support_gap(bottom)
+			if gap > 0.0:
+				_props(-half.x + 16.0, half.x - 16.0, bottom - 2.0, bottom + gap)
+		Kind.CONTAINER:
+			var bottom: float = top + maxf(size.y, 30.0)
+			var gap: float = _support_gap(bottom)
+			if gap > 0.0:
+				_standing_container(-half.x + 20.0, bottom, bottom + gap, 30.0)
+				_rubble_pillar(half.x - 22.0, bottom - 2.0, bottom + gap, 34.0, 5)
+
+
+## Colors of the supports: a little darker than the block, they stand behind it.
+func _back(c: Color) -> Color:
+	return c.darkened(0.22)
+
+
+## A pile of broken concrete chunks from the ground up to `top`, rebar sticking out.
+func _rubble_pillar(x: float, top: float, ground: float, width: float, salt: int) -> void:
+	var h: float = ground - top
+	if h < 4.0:
+		return
+	var base_w: float = width * 1.35
+	var body := PackedVector2Array([Vector2(x - base_w * 0.5, ground + 4.0), Vector2(x - width * 0.42, top + h * 0.35),
+			Vector2(x - width * 0.5, top), Vector2(x + width * 0.5, top), Vector2(x + width * 0.45, top + h * 0.4), Vector2(x + base_w * 0.5, ground + 4.0)])
+	draw_colored_polygon(body, _back(Color(0.3, 0.29, 0.28)))
+	var rows: int = maxi(int(h / 18.0), 1)
+	for i in rows:
+		var y: float = lerpf(top + 6.0, ground - 4.0, (float(i) + 0.5) / float(rows))
+		var w: float = lerpf(width, base_w, (y - top) / h) * 0.5
+		for j in 2:
+			var cx: float = x + (float(j) - 0.5) * w * 0.9 + (_rand(salt * 31 + i * 5 + j) - 0.5) * 6.0
+			var chunk := _blob(Vector2(cx, y), Vector2(w * 0.5 + 2.0, 8.0 + _rand(salt * 31 + i * 5 + j + 2) * 3.0), 6, salt * 17 + i * 3 + j)
+			draw_colored_polygon(chunk, _back(Color(0.56, 0.54, 0.5).darkened(_rand(salt * 7 + i + j) * 0.25)))
+			_outline(chunk, 1.8)
+	_outline(body, 2.4)
+	for k in 2:
+		var y: float = top + h * (0.3 + 0.35 * float(k))
+		var dir: float = -1.0 if (k + salt) % 2 == 0 else 1.0
+		var from := Vector2(x + dir * width * 0.3, y)
+		draw_polyline(PackedVector2Array([from, from + Vector2(dir * 10.0, -6.0), from + Vector2(dir * 16.0, -4.0)]), _back(RUST), 2.2, true)
+
+
+## A car flattened under the bus: a low crumpled body with burst windows.
+func _crushed_car(x: float, top: float, h: float, w: float) -> void:
+	if h < 6.0:
+		return
+	var body := PackedVector2Array([Vector2(x - w * 0.5, top + h), Vector2(x - w * 0.48, top + h * 0.35), Vector2(x - w * 0.25, top + h * 0.15),
+			Vector2(x - w * 0.05, top + h * 0.35), Vector2(x + w * 0.15, top + h * 0.05), Vector2(x + w * 0.45, top + h * 0.3), Vector2(x + w * 0.5, top + h)])
+	draw_colored_polygon(body, _back(Color(0.32, 0.38, 0.42)))
+	draw_line(Vector2(x - w * 0.3, top + h * 0.55), Vector2(x + w * 0.3, top + h * 0.6), _back(GLASS_DARK), 3.0, true)
+	for k in 3:
+		draw_colored_polygon(_blob(Vector2(x + (float(k) - 1.0) * w * 0.3, top + h * 0.75), Vector2(6, 3), 7, 900 + k), Color(_back(RUST), 0.8))
+	_outline(body, 2.4)
+	for sx in [-0.32, 0.32]:
+		draw_colored_polygon(_blob(Vector2(x + w * float(sx), top + h), Vector2(8, 4), 8, 910), Color(0.1, 0.1, 0.11))
+
+
+## Wooden posts under a plank, with knee braces up at the plank (the middle stays open).
+func _posts(x0: float, x1: float, top: float, ground: float) -> void:
+	var wood: Color = _back(Color(0.45, 0.31, 0.19))
+	for x in [x0, x1]:
+		var lean: float = (_rand(int(x) + 940) - 0.5) * 6.0
+		var post := PackedVector2Array([Vector2(x - 4, top), Vector2(x + 4, top), Vector2(x + 4 + lean, ground + 2), Vector2(x - 4 + lean, ground + 2)])
+		draw_colored_polygon(post, wood)
+		draw_line(Vector2(x - 1, top + 6), Vector2(x - 1 + lean * 0.8, ground - 6), wood.darkened(0.3), 1.2, true)
+		_outline(post, 2.2)
+		var inward: float = 1.0 if x == x0 else -1.0
+		draw_line(Vector2(x + inward * 3.0, top + 26.0), Vector2(x + inward * 24.0, top + 2.0), INK, 5.0, true)
+		draw_line(Vector2(x + inward * 3.0, top + 26.0), Vector2(x + inward * 24.0, top + 2.0), wood, 3.0, true)
+		draw_circle(Vector2(x, top + 4), 1.4, Color(0.25, 0.25, 0.25))
+
+
+## Steel props under a girder: two I-columns with a diagonal knee brace each.
+func _props(x0: float, x1: float, top: float, ground: float) -> void:
+	var steel: Color = _back(Color(0.46, 0.42, 0.4))
+	for x in [x0, x1]:
+		var col := _rect(Vector2(x - 5, top), Vector2(x + 5, ground + 2))
+		draw_colored_polygon(col, steel)
+		draw_line(Vector2(x, top + 2), Vector2(x, ground), steel.darkened(0.3), 3.0, true)
+		_outline(col, 2.2)
+		draw_rect(Rect2(x - 9, ground - 4, 18, 6), steel.darkened(0.2))
+		var inward: float = 1.0 if x == x0 else -1.0
+		draw_line(Vector2(x + inward * 4.0, top + 30.0), Vector2(x + inward * 30.0, top + 1.0), INK, 5.0, true)
+		draw_line(Vector2(x + inward * 4.0, top + 30.0), Vector2(x + inward * 30.0, top + 1.0), steel, 3.0, true)
+		draw_colored_polygon(_blob(Vector2(x, top + (ground - top) * 0.6), Vector2(4, 7), 7, int(x)), Color(_back(RUST_LIGHT), 0.7))
+
+
+## A container stood on its end under one side of another.
+func _standing_container(x: float, top: float, ground: float, w: float) -> void:
+	var base: Color = _back(Color(0.2, 0.4, 0.43) if _rand(950) > 0.5 else Color(0.55, 0.3, 0.16))
+	var box := _rect(Vector2(x - w * 0.5, top), Vector2(x + w * 0.5, ground + 2))
+	draw_colored_polygon(box, base)
+	var ribs: int = maxi(int((ground - top) / 9.0), 2)
+	for i in ribs:
+		var y: float = lerpf(top + 4, ground - 4, float(i) / float(maxi(ribs - 1, 1)))
+		draw_line(Vector2(x - w * 0.5 + 3, y), Vector2(x + w * 0.5 - 3, y), base.darkened(0.3), 2.0, true)
+	draw_colored_polygon(PackedVector2Array([Vector2(x - 6, top + 3), Vector2(x + 3, top + 3), Vector2(x, top + (ground - top) * 0.7)]), Color(_back(RUST_LIGHT), 0.7))
+	_outline(box, 2.4)

@@ -1,17 +1,23 @@
 extends Node2D
 ## Contact sheet of every DuckRig look in every pose. Open and press F6 to review the art;
-## Tab switches between the minions page and the bosses page.
+## Tab cycles the pages: survivors and minions (with the grandfather), bosses, bosses in phase 2
+## (more eyes, more glowing cracks, more drool).
 ## Attack columns loop through windup -> strike -> recover so the motion can be judged.
 ## `-- --shot=<file.png>` saves one frame (with `--freeze`, attacks hold mid-pose) and quits;
-## `--bosses` opens the bosses page, `--row=N` shows one look large.
+## `--bosses` opens the bosses page, `--phase2` the phase 2 page, `--row=N` shows one look large.
 
 const DuckRigScript := preload("res://frontend/animations/duck_rig.gd")
 const MINION_POSES: Array[String] = ["idle", "run", "jump", "dash", "windup", "strike", "heavy", "hurt", "dead"]
 const BOSS_POSES: Array[String] = ["idle", "run", "windup", "strike", "charge", "cast", "enraged", "hurt", "dead"]
-const MINION_LOOKS: Array = [DuckRig.Look.HERO, DuckRig.Look.BRUTE, DuckRig.Look.BRUTE_TOUGH, DuckRig.Look.BANDIT, DuckRig.Look.SLINGER]
-const MINION_NAMES: Array[String] = ["Héroe", "Bruto", "Bruto acorazado", "Bandido", "Hondero"]
+const ELDER_POSES: Array[String] = ["idle", "talk", "point", "torch", "hurt", "dead"]
+const MINION_LOOKS: Array = [DuckRig.Look.HERO, DuckRig.Look.BRUTE, DuckRig.Look.BRUTE_TOUGH, DuckRig.Look.BANDIT,
+		DuckRig.Look.SLINGER, DuckRig.Look.GRANDFATHER]
+const MINION_NAMES: Array[String] = ["Héroe", "Bruto", "Bruto acorazado", "Bandido", "Hondero", "Abuelo"]
 const BOSS_LOOKS: Array = [DuckRig.Look.BOSS_WOODCUTTER, DuckRig.Look.BOSS_SWAMP, DuckRig.Look.BOSS_STORM]
 const BOSS_NAMES: Array[String] = ["Capataz (nivel 1)", "Guardián del Pantano", "Guardián de la Tormenta"]
+const PAGE_MINIONS: int = 0
+const PAGE_BOSSES: int = 1
+const PAGE_PHASE2: int = 2
 
 var CELL := Vector2(136, 138)
 var ZOOM: float = 1.75
@@ -22,7 +28,7 @@ var _shot_path: String = ""
 var _freeze: bool = false
 var _frames: int = 0
 var _only_row: int = -1
-var _bosses: bool = false
+var _page: int = PAGE_MINIONS
 
 
 func _ready() -> void:
@@ -34,14 +40,17 @@ func _ready() -> void:
 		elif arg == "--freeze":
 			_freeze = true
 		elif arg == "--bosses":
-			_bosses = true
-	RenderingServer.set_default_clear_color(Color(0.96, 0.95, 0.92))
+			_page = PAGE_BOSSES
+		elif arg == "--phase2":
+			_page = PAGE_PHASE2
+	RenderingServer.set_default_clear_color(Color(0.8, 0.77, 0.66))
 	_build()
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_TAB:
-		_bosses = not _bosses
+	var key := event as InputEventKey
+	if key != null and key.pressed and not key.echo and key.keycode == KEY_TAB:
+		_page = (_page + 1) % 3
 		_build()
 
 
@@ -49,42 +58,51 @@ func _build() -> void:
 	for child in get_children():
 		child.queue_free()
 	_rigs.clear()
-	var looks: Array = BOSS_LOOKS if _bosses else MINION_LOOKS
-	var names: Array[String] = BOSS_NAMES if _bosses else MINION_NAMES
-	var poses: Array[String] = BOSS_POSES if _bosses else MINION_POSES
-	CELL = Vector2(138, 200) if _bosses else Vector2(136, 138)
-	ZOOM = 0.8 if _bosses else 1.75
-	var per_line: int = poses.size()
+	var bosses: bool = _page != PAGE_MINIONS
+	var phase2: bool = _page == PAGE_PHASE2
+	var looks: Array = BOSS_LOOKS if bosses else MINION_LOOKS
+	var names: Array[String] = BOSS_NAMES if bosses else MINION_NAMES
+	CELL = Vector2(138, 200) if bosses else Vector2(128, 110)
+	ZOOM = 0.8 if bosses else 1.4
+	var per_line: int = 9
 	# `--row=N` shows one look large (poses wrapped on two lines) to inspect details.
 	if _only_row >= 0:
-		ZOOM = 1.8 if _bosses else 3.0
+		ZOOM = 1.8 if bosses else 3.0
 		CELL = Vector2(250, 340)
 		per_line = 5
-	var head_room: float = 62.0 * ZOOM * (DuckRig.BOSS_SCALE if _bosses else 1.0)
-	var foot: float = (44.0 if _bosses else 24.0) * ZOOM
+	var head_room: float = 62.0 * ZOOM * (DuckRig.BOSS_SCALE if bosses else 1.0)
+	var foot: float = (44.0 if bosses else 24.0) * ZOOM
+	var title := Label.new()
+	title.text = ["Supervivientes y enemigos", "Bosses", "Bosses en fase 2 (mutaciones aumentadas)"][_page] + "   [Tab: siguiente página]"
+	title.position = Vector2(8, 4)
+	title.add_theme_color_override("font_color", Color(0.1, 0.1, 0.12))
+	add_child(title)
 	var line_index: int = 0
 	for row in looks.size():
 		if _only_row >= 0 and row != _only_row:
 			continue
+		var poses: Array[String] = BOSS_POSES if bosses else MINION_POSES
+		if looks[row] == DuckRig.Look.GRANDFATHER:
+			poses = ELDER_POSES
 		var label := Label.new()
-		label.text = names[row]
-		label.position = Vector2(8, 4 + line_index * CELL.y)
+		label.text = names[row] + (" — fase 2" if phase2 else "")
+		label.position = Vector2(8, 24 + line_index * CELL.y)
 		label.add_theme_color_override("font_color", Color(0.1, 0.1, 0.12))
 		add_child(label)
 		for i in poses.size():
 			var col: int = i % per_line
-			var y: float = 30.0 + (line_index + i / per_line) * CELL.y + head_room
+			var y: float = 50.0 + (line_index + i / per_line) * CELL.y + head_room
 			var rig: DuckRig = DuckRigScript.new()
 			rig.look = looks[row]
-			rig.foot_y = 44.0 if _bosses else 26.0
+			rig.foot_y = 44.0 if bosses else 26.0
 			rig.scale = Vector2.ONE * ZOOM
 			rig.position = Vector2(80 + col * CELL.x, y - foot)
 			add_child(rig)
-			_rigs.append([rig, poses[i]])
+			_rigs.append([rig, poses[i], phase2])
 			var header := Label.new()
-			header.text = poses[i]
+			header.text = "fase 2" if poses[i] == "enraged" else poses[i]
 			header.position = Vector2(80 + col * CELL.x - 20, y + 6)
-			header.add_theme_color_override("font_color", Color(0.35, 0.33, 0.4))
+			header.add_theme_color_override("font_color", Color(0.3, 0.27, 0.3))
 			add_child(header)
 		line_index += ceili(float(poses.size()) / per_line)
 
@@ -92,7 +110,7 @@ func _build() -> void:
 func _process(delta: float) -> void:
 	_clock += delta
 	for entry in _rigs:
-		_pose(entry[0], entry[1])
+		_pose(entry[0], entry[1], entry[2])
 	_frames += 1
 	if _shot_path != "" and _frames == 50:
 		await RenderingServer.frame_post_draw
@@ -100,15 +118,16 @@ func _process(delta: float) -> void:
 		get_tree().quit()
 
 
-func _pose(rig: DuckRig, pose: String) -> void:
+func _pose(rig: DuckRig, pose: String, phase2: bool) -> void:
 	rig.ground_speed = 0.0
 	rig.grounded = true
 	rig.vertical_speed = 0.0
 	rig.dashing = false
 	rig.hurt = false
 	rig.dead = false
-	rig.enraged = false
+	rig.enraged = phase2
 	rig.action = DuckRig.Action.NONE
+	rig.gesture = DuckRig.Gesture.IDLE
 	match pose:
 		"run":
 			rig.ground_speed = 240.0
@@ -127,6 +146,12 @@ func _pose(rig: DuckRig, pose: String) -> void:
 			_animate_action(rig, DuckRig.Action.CAST, false)
 		"enraged":
 			rig.enraged = true
+		"talk":
+			rig.gesture = DuckRig.Gesture.TALK
+		"point":
+			rig.gesture = DuckRig.Gesture.POINT
+		"torch":
+			rig.gesture = DuckRig.Gesture.HOLD_TORCH
 		"hurt":
 			rig.hurt = true
 		"dead":

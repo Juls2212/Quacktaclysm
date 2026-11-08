@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="PackedScene" path="res://frontend/levels/level_base.tscn" id="1_base"]
 [ext_resource type="PackedScene" path="res://frontend/levels/blocks/placeholder_platform.tscn" id="2_platform"]
@@ -8,6 +8,14 @@
 [ext_resource type="PackedScene" path="res://backend/combat/kill_zone.tscn" id="6_killzone"]
 [ext_resource type="Script" path="res://backend/progression/tutorial_controller.gd" id="7_tutorial"]
 [ext_resource type="Resource" path="res://frontend/levels/biome/meadow_biome.tres" id="90_biome"]
+[ext_resource type="Script" path="res://frontend/animations/duck_rig.gd" id="91_rig"]
+[ext_resource type="Script" path="res://frontend/animations/grandfather_npc.gd" id="92_elder"]
+[ext_resource type="PackedScene" path="res://frontend/prologue/prologue_cutscene.tscn" id="93_prologue"]
+[ext_resource type="Script" path="res://frontend/ui/tutorial_sign.gd" id="94_sign"]
+[ext_resource type="PackedScene" path="res://frontend/levels/blocks/star_portal.tscn" id="95_portal"]
+[ext_resource type="Script" path="res://frontend/levels/blocks/debris_skin.gd" id="96_debris"]
+[ext_resource type="Script" path="res://frontend/levels/blocks/ground_props.gd" id="97_props"]
+[ext_resource type="Theme" path="res://frontend/ui/theme/quack_theme.tres" id="98_theme"]
 
 [sub_resource type="RectangleShape2D" id="Shape_exit"]
 size = Vector2(60, 220)
@@ -35,19 +43,27 @@ size = Vector2(40, 1000)
 [node name="PlatformLow" parent="Content" index="3" instance=ExtResource("2_platform")]
 position = Vector2(1450, 510)
 size = Vector2(200, 24)
+color = Color(0, 0, 0, 0)
+show_placeholder = true
 
 [node name="PlatformHigh" parent="Content" index="4" instance=ExtResource("2_platform")]
 position = Vector2(1750, 410)
 size = Vector2(200, 24)
+color = Color(0, 0, 0, 0)
+show_placeholder = true
 
 [node name="Grandfather" type="Node2D" parent="Content" index="5"]
 position = Vector2(420, 600)
+script = ExtResource("92_elder")
 
-[node name="Visual" type="Polygon2D" parent="Content/Grandfather"]
-color = Color(0.55, 0.45, 0.7, 1)
-polygon = PackedVector2Array(-18, -70, 18, -70, 18, 0, -18, 0)
+[node name="Visual" type="Node2D" parent="Content/Grandfather"]
+position = Vector2(0, -33.8)
+scale = Vector2(-1.3, 1.3)
+script = ExtResource("91_rig")
+look = 8
 
 [node name="Label" type="Label" parent="Content/Grandfather"]
+self_modulate = Color(1, 1, 1, 0)
 offset_left = -160.0
 offset_top = -130.0
 offset_right = 160.0
@@ -72,6 +88,7 @@ monitorable = false
 shape = SubResource("Shape_exit")
 
 [node name="Visual" type="Polygon2D" parent="Content/ExitTrigger"]
+visible = false
 color = Color(0.3, 0.9, 0.4, 0.35)
 polygon = PackedVector2Array(-30, -110, 30, -110, 30, 110, -30, 110)
 
@@ -84,6 +101,7 @@ position = Vector2(120, 570)
 [node name="PromptLayer" type="CanvasLayer" parent="." index="12"]
 
 [node name="PromptLabel" type="Label" parent="PromptLayer"]
+self_modulate = Color(1, 1, 1, 0)
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
@@ -135,3 +153,108 @@ steps = Array[Dictionary]([{
 "kind": "dash_slash",
 "text": "Pulsa atacar ({attack}) durante el dash ({dash}) para el tajo de dash"
 }])
+
+[node name="PrologueCutscene" parent="." instance=ExtResource("93_prologue")]
+
+[node name="CourseStepA" parent="Content" instance=ExtResource("2_platform")]
+position = Vector2(1000, 528)
+size = Vector2(110, 24)
+color = Color(0, 0, 0, 0)
+show_placeholder = true
+
+[node name="Skin" type="Node2D" parent="Content/CourseStepA"]
+script = ExtResource("96_debris")
+size = Vector2(110, 24)
+look = 2
+prize = false
+
+[node name="CourseStepB" parent="Content" instance=ExtResource("2_platform")]
+position = Vector2(1170, 500)
+size = Vector2(150, 24)
+color = Color(0, 0, 0, 0)
+show_placeholder = true
+
+[node name="Skin" type="Node2D" parent="Content/CourseStepB"]
+script = ExtResource("96_debris")
+size = Vector2(150, 24)
+look = 0
+prize = false
+
+[node name="CourseBeam" parent="Content" instance=ExtResource("2_platform")]
+position = Vector2(1560, 330)
+size = Vector2(120, 24)
+color = Color(0, 0, 0, 0)
+show_placeholder = true
+
+[node name="Skin" type="Node2D" parent="Content/CourseBeam"]
+script = ExtResource("96_debris")
+size = Vector2(120, 24)
+look = 1
+prize = false
+
+[node name="CoursePrize" parent="Content" instance=ExtResource("2_platform")]
+position = Vector2(1270, 330)
+size = Vector2(140, 24)
+color = Color(0, 0, 0, 0)
+show_placeholder = true
+
+[node name="Skin" type="Node2D" parent="Content/CoursePrize"]
+script = ExtResource("96_debris")
+size = Vector2(140, 24)
+look = 0
+prize = true
+
+[node name="CourseLanding" parent="Content" instance=ExtResource("2_platform")]
+position = Vector2(1905, 480)
+size = Vector2(110, 24)
+color = Color(0, 0, 0, 0)
+show_placeholder = true
+
+[node name="Skin" type="Node2D" parent="Content/CourseLanding"]
+script = ExtResource("96_debris")
+size = Vector2(110, 24)
+look = 2
+prize = false
+
+[node name="LowSkin" type="Node2D" parent="Content/PlatformLow"]
+script = ExtResource("96_debris")
+size = Vector2(200, 24)
+look = 1
+
+[node name="HighSkin" type="Node2D" parent="Content/PlatformHigh"]
+script = ExtResource("96_debris")
+size = Vector2(200, 24)
+
+[node name="GroundProps" type="Node2D" parent="Content"]
+position = Vector2(0, 600)
+script = ExtResource("97_props")
+
+[node name="Portal" parent="Content/ExitTrigger" instance=ExtResource("95_portal")]
+position = Vector2(0, 90)
+
+[node name="Bubble" type="Control" parent="Content/Grandfather"]
+layout_mode = 3
+anchors_preset = 0
+offset_left = -160.0
+offset_top = -130.0
+offset_right = 160.0
+offset_bottom = -80.0
+mouse_filter = 2
+theme = ExtResource("98_theme")
+script = ExtResource("94_sign")
+mode = 1
+source = NodePath("../Label")
+
+[node name="PromptSign" type="Control" parent="PromptLayer"]
+layout_mode = 3
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -400.0
+offset_top = 70.0
+offset_right = 400.0
+offset_bottom = 120.0
+grow_horizontal = 2
+mouse_filter = 2
+script = ExtResource("94_sign")
+source = NodePath("../PromptLabel")

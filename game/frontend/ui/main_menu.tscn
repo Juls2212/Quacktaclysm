@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://crg5sgb0cvcnf"]
+[gd_scene load_steps=7 format=3 uid="uid://crg5sgb0cvcnf"]
 
 [ext_resource type="Script" uid="uid://b0ui451lmdjd5" path="res://frontend/ui/main_menu.gd" id="1_script"]
 [ext_resource type="Theme" path="res://frontend/ui/theme/quack_theme.tres" id="2_theme"]
 [ext_resource type="Script" path="res://frontend/ui/menu_stage.gd" id="3_stage"]
 [ext_resource type="Script" path="res://frontend/ui/type/ink_label.gd" id="4_ink"]
 [ext_resource type="Script" path="res://frontend/ui/sign_button.gd" id="5_sign"]
+[ext_resource type="Script" path="res://frontend/ui/ui_fx.gd" id="6_fx"]
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
@@ -19,16 +20,45 @@ script = ExtResource("1_script")
 [node name="Stage" type="Node2D" parent="."]
 script = ExtResource("3_stage")
 
+[node name="TitleBoard" type="Control" parent="."]
+layout_mode = 0
+offset_left = 34.0
+offset_top = 40.0
+offset_right = 786.0
+offset_bottom = 182.0
+rotation = -0.035
+pivot_offset = Vector2(376, 71)
+mouse_filter = 2
+script = ExtResource("6_fx")
+mode = 6
+
 [node name="Title" type="Control" parent="."]
 layout_mode = 0
 offset_left = 30.0
 offset_top = 34.0
 offset_right = 790.0
 offset_bottom = 184.0
+rotation = -0.035
+pivot_offset = Vector2(380, 75)
 script = ExtResource("4_ink")
-text = "Quacktaclysm"
-cap_height = 64.0
-wave = 0.3
+text = "QUACKTACLYSM"
+cap_height = 54.0
+fill = Color(0.93, 0.86, 0.64, 1)
+extrude = Color(0.22, 0.16, 0.12, 1)
+wobble = 1.3
+wave = 0.12
+
+[node name="TitleCrack" type="Control" parent="."]
+layout_mode = 0
+offset_left = 34.0
+offset_top = 40.0
+offset_right = 786.0
+offset_bottom = 182.0
+rotation = -0.035
+pivot_offset = Vector2(376, 71)
+mouse_filter = 2
+script = ExtResource("6_fx")
+mode = 7
 
 [node name="Tagline" type="Label" parent="."]
 layout_mode = 0
@@ -51,30 +81,35 @@ theme_override_constants/separation = 20
 custom_minimum_size = Vector2(300, 60)
 layout_mode = 2
 script = ExtResource("5_sign")
+ropes = false
 tilt = -1.5
 
 [node name="ContinueButton" type="Button" parent="Signs"]
 custom_minimum_size = Vector2(300, 60)
 layout_mode = 2
 script = ExtResource("5_sign")
+ropes = false
 tilt = 1.2
 
 [node name="OptionsButton" type="Button" parent="Signs"]
 custom_minimum_size = Vector2(300, 60)
 layout_mode = 2
 script = ExtResource("5_sign")
+ropes = false
 tilt = -0.8
 
 [node name="CreditsButton" type="Button" parent="Signs"]
 custom_minimum_size = Vector2(300, 60)
 layout_mode = 2
 script = ExtResource("5_sign")
+ropes = false
 tilt = 1.6
 
 [node name="QuitButton" type="Button" parent="Signs"]
 custom_minimum_size = Vector2(300, 60)
 layout_mode = 2
 script = ExtResource("5_sign")
+ropes = false
 tilt = -1.0
 
 [node name="MessageLabel" type="Label" parent="."]
@@ -96,6 +131,14 @@ offset_left = 800.0
 offset_top = 170.0
 offset_right = 1230.0
 offset_bottom = 420.0
+pivot_offset = Vector2(215, 125)
+theme_type_variation = &"CardboardPanel"
+
+[node name="ConfirmDecor" type="Control" parent="ConfirmPanel"]
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("6_fx")
+mode = 4
 
 [node name="Margin" type="MarginContainer" parent="ConfirmPanel"]
 layout_mode = 2
@@ -115,6 +158,7 @@ custom_minimum_size = Vector2(384, 56)
 layout_mode = 2
 size_flags_horizontal = 4
 script = ExtResource("5_sign")
+look = 1
 ropes = false
 cap_height = 16.0
 tilt = -1.0
@@ -124,6 +168,7 @@ custom_minimum_size = Vector2(300, 56)
 layout_mode = 2
 size_flags_horizontal = 4
 script = ExtResource("5_sign")
+look = 1
 ropes = false
 cap_height = 19.0
 tilt = 1.0
@@ -131,17 +176,25 @@ tilt = 1.0
 [node name="OptionsPanel" type="PanelContainer" parent="."]
 visible = false
 layout_mode = 0
-offset_left = 800.0
-offset_top = 150.0
-offset_right = 1230.0
-offset_bottom = 400.0
+offset_left = 760.0
+offset_top = 34.0
+offset_right = 1250.0
+offset_bottom = 640.0
+pivot_offset = Vector2(245, 300)
+theme_type_variation = &"CorkPanel"
+
+[node name="OptionsDecor" type="Control" parent="OptionsPanel"]
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("6_fx")
+mode = 3
 
 [node name="Margin" type="MarginContainer" parent="OptionsPanel"]
 layout_mode = 2
 
 [node name="Box" type="VBoxContainer" parent="OptionsPanel/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 8
 
 [node name="OptionsTitle" type="Control" parent="OptionsPanel/Margin/Box"]
 custom_minimum_size = Vector2(360, 60)
@@ -158,6 +211,7 @@ layout_mode = 2
 theme_override_constants/separation = 14
 
 [node name="VolumeLabel" type="Label" parent="OptionsPanel/Margin/Box/VolumeRow"]
+custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 
 [node name="VolumeSlider" type="HSlider" parent="OptionsPanel/Margin/Box/VolumeRow"]
@@ -169,11 +223,57 @@ max_value = 1.0
 step = 0.05
 value = 0.8
 
+[node name="MusicRow" type="HBoxContainer" parent="OptionsPanel/Margin/Box"]
+layout_mode = 2
+
+[node name="MusicLabel" type="Label" parent="OptionsPanel/Margin/Box/MusicRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+
+[node name="MusicSlider" type="HSlider" parent="OptionsPanel/Margin/Box/MusicRow"]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.05
+value = 0.8
+
+[node name="SfxRow" type="HBoxContainer" parent="OptionsPanel/Margin/Box"]
+layout_mode = 2
+
+[node name="SfxLabel" type="Label" parent="OptionsPanel/Margin/Box/SfxRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+
+[node name="SfxSlider" type="HSlider" parent="OptionsPanel/Margin/Box/SfxRow"]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.05
+value = 0.8
+
+[node name="ShakeCheck" type="CheckButton" parent="OptionsPanel/Margin/Box"]
+layout_mode = 2
+
+[node name="ControlsTitle" type="Label" parent="OptionsPanel/Margin/Box"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+
+[node name="ControlsGrid" type="GridContainer" parent="OptionsPanel/Margin/Box"]
+layout_mode = 2
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 2
+columns = 2
+
 [node name="OptionsBackButton" type="Button" parent="OptionsPanel/Margin/Box"]
 custom_minimum_size = Vector2(240, 56)
 layout_mode = 2
 size_flags_horizontal = 4
 script = ExtResource("5_sign")
+look = 1
 ropes = false
 cap_height = 20.0
 tilt = -1.2
@@ -181,10 +281,18 @@ tilt = -1.2
 [node name="CreditsPanel" type="PanelContainer" parent="."]
 visible = false
 layout_mode = 0
-offset_left = 800.0
-offset_top = 150.0
-offset_right = 1230.0
-offset_bottom = 520.0
+offset_left = 770.0
+offset_top = 50.0
+offset_right = 1250.0
+offset_bottom = 650.0
+pivot_offset = Vector2(240, 300)
+theme_type_variation = &"NewspaperPanel"
+
+[node name="CreditsDecor" type="Control" parent="CreditsPanel"]
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("6_fx")
+mode = 5
 
 [node name="Margin" type="MarginContainer" parent="CreditsPanel"]
 layout_mode = 2
@@ -203,23 +311,46 @@ cap_height = 34.0
 [node name="CreditsLabel" type="Label" parent="CreditsPanel/Margin/Box"]
 custom_minimum_size = Vector2(360, 0)
 layout_mode = 2
+theme_type_variation = &"NoteLabel"
 horizontal_alignment = 1
 autowrap_mode = 3
+
+[node name="CreditsScroll" type="Control" parent="CreditsPanel/Margin/Box"]
+clip_contents = true
+custom_minimum_size = Vector2(400, 330)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="CreditsRoll" type="VBoxContainer" parent="CreditsPanel/Margin/Box/CreditsScroll"]
+layout_mode = 0
+offset_right = 400.0
+theme_override_constants/separation = 10
 
 [node name="CreditsBackButton" type="Button" parent="CreditsPanel/Margin/Box"]
 custom_minimum_size = Vector2(240, 56)
 layout_mode = 2
 size_flags_horizontal = 4
 script = ExtResource("5_sign")
+look = 1
 ropes = false
 cap_height = 20.0
 tilt = 1.2
 
 [node name="VersionLabel" type="Label" parent="."]
 layout_mode = 0
-offset_left = 20.0
-offset_top = 684.0
-offset_right = 420.0
-offset_bottom = 710.0
-theme_type_variation = &"SceneLabel"
-theme_override_font_sizes/font_size = 14
+offset_left = 22.0
+offset_top = 680.0
+offset_right = 222.0
+offset_bottom = 704.0
+rotation = -0.05
+theme_type_variation = &"TapeLabel"
+
+[node name="InkWipe" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("6_fx")
