@@ -219,7 +219,7 @@ func _test_registry_and_manager() -> void:
 	_check("go_to_main_menu", SceneManager.go_to_main_menu() and SceneManager.last_requested_scene_id == "main_menu")
 	await _wait_idle()
 	var autoloads: PackedStringArray = _autoload_names()
-	_check("autoloads are exactly GameState and SceneManager", autoloads == PackedStringArray(["GameState", "SceneManager"]), str(autoloads))
+	_check("autoloads are exactly GameState, SceneManager and AudioDirector", autoloads == PackedStringArray(["GameState", "SceneManager", "AudioDirector"]), str(autoloads))
 	SceneManager.set_registry(_test_registry())
 
 
