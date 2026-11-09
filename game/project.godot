@@ -18,6 +18,7 @@ config/features=PackedStringArray("4.7")
 
 GameState="*res://backend/progression/game_state.gd"
 SceneManager="*res://backend/progression/scene_manager.gd"
+AudioDirector="*res://frontend/audio/audio_director.gd"
 
 [display]
 
