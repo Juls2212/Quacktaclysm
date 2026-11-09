@@ -19,3 +19,9 @@ Todos los audios son **CC0 (dominio público)**: no exigen atribución, pero la 
 
 Las licencias de Kenney están en `LICENSE_kenney_*.txt`.
 El cableado está en `audio_director.gd` (autoload `AudioDirector`).
+
+## Espadas (`sfx/swords/`)
+- **sword_1…10, clash_1…10**: [20 Sword Sound Effects (Attacks and Clashes)](https://opengameart.org/content/20-sword-sound-effects-attacks-and-clashes) de StarNinjas (CC0).
+
+## Voces de pato (`sfx/ducks/`)
+- **quack_*.wav**: sintetizados para este juego con `tools/gen_quacks.py` (originales, sin muestras de terceros). Para cambiarlos, edita las voces del script y vuelve a ejecutarlo.
