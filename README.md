@@ -89,7 +89,8 @@ python -m venv .venv
 # macOS/Linux: .venv/bin/python -m pip install -r requirements-dev.txt
 ```
 
-**Configuración:** copia `ai-service/.env.example` a `ai-service/.env` y rellena `OPENAI_API_KEY` y `OPENAI_MODEL` (el modelo solo se lee del entorno; no está en el código). `AI_SERVICE_MODE` puede ser `mock` (reglas deterministas, sin red, para desarrollo y pruebas) o `openai`.
+**Configuración (cada ingeniera, en su propio portátil):** copia `ai-service/.env.example` a `ai-service/.env` y rellénalo con TU clave y TU modelo (`OPENAI_API_KEY`, `OPENAI_MODEL`). El modelo solo se lee de ese archivo; no está en el código ni lo fijamos en el repositorio: elige uno de los que tu cuenta de OpenAI tenga disponibles (lista en el panel de tu cuenta de OpenAI). `AI_SERVICE_MODE` puede ser `mock` (reglas deterministas, sin red, para desarrollo y pruebas) o `openai`.
+El servicio lee `ai-service/.env` por su ruta junto al código, así que funciona desde cualquier carpeta, y **el `.env` manda sobre las variables del terminal** (un `$env:AI_SERVICE_MODE` viejo no lo pisa). El cliente del juego nunca lee ni contiene ninguna clave. **Nunca compartas la clave por chat ni la subas a Git;** cada persona usa la suya.
 
 **Arrancar el servicio** (escucha en `127.0.0.1:8000` por defecto):
 
@@ -99,7 +100,7 @@ cd ai-service
 set AI_SERVICE_MODE=openai && .venv\Scripts\python run_dev.py   # modo openai (PowerShell: $env:AI_SERVICE_MODE="openai")
 ```
 
-Comprobación rápida: `http://127.0.0.1:8000/health` devuelve `{"status":"ok","mode":"mock",...}`. En modo `openai` sin clave o sin modelo, el servicio arranca igualmente (`/health` funciona) y el endpoint de perfil responde 503.
+Comprobación rápida: `http://127.0.0.1:8000/health` devuelve solo `{"status":"ok","mode":"...","openai_configured":true|false}`; nunca muestra nada de la clave (ni prefijo ni longitud). Si falta `.env`, o si `AI_SERVICE_MODE=openai` pero `OPENAI_API_KEY` u `OPENAI_MODEL` están vacíos, el servicio **no falla**: arranca en modo `mock` e imprime un único aviso (sin claves) para copiar `.env.example` a `.env` y rellenarlo. En ese caso `/health` dirá `"mode":"mock"` y `"openai_configured":false`: es la señal de que tu `.env` no se está leyendo bien.
 
 **URL del servicio en el juego:** por defecto `http://127.0.0.1:8000` (recurso `game/backend/ai/default_ai_service_config.tres`). Para usar otra URL, define la variable de entorno `QUACKTACLYSM_AI_URL` antes de abrir Godot o del juego exportado, o edita el recurso. En la escena `boss_test`, la tecla `7` pide un refinamiento. **Sin el servicio** (por ejemplo, en el `.exe` exportado sin nada escuchando), el juego usa el clasificador local.
 
@@ -116,7 +117,7 @@ cd ai-service
 ai-service\.venv\Scripts\python ai-service\scripts\integration_mock.py --godot <ejecutable de consola de Godot>
 ```
 
-> **Advertencia:** nunca subas `.env` al repositorio ni pegues claves de API en issues, chats o capturas. Solo `.env.example` (con valores vacíos) está versionado.
+> **Advertencia:** nunca subas `.env` al repositorio ni pegues claves de API en issues, chats o capturas. Solo `.env.example` (con valores vacíos) está versionado. Las pruebas de Python apuntan el cargador a un archivo inexistente (`AI_SERVICE_ENV_FILE`, en `ai-service/tests/conftest.py`), así que nunca leen tu `.env` real.
 
 **Antes de publicar el servicio en internet:** este servicio NO tiene autenticación ni límite de peticiones. Hace falta añadir autenticación, rate limiting, HTTPS (proxy inverso) y revisar los límites de coste en OpenAI.
 

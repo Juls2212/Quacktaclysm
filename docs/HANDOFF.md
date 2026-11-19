@@ -92,6 +92,7 @@ Conecta señales; no añadas llamadas de audio en los scripts de lógica. Un nod
 - La IA **nunca** controla el combate: solo elige perfil y variante narrativa; los números salen de `AdaptiveConfig`.
 - El archivo de guardado tiene exactamente siete claves (`save_version`, `current_level`, `checkpoint`, `souls_released`, `souls_kept`, `decisions`, `adaptive_profile`). La onda de espada, el final y demás se derivan de ellas.
 - No pongas rutas absolutas ni claves en el repositorio. `.env` nunca se sube.
+- Configuración del servicio de IA: cada ingeniera usa su propio `ai-service/.env` (copia de `ai-service/.env.example`, ver `docs/ENVIRONMENT.md`). El cargador está en `ai-service/app/config.py` (`prepare_settings`): el `.env` gana sobre el entorno del terminal y, sin `.env` o sin clave/modelo en modo `openai`, el servicio arranca en `mock` con un aviso. `/health` solo devuelve `mode` y `openai_configured`. Las pruebas de `ai-service` usan `AI_SERVICE_ENV_FILE` para no leer nunca el `.env` real.
 - Ejecuta `python tools/run_all_tests.py` antes de cada fusión: debe terminar en `OVERALL: PASS`.
 - Las pruebas usan rutas `user://test_save_*.json` y el servicio de IA desactivado; no las cambies para tocar el guardado real.
 
