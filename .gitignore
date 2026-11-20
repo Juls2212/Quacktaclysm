@@ -14,6 +14,7 @@ build/
 .env
 .env.*
 !.env.example
+!ai-service/.env.example
 
 # Python
 __pycache__/
@@ -27,3 +28,7 @@ venv/
 Thumbs.db
 .idea/
 .vscode/
+
+# Local save / test save files (the real save lives in user://, outside the repo)
+test_save_*.json
+*.corrupt

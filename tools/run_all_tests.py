@@ -24,6 +24,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GAME_DIR = REPO_ROOT / "game"
+AI_DIR = REPO_ROOT / "ai-service"
 TEST_DIR = GAME_DIR / "frontend" / "scenes" / "test"
 PATTERNS = ("*_smoke_test.tscn", "*_e2e_test.tscn", "*_playthrough_test.tscn", "*_soak_test.tscn", "*_leak_test.tscn")
 # Needs a real AI service and an environment variable: run ai-service/scripts/integration_mock.py instead.
@@ -114,6 +115,40 @@ def run_one(godot: str, test: Path, timeout: int) -> dict:
             "seconds": time.time() - started, "ok": ok, "timed_out": timed_out, "result": result, "output": output}
 
 
+def ai_venv_python() -> Path | None:
+    for relative in ("Scripts/python.exe", "bin/python"):
+        candidate = AI_DIR / ".venv" / relative
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def run_ai_env_tests(timeout: int) -> dict | None:
+    """The .env-loading tests of ai-service (pytest, temp files only; tests/conftest.py keeps the
+    real ai-service/.env from ever being read). None when the ai-service venv is not set up."""
+    python = ai_venv_python()
+    if python is None:
+        return None
+    command = [str(python), "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/test_env_loading.py"]
+    started = time.time()
+    timed_out = False
+    try:
+        completed = subprocess.run(command, cwd=AI_DIR, capture_output=True, text=True, encoding="utf-8",
+                                   errors="replace", timeout=timeout)
+        output, code = completed.stdout + " " + completed.stderr, completed.returncode
+    except subprocess.TimeoutExpired:
+        output, code, timed_out = "", -1, True
+    passed = re.search(r"(\d+) passed", output)
+    failed = re.search(r"(\d+) failed", output)
+    errored = re.search(r"(\d+) error", output)
+    n_fail = int(failed.group(1)) if failed else 0
+    n_err = int(errored.group(1)) if errored else 0
+    ok = not timed_out and code == 0 and passed is not None and n_fail == 0 and n_err == 0
+    return {"name": "ai_env_loading_pytest", "pass": int(passed.group(1)) if passed else 0, "fail": n_fail,
+            "errors": ["pytest reported %d error(s)" % n_err] if n_err else [], "warnings": 0, "code": code,
+            "seconds": time.time() - started, "ok": ok, "timed_out": timed_out, "result": None, "output": output}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run every Godot test scene headless and summarize.")
     parser.add_argument("--godot", help="Path to the Godot executable (else GODOT_BIN, else godot/godot4 in PATH)")
@@ -127,12 +162,13 @@ def main() -> int:
     if args.list:
         for test in tests:
             print(test.stem)
+        print("ai_env_loading_pytest (Python, needs ai-service/.venv)")
         return 0
-    if not tests:
+    if not tests and not (args.only and args.only in "ai_env_loading_pytest"):
         print("No tests found.")
         return 1
     godot = find_godot(args.godot)
-    if godot is None:
+    if godot is None and tests:
         print("Godot not found. Use --godot <path>, set GODOT_BIN, or put godot/godot4 in PATH.")
         return 2
 
@@ -143,6 +179,14 @@ def main() -> int:
         results.append(run_one(godot, test, max(args.timeout, TIMEOUT_OVERRIDES.get(test.stem, 0))))
         last = results[-1]
         print("  -> %s (%d PASS, %d FAIL, %d error line(s), %.1fs)" % ("ok" if last["ok"] else "NOT OK", last["pass"], last["fail"], len(last["errors"]), last["seconds"]), flush=True)
+    if not args.only or args.only in "ai_env_loading_pytest":
+        print("running ai_env_loading_pytest ...", flush=True)
+        env_result = run_ai_env_tests(max(args.timeout, 120))
+        if env_result is None:
+            print("  -> skipped (ai-service/.venv not set up; see README)", flush=True)
+        else:
+            results.append(env_result)
+            print("  -> %s (%d PASS, %d FAIL, %.1fs)" % ("ok" if env_result["ok"] else "NOT OK", env_result["pass"], env_result["fail"], env_result["seconds"]), flush=True)
     save_after = save_digest()
 
     width = max(len(r["name"]) for r in results)

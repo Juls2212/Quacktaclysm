@@ -14,7 +14,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from . import rules
-from .config import MODE_MOCK, Settings, load_dotenv_if_available, load_settings
+from .config import MODE_MOCK, Settings, prepare_settings
 from .openai_client import OpenAIProfileClient, ProfileModelClient, UpstreamError, UpstreamTimeout
 from .schemas import ProfileRequest, ProfileResponse
 
@@ -103,8 +103,7 @@ class AccessLogMiddleware:
 def create_app(settings: Settings | None = None, model_client: ProfileModelClient | None = None) -> FastAPI:
     """`model_client` lets tests inject a fake OpenAI client (no network)."""
     if settings is None:
-        load_dotenv_if_available()
-        settings = load_settings()
+        settings = prepare_settings()
     app = FastAPI(title="Quacktaclysm AI service")
     app.add_middleware(BodyLimitMiddleware, max_bytes=MAX_BODY_BYTES)
     app.add_middleware(AccessLogMiddleware)
