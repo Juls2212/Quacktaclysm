@@ -35,7 +35,8 @@ const DASH_SWEEP: Array[float] = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
 const SAVE_KEYS: Array[String] = ["save_version", "current_level", "checkpoint", "souls_released", "souls_kept", "decisions", "adaptive_profile"]
 const PROFILES: Array[String] = ["compassionate", "neutral", "corrupt"]
 const PROFILE_AGGRESSION: Dictionary = {"compassionate": 0.9, "neutral": 1.0, "corrupt": 1.15}
-const PROFILE_ENDING: Dictionary = {"compassionate": "ending_compassionate", "neutral": "ending_neutral", "corrupt": "ending_corrupt"}
+# Phase 14d: the ending depends only on the souls released (3 / 2 / 0 in these three scenarios).
+const PROFILE_ENDING: Dictionary = {"compassionate": "ending_full", "neutral": "ending_scar", "corrupt": "ending_corrupt"}
 ## Designed enemy counts: level -> {melee, fast, ranged} of the BASELINE and the number of corrupted extras.
 const DESIGNED: Dictionary = {
 	1: {"melee": 3, "fast": 2, "ranged": 1, "extras": 0},
@@ -535,8 +536,8 @@ func _test_level_adaptive() -> void:
 	_clean_state()
 	var level_one: LevelBase = _make_level(1)
 	await _physics(3)
-	_check("level 1: neutral defaults leave the boss unchanged and the intro hidden", level_one.boss.aggression_multiplier == 1.0
-		and not level_one.is_intro_visible() and not level_one.background.visible and _enemy_counts(level_one)["total"] == 6)
+	_check("level 1: neutral defaults leave the boss unchanged; it now has an intro line (Phase 14b)", level_one.boss.aggression_multiplier == 1.0
+		and level_one.is_intro_visible() and not level_one.background.visible and _enemy_counts(level_one)["total"] == 6)
 	level_one.free()
 	_clean_state()
 
@@ -745,6 +746,10 @@ func _ending_state(profile: String) -> void:
 	for index in choices.size():
 		GameState.record_decision("fragment_level_%d" % (index + 1), "boss_%d" % (index + 1), index + 1, choices[index])
 	GameState.refresh_adaptive_profile(AdaptiveInput.POINT_ENDING)
+	if profile == "neutral":
+		# Three decisions can no longer give score 0 (Phase 14b: threshold 1.0), so the neutral ending is
+		# reached here the way a loaded save would carry it: the stored profile is set directly.
+		GameState.set_adaptive_profile("neutral")
 	GameState.set_current_level(3)
 	GameState.set_checkpoint(GameState.CHECKPOINT_ENDING)
 	GameState.save_to_disk()
@@ -761,11 +766,13 @@ func _test_ending_scene() -> void:
 		await _physics(3)
 		var expected_variant: String = PROFILE_ENDING[profile]
 		_check("ending (%s): shows %s" % [profile, expected_variant], ending.shown_variant == expected_variant
-			and ending.ending_label.text == String(ending.ending_texts[expected_variant]) and not ending.ending_label.text.is_empty())
-		_check("ending (%s): soul counts" % profile, ending.released_label.text == ending.souls_released_format % GameState.souls_released
-			and ending.kept_label.text == ending.souls_kept_format % GameState.souls_kept, "%s / %s" % [ending.released_label.text, ending.kept_label.text])
-		_check("ending (%s): narrative variant in small text" % profile, ending.narrative_label.visible
-			and ending.narrative_label.text == ending.narrative_format % GameState.get_adaptive_result().narrative_variant)
+			and ending.ending_label.text == ending.texts.get_ending(expected_variant).summary_line and not ending.ending_label.text.is_empty())
+		_check("ending (%s): soul counts" % profile, ending.released_label.text == ending.texts.summary_released_format % GameState.souls_released
+			and ending.kept_label.text == ending.texts.summary_kept_format % GameState.souls_kept, "%s / %s" % [ending.released_label.text, ending.kept_label.text])
+		var on_screen: String = " ".join([ending.title_label.text, ending.ending_label.text, ending.released_label.text, ending.kept_label.text,
+			ending.released_names_label.text, ending.kept_names_label.text])
+		_check("ending (%s): no raw narrative id on screen" % profile, not on_screen.contains("Variante narrativa") and not on_screen.contains("mercy")
+			and not on_screen.contains("balanced") and not on_screen.contains("burden") and not on_screen.contains("provisional"))
 		_check("ending (%s): focus on the back button" % profile, ending.back_button.has_focus())
 		_check("ending (%s): GameState and save untouched" % profile, GameState.to_dict() == before and _read_file(TEST_SAVE) == save_before and GameState.is_game_completed())
 		ending.back_button.pressed.emit()
@@ -775,10 +782,12 @@ func _test_ending_scene() -> void:
 		ending.free()
 		await _wait_idle()
 		_check("ending (%s): still untouched after leaving" % profile, GameState.to_dict() == before and _read_file(TEST_SAVE) == save_before)
-	# Texts are distinct, unknown variant, empty state, hidden narrative text.
+	# Texts are distinct; the ending ignores the adaptive result's variant; an empty state works.
 	var probe: EndingController = ENDING_SCENE.instantiate() as EndingController
-	var texts: Array = probe.ending_texts.values()
-	_check("ending: three distinct texts", texts.size() == 3 and texts[0] != texts[1] and texts[1] != texts[2] and texts[0] != texts[2])
+	var summaries: Array = []
+	for story: Variant in (load(StoryTexts.DEFAULT_PATH) as StoryTexts).endings:
+		summaries.append((story as EndingStory).summary_line)
+	_check("ending: four distinct summaries", summaries.size() == 4 and summaries.size() == _unique_count(summaries))
 	probe.free()
 	_clean_state()
 	var weird_config: AdaptiveConfig = (GameState.get_adaptive_config() as AdaptiveConfig).duplicate(true) as AdaptiveConfig
@@ -787,23 +796,26 @@ func _test_ending_scene() -> void:
 	var unknown: EndingController = ENDING_SCENE.instantiate() as EndingController
 	add_child(unknown)
 	await _physics(2)
-	_check("ending: an unknown variant falls back to the neutral text", unknown.shown_variant == "ending_neutral" and unknown.ending_label.text == String(unknown.ending_texts["ending_neutral"]))
+	_check("ending: deterministic, an unknown adaptive ending variant changes nothing (0 released = corrupt ending)",
+		unknown.shown_variant == "ending_corrupt" and not unknown.ending_label.text.is_empty())
 	unknown.free()
 	_clean_state()
 	var empty_state: EndingController = ENDING_SCENE.instantiate() as EndingController
 	add_child(empty_state)
 	await _physics(2)
-	_check("ending: an empty/default state works (neutral)", empty_state.shown_variant == "ending_neutral" and empty_state.released_label.text == empty_state.souls_released_format % 0
-		and empty_state.kept_label.text == empty_state.souls_kept_format % 0)
+	_check("ending: an empty/default state works (0 released)", empty_state.shown_variant == "ending_corrupt"
+		and empty_state.released_label.text == empty_state.texts.summary_released_format % 0
+		and empty_state.kept_label.text == empty_state.texts.summary_kept_format % 0
+		and empty_state.released_names_label.text == empty_state.texts.summary_released_names_format % empty_state.texts.summary_none_text)
 	empty_state.free()
-	var no_texts: EndingController = ENDING_SCENE.instantiate() as EndingController
-	no_texts.ending_texts = {}
-	no_texts.show_narrative_variant = false
-	add_child(no_texts)
-	await _physics(2)
-	_check("ending: generic text when the dictionary is empty; narrative text can be hidden", no_texts.ending_label.text == no_texts.fallback_text and not no_texts.narrative_label.visible)
-	no_texts.free()
 	_clean_state()
+
+
+func _unique_count(values: Array) -> int:
+	var seen: Dictionary = {}
+	for value: Variant in values:
+		seen[value] = true
+	return seen.size()
 
 
 # --- Reach measurement (real Player simulation) ---
@@ -1076,7 +1088,8 @@ func _test_reachability(level_number: int) -> void:
 	# Vertical steps.
 	var worst_step: float = 0.0
 	for surface in surfaces:
-		if absf(surface["top"] - GROUND_TOP) < 0.5:
+		# The high tier of arena 2 (ArenaHigh*) is reached with a lily pad or the double jump on purpose (Phase 15c).
+		if absf(surface["top"] - GROUND_TOP) < 0.5 or String(surface["name"]).begins_with("ArenaHigh"):
 			continue
 		var smallest: float = INF
 		for other in surfaces:
@@ -1202,9 +1215,9 @@ func _test_debug_helper() -> void:
 			_press_key(KEY_F3)
 			await _physics(2)
 			_check("debug (level %d): F3 toggles the info label" % level_number, debug_node._label.visible)
-			_press_key(KEY_K)
+			_press_key(KEY_F4)
 			await _physics(2)
-			_check("debug (level %d): K kills the boss through a real key event" % level_number, level.boss.state == BossBase.State.DEAD)
+			_check("debug (level %d): F4 kills the boss through a real key event" % level_number, level.boss.state == BossBase.State.DEAD)
 		level.free()
 		_free_fragments()
 	_clean_state()

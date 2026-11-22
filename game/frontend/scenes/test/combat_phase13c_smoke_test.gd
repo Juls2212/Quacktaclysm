@@ -24,10 +24,10 @@ const SAVE_KEYS: Array[String] = ["save_version", "current_level", "checkpoint",
 const FLOOR_Y: float = 300.0
 const PLAYER_HALF_HEIGHT: float = 26.0
 const ACTIONS: Array[String] = ["move_left", "move_right", "jump", "dash", "attack", "wave", "heavy_attack"]
-const DEBUG_KEYCODES: Array[int] = [KEY_K, KEY_H, KEY_F2, KEY_F3, KEY_G, KEY_R, KEY_L, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7]
+const DEBUG_KEYCODES: Array[int] = [KEY_F4, KEY_H, KEY_F2, KEY_F3, KEY_G, KEY_R, KEY_L, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7]
 const EXPECTED_KEYS: Dictionary = {
 	"move_left": [KEY_A, KEY_LEFT], "move_right": [KEY_D, KEY_RIGHT], "jump": [KEY_SPACE, KEY_UP], "dash": [KEY_SHIFT, KEY_K],
-	"attack": [KEY_J, KEY_X], "wave": [KEY_U], "pause": [KEY_ESCAPE, KEY_P], "heavy_attack": [KEY_I],
+	"attack": [KEY_J], "wave": [KEY_U], "pause": [KEY_ESCAPE, KEY_P], "heavy_attack": [KEY_I],
 }
 const EXPECTED_MOUSE: Dictionary = {"attack": [MOUSE_BUTTON_LEFT], "wave": [MOUSE_BUTTON_RIGHT], "heavy_attack": [MOUSE_BUTTON_MIDDLE]}
 
@@ -214,7 +214,7 @@ func _test_input_map() -> void:
 		if not String(action).begins_with("ui_") and not String(action).begins_with("spatial_editor"):
 			custom.append(String(action))
 	custom.sort()
-	_check("input map: only one action was added", custom == ["attack", "dash", "heavy_attack", "jump", "move_left", "move_right", "pause", "wave"], str(custom))
+	_check("input map: only the known actions exist (heal was added in Phase 15a)", custom == ["attack", "dash", "heal", "heavy_attack", "jump", "move_left", "move_right", "pause", "wave"], str(custom))
 	var collides: bool = false
 	for event in InputMap.action_get_events("heavy_attack"):
 		var key := event as InputEventKey
@@ -868,9 +868,8 @@ func _test_dash_slash() -> void:
 			invulnerable_frames[0] += 1
 		await get_tree().physics_frame
 	Input.parse_input_event(_key_event(KEY_D, false))
-	var expected_invulnerable: int = int(round(default_stats.dash_invulnerability_time * Engine.physics_ticks_per_second))
-	_check("dash slash: the dash keeps its duration and invulnerability window (%d of %d frames)" % [invulnerable_frames[0], dash_frames[0]],
-		absi(invulnerable_frames[0] - maxi(expected_invulnerable - 3, 0)) <= 3 and absi(dash_frames[0] + 3 - int(round(default_stats.dash_duration * Engine.physics_ticks_per_second))) <= 3)
+	_check("dash slash: the dash keeps its duration and is invulnerable for all of it (Phase 15b) (%d of %d frames)" % [invulnerable_frames[0], dash_frames[0]],
+		invulnerable_frames[0] == dash_frames[0] and absi(dash_frames[0] + 3 - int(round(default_stats.dash_duration * Engine.physics_ticks_per_second))) <= 3)
 	await _physics(8)
 	Input.parse_input_event(_key_event(KEY_SHIFT, true))
 	await get_tree().physics_frame
@@ -1022,7 +1021,7 @@ func _test_tutorial() -> void:
 	var ids: Array[String] = []
 	for step in controller.steps:
 		ids.append(String(step["id"]))
-	_check("tutorial: eight steps ending with heavy and dash_slash", ids == ["move", "jump", "dash", "attack", "hit_dummy", "wave", "heavy", "dash_slash"], str(ids))
+	_check("tutorial: nine steps ending with heavy, dash_slash and heal (Phase 15a)", ids == ["move", "jump", "dash", "attack", "hit_dummy", "wave", "heavy", "dash_slash", "heal"], str(ids))
 	var heavy_text: String = controller.build_text(String(controller.steps[6]["text"]))
 	var slash_text: String = controller.build_text(String(controller.steps[7]["text"]))
 	_check("tutorial: the new prompts resolve their keys from the InputMap", heavy_text.contains("I") and not heavy_text.contains("{") and slash_text.contains("J") and slash_text.contains("Shift")
@@ -1068,8 +1067,19 @@ func _test_tutorial() -> void:
 	await _physics(40)
 	await _hold_dash_slash(player, 2)
 	Input.parse_input_event(_key_event(KEY_D, false))
-	var all_done: bool = await _wait_until(func() -> bool: return controller.is_completed, 30)
-	_check("tutorial: a real dash slash completes the tutorial", all_done and controller.current_index == 8)
+	var heal_step: bool = await _wait_until(func() -> bool: return controller.get_current_step_id() == "heal", 30)
+	_check("tutorial: a real dash slash leaves the dash slash step for the heal step (Phase 15a)", heal_step and not controller.is_completed)
+	controller.exit_area.body_entered.emit(player)
+	_check("tutorial: the exit stays locked before the heal step", SceneManager.last_requested_scene_id == "")
+	# The heal step: gather soul, then hold the heal key; at full health it only spends the soul.
+	await _wait_until(func() -> bool: return player.state == Player.State.IDLE or player.state == Player.State.RUN, 150)
+	player.soul.add_soul(60)
+	var soul_before: int = player.soul.soul
+	Input.parse_input_event(_key_event(KEY_E, true))
+	var all_done: bool = await _wait_until(func() -> bool: return controller.is_completed, 150)
+	Input.parse_input_event(_key_event(KEY_E, false))
+	_check("tutorial: a real held heal key completes the tutorial; at full health nothing heals but the soul is spent (Phase 15a)",
+		all_done and controller.current_index == 9 and player.health.current_health == player.health.max_health and player.soul.soul == soul_before - player.soul.heal_cost())
 	controller.exit_area.body_entered.emit(player)
 	_check("tutorial: the exit opens only now", SceneManager.last_requested_scene_id == "level_1")
 	tutorial.free()

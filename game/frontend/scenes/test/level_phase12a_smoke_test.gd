@@ -304,7 +304,8 @@ func _test_level_wiring() -> void:
 	await _physics(2)
 	_check("wiring: safety unlock after the transition", not level.player.is_input_locked())
 	level.free()
-	_check("wiring: signals disconnected on exit", SceneManager.transition_started.get_connections().size() <= 1)
+	# Phase 14f: AudioDirector keeps one permanent connection (the transition sound), so up to two remain.
+	_check("wiring: the level's own signals are disconnected on exit", SceneManager.transition_started.get_connections().size() <= 2)
 
 
 # --- Continue / restore ---
@@ -505,7 +506,7 @@ func _test_tutorial() -> void:
 	_check("tutorial: loading never changes GameState or saves", GameState.to_dict() == state_before and not SaveSystem.has_save())
 	_check("tutorial: autosave suspended while it is alive", not GameState.autosave_enabled)
 	_check("tutorial: no game over, auto respawn on", not tutorial.game_over_controller.show_game_over and player.is_auto_respawn_enabled())
-	_check("tutorial: eight ordered steps (wave added in Phase 12c, heavy and dash slash in 13c)", controller.steps.size() == 8 and controller.get_current_step_id() == "move")
+	_check("tutorial: nine ordered steps (wave in 12c, heavy and dash slash in 13c, heal in 15a)", controller.steps.size() == 9 and controller.get_current_step_id() == "move")
 	_check("tutorial: key hints resolved from the input map", controller.build_text("{jump}") != "{jump}" and not controller.prompt_label.text.contains("{"),
 		controller.prompt_label.text)
 	player.dash_started.emit()
@@ -537,7 +538,9 @@ func _test_tutorial() -> void:
 	_check("tutorial: the wave cast leaves the heavy step", not controller.is_completed and controller.get_current_step_id() == "heavy")
 	player.heavy_attack_started.emit()
 	player.dash_slash_started.emit()
-	_check("tutorial: heavy and dash slash complete the tutorial", controller.is_completed and controller.current_index == 8)
+	_check("tutorial: heavy and dash slash leave the heal step", not controller.is_completed and controller.get_current_step_id() == "heal")
+	player.focus_completed.emit(0)
+	_check("tutorial: the heal step completes the tutorial", controller.is_completed and controller.current_index == 9)
 	_check("tutorial: final line shown", controller.prompt_label.text == controller.final_text)
 	controller.exit_area.body_entered.emit(player)
 	controller.exit_area.body_entered.emit(player)

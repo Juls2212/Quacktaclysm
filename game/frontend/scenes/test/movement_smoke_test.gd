@@ -145,10 +145,9 @@ func _run() -> void:
 	_check("dash covers more than run", dash_dist > run_dist, "dash=%.1f run=%.1f" % [dash_dist, run_dist])
 	_check("dash started and finished once", dash_started_count == 1 and dash_finished_count == 1,
 		"started=%d finished=%d" % [dash_started_count, dash_finished_count])
-	var max_invuln_frames: int = ceili(player.stats.dash_invulnerability_time * 60.0) + 1
 	_check("invulnerable at dash start", invuln_at_first)
-	_check("invulnerability is brief", invuln_frames <= max_invuln_frames and invuln_frames < dash_frames,
-		"invuln=%d dash=%d max=%d" % [invuln_frames, dash_frames, max_invuln_frames])
+	_check("invulnerability covers the whole dash (Phase 15b)", invuln_frames == dash_frames and dash_frames > 0,
+		"invuln=%d dash=%d" % [invuln_frames, dash_frames])
 	_check("not invulnerable after dash", not player.is_dash_invulnerable)
 
 	# Dash cooldown blocks a second dash, then allows it.

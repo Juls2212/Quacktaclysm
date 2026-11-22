@@ -1,7 +1,7 @@
 extends Node2D
 ## Sandbox for the boss system. Debug keys are handled here only (not in the input map):
 ## R respawns the player and resets the encounter, L reloads the scene,
-## H deals 10% of the boss's max health, K kills the boss, G resets GameState.
+## H deals 10% of the boss's max health, F4 kills the boss, G resets GameState.
 ## GameState is an autoload, so its data survives R and L (scene reload); G is the only
 ## way to clear recorded decisions (otherwise a decided fragment will not drop again).
 ## Persistence: 1 saves now, 2 loads and moves the player to the saved checkpoint,
@@ -65,13 +65,13 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_last_io_text = "refine: %s" % ("sent" if refiner.request_refinement() else "not sent (%s)" % refiner.last_status)
 		KEY_G:
 			GameState.reset_run()
-		KEY_K:
+		KEY_F4:
 			if is_instance_valid(boss):
 				boss.health.kill()
 
 
 func _process(_delta: float) -> void:
-	var lines: PackedStringArray = ["[J/X/click] attack  [R] reset  [L] reload  [H] hurt boss 10%  [K] kill boss  [G] reset GameState", "[1] save  [2] load  [3] delete save  [4] corrupt save"]
+	var lines: PackedStringArray = ["[J/X/click] attack  [R] reset  [L] reload  [H] hurt boss 10%  [F4] kill boss  [G] reset GameState", "[1] save  [2] load  [3] delete save  [4] corrupt save"]
 	if is_instance_valid(boss):
 		lines.append("boss: %s  phase %d  pattern: %s" % [BossBase.State.keys()[boss.state], boss.current_phase, boss.current_pattern_id])
 		lines.append("boss hp %d/%d" % [boss.health.current_health, boss.health.max_health])

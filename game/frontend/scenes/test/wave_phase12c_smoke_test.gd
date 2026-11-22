@@ -24,7 +24,7 @@ const PLAYER_HALF_HEIGHT: float = 26.0
 const PLAYER_HALF_WIDTH: float = 14.0
 const ACTIONS: Array[String] = ["move_left", "move_right", "jump", "dash", "attack", "wave"]
 const SAVE_KEYS: Array[String] = ["save_version", "current_level", "checkpoint", "souls_released", "souls_kept", "decisions", "adaptive_profile"]
-const EXPECTED_ACTIONS: Array[String] = ["attack", "dash", "heavy_attack", "jump", "move_left", "move_right", "pause", "wave"]
+const EXPECTED_ACTIONS: Array[String] = ["attack", "dash", "heal", "heavy_attack", "jump", "move_left", "move_right", "pause", "wave"]
 const DASH_DELAY: float = 0.3
 
 var failures: int = 0
@@ -250,7 +250,7 @@ func _test_input_map_and_scans() -> void:
 		if not String(action).begins_with("ui_") and not String(action).begins_with("spatial_editor"):
 			custom.append(String(action))
 	custom.sort()
-	_check("input: no action other than wave and heavy_attack (Phase 13c) was added", custom == EXPECTED_ACTIONS, str(custom))
+	_check("input: no action other than wave, heavy_attack (Phase 13c) and heal (Phase 15a) was added", custom == EXPECTED_ACTIONS, str(custom))
 	var key_regex: RegEx = RegEx.create_from_string("KEY_[A-Z0-9_]+")
 	var seen_level: Array[String] = _keys_in("res://backend/progression/level_debug.gd", key_regex)
 	var seen_boss: Array[String] = _keys_in("res://frontend/scenes/test/boss_test.gd", key_regex)
@@ -864,7 +864,7 @@ func _test_tutorial() -> void:
 	var ids: Array[String] = []
 	for step in controller.steps:
 		ids.append(String(step["id"]))
-	_check("tutorial: the wave step is followed by the Phase 13c steps", ids == ["move", "jump", "dash", "attack", "hit_dummy", "wave", "heavy", "dash_slash"], str(ids))
+	_check("tutorial: the wave step is followed by the Phase 13c steps and the Phase 15a heal step", ids == ["move", "jump", "dash", "attack", "hit_dummy", "wave", "heavy", "dash_slash", "heal"], str(ids))
 	_check("tutorial: the wave prompt resolves its key from the InputMap", controller.build_text(String(controller.steps[5]["text"])).contains("U") and not controller.build_text(String(controller.steps[5]["text"])).contains("{"))
 	# A real cast before its step does not count.
 	await _tap_wave(true)
@@ -943,7 +943,7 @@ func _test_level_1_gap() -> void:
 	var zone_left: float = kill_zone.position.x - kill_zone.size.x * 0.5
 	var zone_right: float = kill_zone.position.x + kill_zone.size.x * 0.5
 	_check("level 1: the gap is 285 px", is_equal_approx(gap, 285.0), "%.1f" % gap)
-	_check("level 1: the landing platform keeps its right edge (5400) and top (600)", is_equal_approx(end_floor.position.x + end_floor.size.x * 0.5, 5400.0)
+	_check("level 1: the landing platform keeps its right edge (5490, the right wall; was 5400 before the Phase 15b hole fix) and top (600)", is_equal_approx(end_floor.position.x + end_floor.size.x * 0.5, 5490.0)
 		and is_equal_approx(end_floor.position.y - end_floor.size.y * 0.5, 600.0) and is_equal_approx(gap_left, 2400.0))
 	_check("level 1: the KillZone still covers the gap from below", zone_left <= gap_left and zone_right >= gap_right and kill_zone.position.y - kill_zone.size.y * 0.5 > 600.0)
 	level.free()

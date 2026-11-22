@@ -8,6 +8,7 @@ Examples:
     python tools/run_all_tests.py
     python tools/run_all_tests.py --only boss --timeout 120
     python tools/run_all_tests.py --list
+    python tools/run_all_tests.py --skip bot_phase13_soak_test   # everything but the long soak
     GODOT_BIN=/path/to/godot python tools/run_all_tests.py
 """
 from __future__ import annotations
@@ -46,7 +47,7 @@ def find_godot(cli_value: str | None) -> str | None:
     return shutil.which("godot") or shutil.which("godot4")
 
 
-def discover(only: str | None) -> list[Path]:
+def discover(only: str | None, skip: list[str] | None = None) -> list[Path]:
     found: dict[str, Path] = {}
     for pattern in PATTERNS:
         for path in TEST_DIR.glob(pattern):
@@ -55,6 +56,8 @@ def discover(only: str | None) -> list[Path]:
     tests = [found[name] for name in sorted(found)]
     if only:
         tests = [path for path in tests if only in path.stem]
+    if skip:
+        tests = [path for path in tests if path.stem not in skip]
     return tests
 
 
@@ -154,11 +157,13 @@ def main() -> int:
     parser.add_argument("--godot", help="Path to the Godot executable (else GODOT_BIN, else godot/godot4 in PATH)")
     parser.add_argument("--timeout", type=int, default=300, help="Seconds per test (default 300)")
     parser.add_argument("--only", help="Run only the tests whose name contains this text")
+    parser.add_argument("--skip", action="append", default=[], metavar="NAME",
+                        help="Do not run the test with this exact name (repeatable), e.g. --skip bot_phase13_soak_test")
     parser.add_argument("--list", action="store_true", help="List the discovered tests and exit")
     parser.add_argument("--verbose", action="store_true", help="Print the output of failing tests")
     args = parser.parse_args()
 
-    tests = discover(args.only)
+    tests = discover(args.only, args.skip)
     if args.list:
         for test in tests:
             print(test.stem)
@@ -173,6 +178,8 @@ def main() -> int:
         return 2
 
     save_before = save_digest()
+    if args.skip:
+        print("skipped by request: %s" % ", ".join(args.skip), flush=True)
     results = []
     for test in tests:
         print("running %s ..." % test.stem, flush=True)
