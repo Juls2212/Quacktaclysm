@@ -12,6 +12,8 @@ extends Node2D
 ## (the ending), completing the level writes the ending marker to GameState.
 
 signal level_ready
+## The title/intro lines of the level are gone (or there were none): the grandfather line may come now (Phase 16c).
+signal intro_finished
 signal level_completed(level_number: int)
 
 ## 0 = tutorial (never writes GameState), 1-3 = levels.
@@ -51,6 +53,11 @@ var _advance_pending: bool = false
 var _advance_elapsed: float = 0.0
 var _completion_started: bool = false
 var _applied_result: AdaptiveResult = null
+var _applied_plan: DirectorPlan = null
+## Feeds the in-memory telemetry of the AI Director (Phase 16a); null in the tutorial.
+var telemetry_observer: TelemetryObserver = null
+## The grandfather line at level start (Phase 16c); null in the tutorial.
+var grandfather_voice: GrandfatherVoice = null
 var _intro_left: float = 0.0
 ## The consequence line shown with the intro ("" in the tutorial); built once at load.
 var consequence_line: String = ""
@@ -82,6 +89,7 @@ func _ready() -> void:
 	player.set_auto_respawn(not show_game_over)
 	_apply_camera_limits()
 	_place_player()
+	_start_telemetry()
 	_apply_adaptive()
 	_apply_background()
 	_show_intro()
@@ -108,6 +116,7 @@ func _process(delta: float) -> void:
 		if _intro_left <= 0.0:
 			intro_label.visible = false
 			consequence_label.visible = false
+			intro_finished.emit()
 	# Safety net: a failed or missed transition must never leave the player locked.
 	if _locked_by_level and not SceneManager.is_transitioning():
 		_set_level_lock(false)
@@ -127,20 +136,117 @@ func is_intro_visible() -> bool:
 	return intro_label.visible
 
 
-## Runs once. Boss aggression + variant groups, from the adaptive result at load time.
+## The AI Director plan this level was loaded with (null before `_ready`).
+func get_applied_plan() -> DirectorPlan:
+	return _applied_plan
+
+
+func _start_telemetry() -> void:
+	if level_number < 1:
+		return
+	telemetry_observer = TelemetryObserver.new()
+	telemetry_observer.name = "TelemetryObserver"
+	add_child(telemetry_observer)
+	telemetry_observer.setup(self)
+	grandfather_voice = GrandfatherVoice.new()
+	grandfather_voice.name = "GrandfatherVoice"
+	add_child(grandfather_voice)
+
+
+## Runs once. Boss aggression, the AI Director plan (extra enemies and boss pattern weights) and the variant groups, from the
+## adaptive result at load time. Never again during the level (a retry loads the level again and reuses the cached plan).
 func _apply_adaptive() -> void:
 	_applied_result = GameState.get_adaptive_result()
 	if boss != null:
 		boss.set_aggression(_applied_result.boss_aggression)
+	_applied_plan = _resolve_plan()
+	if boss != null and level_number >= 1:
+		var cfg: TelemetryConfig = GameState.director.get_config()
+		boss.apply_pattern_weights(_applied_plan.boss_pattern_weights, cfg.weight_min, cfg.weight_max)
+	_apply_variant_groups(_applied_plan)
+
+
+func _resolve_plan() -> DirectorPlan:
+	if level_number < 1:
+		return DirectorPlan.neutral(GameState.director.get_config().default_theme)
+	var ids := PackedStringArray()
+	if boss != null:
+		ids = boss.rotation_pattern_ids()
+	var plan: DirectorPlan = GameState.director.plan_for_level(level_number, ids)
+	if OS.is_debug_build():
+		print("[Director] level %d plan (%s): %s" % [level_number, GameState.director.last_source, plan.describe()])
+	return plan
+
+
+## Keeps the extra enemies the profile asks for, changed by the plan: final = clamp(profile extras + extras_delta, 0, cap). Fewer
+## keeps the first slots of the profile group (authored order); more takes slots of the other groups that are fair (never within
+## the configured distance of a gap edge). An unchanged plan (delta 0) removes exactly what it always removed.
+func _apply_variant_groups(plan: DirectorPlan) -> void:
+	var cfg: TelemetryConfig = GameState.director.get_config()
+	var profile_slots: Array[NodePath] = _group_paths(_applied_result.encounter_variant)
+	var keep: Array[NodePath] = profile_slots.duplicate()
+	if plan.extras_delta != 0:
+		var final_count: int = clampi(profile_slots.size() + plan.extras_delta, 0, cfg.extras_total_cap)
+		if final_count <= profile_slots.size():
+			keep = profile_slots.slice(0, final_count)
+		else:
+			var group_ids: Array = variant_groups.keys()
+			group_ids.sort()
+			for group_id: Variant in group_ids:
+				if String(group_id) == _applied_result.encounter_variant:
+					continue
+				for path in _group_paths(String(group_id)):
+					if keep.size() < final_count and _slot_is_fair(path, cfg):
+						keep.append(path)
 	for group_id: Variant in variant_groups.keys():
-		if String(group_id) == _applied_result.encounter_variant:
-			continue
 		var paths: Variant = variant_groups[group_id]
 		if not paths is Array:
-			push_warning("LevelBase: variant group '%s' must be an Array of NodePath" % String(group_id))
+			if String(group_id) != _applied_result.encounter_variant:
+				push_warning("LevelBase: variant group '%s' must be an Array of NodePath" % String(group_id))
 			continue
 		for raw_path: Variant in paths as Array:
+			if keep.has(NodePath(raw_path)):
+				continue
 			_remove_variant_node(NodePath(raw_path), String(group_id))
+
+
+func _group_paths(group_id: String) -> Array[NodePath]:
+	var result: Array[NodePath] = []
+	var paths: Variant = variant_groups.get(group_id)
+	if paths is Array:
+		for raw_path: Variant in paths as Array:
+			result.append(NodePath(raw_path))
+	return result
+
+
+## A slot added by a plan must stand at least `slot_min_gap_edge_distance` px from every gap edge of the level floors.
+func _slot_is_fair(path: NodePath, cfg: TelemetryConfig) -> bool:
+	var node := get_node_or_null(path) as Node2D
+	if node == null:
+		return false
+	for edge in get_gap_edges(cfg.gap_min_width):
+		if absf(node.global_position.x - edge) < cfg.slot_min_gap_edge_distance:
+			return false
+	return true
+
+
+## X of both edges of every hole between the floors (the nodes of Content named Floor*).
+func get_gap_edges(min_width: float) -> Array[float]:
+	var edges: Array[float] = []
+	var content: Node = get_node_or_null(^"Content")
+	if content == null:
+		return edges
+	var spans: Array[Vector2] = []
+	for child in content.get_children():
+		if child is PlaceholderPlatform and String(child.name).begins_with("Floor"):
+			var platform := child as PlaceholderPlatform
+			spans.append(Vector2(platform.global_position.x - platform.size.x * 0.5, platform.global_position.x + platform.size.x * 0.5))
+	spans.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.x < b.x)
+	for i in range(1, spans.size()):
+		if spans[i].x - spans[i - 1].y >= min_width:
+			edges.append(spans[i - 1].y)
+			edges.append(spans[i].x)
+	return edges
 
 
 ## Removes the node from the tree at once (it can no longer emit or act) and frees it.
@@ -177,6 +283,12 @@ func build_consequence_line() -> String:
 
 
 func _show_intro() -> void:
+	_show_intro_labels()
+	if _intro_left <= 0.0:
+		intro_finished.emit()
+
+
+func _show_intro_labels() -> void:
 	intro_label.visible = false
 	consequence_label.visible = false
 	consequence_line = build_consequence_line()
