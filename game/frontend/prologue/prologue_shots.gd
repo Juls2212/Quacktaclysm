@@ -10,7 +10,7 @@ extends Control
 ## sets `shot`, `t` (seconds into the shot) and `line` (current subtitle); some shots add their
 ## own nodes (ducks, comic panels, the torchlight). Visual only.
 
-enum Shot { CARD, TITLE, EYE, FALL, FOREST, COMIC, CAVE, OUT }
+enum Shot { CARD, TITLE, EYE, FALL, FOREST, COMIC, CAVE, OUT, EPILOGUE }
 
 const INK := Color(0.07, 0.06, 0.08)
 const STAR := Color(1.0, 0.82, 0.32)
@@ -48,6 +48,9 @@ var _actors: Array[Node] = []
 var _elder: DuckRig = null
 var _panels: Array[Control] = []
 var _hero: DuckRig = null
+## Look of the EPILOGUE shot (Phase 14d, the four endings): "full", "scar", "doubt" or "corrupt".
+## Set before `set_shot(Shot.EPILOGUE)`.
+var epilogue_style: String = "full"
 
 
 func _ready() -> void:
@@ -79,6 +82,8 @@ func set_shot(next: Shot) -> void:
 		Shot.CAVE:
 			_elder = _add_duck(DuckRig.Look.GRANDFATHER, Vector2(230, 600), 2.6)
 			_elder.gesture = DuckRig.Gesture.HOLD_TORCH
+		Shot.EPILOGUE:
+			_build_epilogue()
 	queue_redraw()
 
 
@@ -168,6 +173,8 @@ func _draw() -> void:
 			_draw_cave()
 		Shot.OUT:
 			draw_rect(Rect2(Vector2(-20, -20), DESIGN + Vector2(40, 40)), Color.BLACK)
+		Shot.EPILOGUE:
+			_draw_epilogue()
 	draw_set_transform_matrix(Transform2D.IDENTITY)
 
 
@@ -2163,6 +2170,90 @@ func _animate_elder(delta: float) -> void:
 	else:
 		_elder.scale.x = absf(_elder.scale.x)
 	torch_point = cave_torch()
+
+
+# =====================================================================================
+# 8. The epilogue (the four endings)
+# =====================================================================================
+
+## Sky, stars and ground of each ending. "dir" is where the stars drift (-1 up, +1 down), "count"
+## how many there are, "speed" how fast.
+const EPILOGUE_LOOKS: Dictionary = {
+	"full": {"top": Color("1d2b5e"), "bottom": Color("f2b36a"), "star": Color(1.0, 0.86, 0.4), "ground": Color("2a3b2e"), "dir": -1.0, "count": 40, "speed": 22.0},
+	"scar": {"top": Color("241f4a"), "bottom": Color("b9605a"), "star": Color(1.0, 0.8, 0.55), "ground": Color("2b2a33"), "dir": -0.3, "count": 26, "speed": 12.0},
+	"doubt": {"top": Color("101428"), "bottom": Color("4a5878"), "star": Color(0.85, 0.9, 1.0), "ground": Color("1b2128"), "dir": 0.0, "count": 12, "speed": 0.0},
+	"corrupt": {"top": Color("12040a"), "bottom": Color("7a1220"), "star": Color(1.0, 0.25, 0.2), "ground": Color("120a10"), "dir": 1.0, "count": 34, "speed": 70.0},
+}
+
+
+func _epilogue_look() -> Dictionary:
+	return EPILOGUE_LOOKS.get(epilogue_style, EPILOGUE_LOOKS["full"]) as Dictionary
+
+
+## The hero (and the grandfather, who faces him) in the pose of the chosen ending.
+func _build_epilogue() -> void:
+	var elder_pos := Vector2(760, 610)
+	var hero_pos := Vector2(540, 610)
+	var hero_scale: float = 2.8
+	var elder_scale: float = 2.6
+	match epilogue_style:
+		"scar":
+			hero_pos = Vector2(560, 610)
+		"doubt":
+			hero_pos = Vector2(470, 610)
+			elder_pos = Vector2(930, 610)
+			elder_scale = 2.3
+		"corrupt":
+			hero_pos = Vector2(620, 610)
+			hero_scale = 3.2
+			elder_pos = Vector2(1040, 610)
+			elder_scale = 2.2
+	_hero = _add_duck(DuckRig.Look.HERO, hero_pos, hero_scale)
+	_elder = _add_duck(DuckRig.Look.GRANDFATHER, elder_pos, elder_scale)
+	_elder.scale.x = -absf(_elder.scale.x)
+	_elder.gesture = DuckRig.Gesture.IDLE if epilogue_style == "corrupt" else DuckRig.Gesture.TALK
+	match epilogue_style:
+		"full":
+			_hero.aura_color = Color(1.0, 0.86, 0.45, 0.34)
+			_hero.eye_tint = Color(1.0, 0.9, 0.5, 0.7)
+		"scar":
+			_hero.aura_color = Color(1.0, 0.62, 0.4, 0.2)
+			_hero.eye_tint = Color(1.0, 0.7, 0.45, 0.5)
+		"doubt":
+			_hero.eye_tint = Color(0.9, 0.8, 0.55, 0.4)
+		"corrupt":
+			_hero.aura_color = Color(0.62, 0.25, 0.92, 0.42)
+			_hero.eye_tint = Color(0.8, 0.35, 1.0, 0.95)
+
+
+func _draw_epilogue() -> void:
+	var look: Dictionary = _epilogue_look()
+	var top: Color = look["top"]
+	var bottom: Color = look["bottom"]
+	for i in 14:
+		var k: float = float(i) / 13.0
+		draw_rect(Rect2(-20, -20.0 + float(i) * 55.0, 1320, 56.0), top.lerp(bottom, k * k))
+	var star_color: Color = look["star"]
+	var dir: float = look["dir"]
+	var speed: float = look["speed"]
+	for i in int(look["count"]):
+		var x: float = 40.0 + _h(i + 900) * 1200.0
+		var y: float = fposmod(_h(i + 940) * 560.0 + dir * speed * t * (0.6 + _h(i + 980)), 560.0)
+		var twinkle: float = 0.55 + 0.45 * sin(t * 2.0 + float(i))
+		var r: float = 4.0 + _h(i + 1000) * 6.0
+		draw_circle(Vector2(x, y), r * 2.6, Color(star_color, 0.12 * twinkle))
+		if epilogue_style == "corrupt":
+			draw_line(Vector2(x, y), Vector2(x - 10.0, y - 34.0), Color(star_color, 0.5 * twinkle), 3.0, true)
+		draw_circle(Vector2(x, y), r, Color(star_color, 0.55 + 0.4 * twinkle))
+	if epilogue_style == "doubt":
+		# The one light that did not fall.
+		_star(Vector2(980, 170), 30.0, Color(1.0, 0.95, 0.7))
+		draw_circle(Vector2(980, 170), 70.0, Color(1.0, 0.95, 0.7, 0.12))
+	var ground: Color = look["ground"]
+	var hill := PackedVector2Array([Vector2(-20, 640), Vector2(-20, 560), Vector2(240, 520), Vector2(520, 575), Vector2(820, 530), Vector2(1100, 570), Vector2(1300, 540), Vector2(1300, 640)])
+	draw_colored_polygon(hill, ground.lightened(0.08))
+	_ink_outline(hill, 4.0)
+	draw_rect(Rect2(-20, 600, 1320, 140), ground)
 
 
 # =====================================================================================

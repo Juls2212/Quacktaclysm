@@ -89,6 +89,8 @@ var _wipe: UiFx
 
 func _ready() -> void:
 	if skip_when_headless and DisplayServer.get_name() == "headless":
+		# _process must not run before the node is freed: nothing below was built.
+		set_process(false)
 		queue_free()
 		return
 	process_mode = Node.PROCESS_MODE_ALWAYS
