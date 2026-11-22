@@ -39,3 +39,4 @@ neutral = SubResource("Look_neutral")
 corrupt = SubResource("Look_corrupt")
 fade_time = 1.4
 toggle_text = "Efectos de corrupción"
+ai_toggle_text = "Adaptación con IA"
