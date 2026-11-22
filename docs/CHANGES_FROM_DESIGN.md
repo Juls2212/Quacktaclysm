@@ -155,3 +155,15 @@ El primer hueco pasa de 380 a 336 px (regla del 88 % del alcance de salto + dobl
 ## Fase 15e-3: retroalimentación de la guardia del jefe 3
 
 Sin cambios de balance: se añadieron la etiqueta «BLOQUEADO», el medidor de guardia bajo la barra del jefe y una pista de una vez por pelea. Jefes 1 y 2 sin cambios.
+
+## Fase 16a: Director de IA local
+
+Nuevo: telemetría en memoria, planificador local determinista y plan por nivel (enemigos extra y pesos de patrones del jefe, dentro de topes). Activo desde el nivel 2. Sin red y sin IA remota todavía; sin claves de guardado ni autoloads nuevos. El nivel 1 y cualquier carga sin telemetría usan el plan neutro, idéntico al comportamiento anterior.
+
+## Fase 16b: Director de IA remoto
+
+La IA remota propone el plan del siguiente nivel (extras, pesos de patrones, tema y epílogo) dentro de los mismos topes y por la misma puerta de validación que el plan local, con el plan local como respaldo. Nueva opción «Adaptación con IA». Sin texto libre, sin claves de guardado ni autoloads nuevos; `max_profile_distance` sigue en 0.
+
+## Fase 16c: la parte visible del Director
+
+Nuevo: una línea breve del abuelo al empezar cada nivel (recuerdo en los niveles 1 y 2, voz directa en el 3), su reflejo de estrellas en el cielo y tres variantes de epílogo por final (12 textos). La petición al servicio admite `next_level = 4` (el final) y la respuesta un campo opcional `grandfather_line`. Los finales siguen decididos solo por las almas liberadas. Sin claves de guardado ni autoloads nuevos; la línea y la variante no se guardan.
