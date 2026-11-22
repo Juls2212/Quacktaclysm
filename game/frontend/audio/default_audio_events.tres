@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="AudioEvents" load_steps=30 format=3]
+[gd_resource type="Resource" script_class="AudioEvents" load_steps=31 format=3]
 
 [ext_resource type="Script" path="res://frontend/audio/audio_events.gd" id="1_events"]
 [ext_resource type="Script" path="res://frontend/audio/audio_event.gd" id="2_event"]
@@ -300,9 +300,20 @@ cooldown = 2.0
 max_voices = 1
 note = "El jefe poseido vuelve a bajar: el golpe que cierra la posesion."
 
+[sub_resource type="Resource" id="Event_grandfather_voice"]
+script = ExtResource("2_event")
+id = &"grandfather_voice"
+files = Array[String](["soul_fragment.wav"])
+volume_db = -14.0
+pitch_min = 0.85
+pitch_max = 0.9
+cooldown = 3.0
+max_voices = 1
+note = "La voz del abuelo aparece al empezar el nivel (suave)."
+
 [resource]
 script = ExtResource("1_events")
-events = [SubResource("Event_footstep"), SubResource("Event_exorcism"), SubResource("Event_boss_vs_sting"), SubResource("Event_title_card"), SubResource("Event_transition"), SubResource("Event_portal_lit"), SubResource("Event_portal_enter"), SubResource("Event_projectile_impact_world"), SubResource("Event_projectile_impact_player"), SubResource("Event_projectile_impact_enemy"), SubResource("Event_wave_impact"), SubResource("Event_wave_impact_world"), SubResource("Event_game_over"), SubResource("Event_soul_gain"), SubResource("Event_focus_start"), SubResource("Event_heal_done"), SubResource("Event_heal_denied"), SubResource("Event_soul_full"), SubResource("Event_pad_bounce"), SubResource("Event_double_jump"), SubResource("Event_spike_warning"), SubResource("Event_spike_rise"), SubResource("Event_boss_leap"), SubResource("Event_leap_land"), SubResource("Event_possession_start"), SubResource("Event_possession_roar"), SubResource("Event_possession_slam")]
+events = [SubResource("Event_footstep"), SubResource("Event_exorcism"), SubResource("Event_boss_vs_sting"), SubResource("Event_title_card"), SubResource("Event_transition"), SubResource("Event_portal_lit"), SubResource("Event_portal_enter"), SubResource("Event_projectile_impact_world"), SubResource("Event_projectile_impact_player"), SubResource("Event_projectile_impact_enemy"), SubResource("Event_wave_impact"), SubResource("Event_wave_impact_world"), SubResource("Event_game_over"), SubResource("Event_soul_gain"), SubResource("Event_focus_start"), SubResource("Event_heal_done"), SubResource("Event_heal_denied"), SubResource("Event_soul_full"), SubResource("Event_pad_bounce"), SubResource("Event_double_jump"), SubResource("Event_spike_warning"), SubResource("Event_spike_rise"), SubResource("Event_boss_leap"), SubResource("Event_leap_land"), SubResource("Event_possession_start"), SubResource("Event_possession_roar"), SubResource("Event_possession_slam"), SubResource("Event_grandfather_voice")]
 boss_music = {
 1: ["the_evil_one.ogg", 1.0],
 2: ["treacherous_path.ogg", 0.92],
