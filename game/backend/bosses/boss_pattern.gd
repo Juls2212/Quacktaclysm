@@ -26,6 +26,8 @@ const PHASE_RECOVERY: StringName = &"recovery"
 
 @export var pattern_id: StringName = &""
 @export_range(0.0, 100.0, 0.1) var weight: float = 1.0
+## The weight the scene gave (set once by BossBase.apply_pattern_weights, so a plan never compounds). -1 = not read yet.
+var base_weight: float = -1.0
 @export_range(1, 99, 1) var min_phase: int = 1
 @export_range(1, 99, 1) var max_phase: int = 2
 ## 0 = a normal pattern of the rotation. 1, 2, 3... = a FALLBACK: never chosen at random, used (lowest number first)
