@@ -42,14 +42,28 @@ func _exit_tree() -> void:
 		_http.cancel_request()
 
 
-## Starts a request and returns its id (> 0). Never blocks.
+## Starts a profile request and returns its id (> 0). Never blocks.
 func request_profile(payload: Dictionary) -> int:
-	if in_flight:
-		cancel()
+	_ensure_config()
+	return _request(config.resolve_profile_url(), payload, config.request_timeout_seconds)
+
+
+## Starts an AI Director plan request (Phase 16b): its own endpoint and its own, tighter timeout.
+func request_director(payload: Dictionary) -> int:
+	_ensure_config()
+	return _request(config.resolve_director_url(), payload, config.director_timeout_seconds)
+
+
+func _ensure_config() -> void:
 	if config == null:
 		config = load(DEFAULT_CONFIG_PATH) as AiServiceConfig
 		if config == null:
 			config = AiServiceConfig.new()
+
+
+func _request(url: String, payload: Dictionary, timeout_seconds: float) -> int:
+	if in_flight:
+		cancel()
 	_next_id += 1
 	var request_id: int = _next_id
 	_active_id = request_id
@@ -57,7 +71,6 @@ func request_profile(payload: Dictionary) -> int:
 	if not config.enabled:
 		_fail_later(request_id, STATUS_DISABLED, "AI service disabled in config")
 		return request_id
-	var url: String = config.resolve_profile_url()
 	if url.is_empty():
 		_fail_later(request_id, STATUS_INVALID_URL, "base URL must start with http:// or https://")
 		return request_id
@@ -69,7 +82,7 @@ func request_profile(payload: Dictionary) -> int:
 		_fail_later(request_id, STATUS_CONNECTION_FAILED, "client is not in the scene tree")
 		return request_id
 	_ensure_http()
-	_http.timeout = config.request_timeout_seconds
+	_http.timeout = timeout_seconds
 	_http.body_size_limit = config.max_response_bytes
 	_http.cancel_request()
 	var error: Error = _http.request(url, _HEADERS, HTTPClient.METHOD_POST, body)
