@@ -133,6 +133,16 @@ Para repetir con otras elecciones: Menú principal → «Nueva partida» (confir
 | POS-05 | Posesión | Muere en plena secuencia (por ejemplo cayendo) o pausa con Esc durante ella | Al morir se cancela limpia, el jefe vuelve al inicio y el pato reaparece libre; con la pausa la secuencia se detiene y sigue al reanudar | | |
 | POS-06 | Posesión | Reintenta el combate tras morir en la fase 2 | Empieza en la fase 1 sin rojo; la secuencia vuelve a ocurrir al cruzar la línea; no suena el sting de la fase 2 encima de los sonidos de la posesión | | |
 | BAL-02 | Jefe 2 | Pelea el jefe 2 completo | El salto del jefe se ve menos seguido que antes (peso 1,2 en la fase 2; recargas 7 s y 8 s); sigue siendo difícil pero se puede golpear (#76) | | |
+| IDL-01 | Jefe 2 sin pausas | Pelea el jefe 2 quedándote en otra plataforma, al otro lado, encima o sobre un nenúfar | El jefe siempre acaba atacando en menos de ~1,5 s (descarga hacia ti, salto hacia tu plataforma o pisotón); nunca se queda quieto (#84, #85) | | |
+| EMB-01 | Embestida | Lleva al jefe 2 a una plataforma y espera su embestida; luego míralo en el suelo cerca de un muro | En una plataforma nunca embiste; en el suelo el telegrafiado muestra el carril real (más corto junto a un muro) y el golpe cubre todo el carril | | |
+| NEN-03 | Nenúfares elevados | Salta desde el suelo hacia un nenúfar; camina por debajo; fíjate en el tallo | Los nenúfares flotan a unos 56 px; el tallo curvo se comprime como un muelle al lanzar; se camina por debajo sin que se active; hay que caer encima (#83) | | |
+| NEN-04 | Nenúfares elevados | Usa un nenúfar durante los pinchos de la fase 2 | La cima del nenúfar es un refugio; el suelo bajo él no (#86); el margen de refugio sigue siendo cómodo | | |
+| LAR-01 | Jefe 2 más corto | Pelea el jefe 2 completo | Dura menos que antes (50 PV); la línea de la barra está en 27,5 PV y la posesión sale una vez (#83) | | |
+| ONDA-01 | Colores de la onda | Lanza la onda sin fragmentos conservados, conservando uno del nivel 1 y conservando los dos | Azul-blanco, esmeralda y violeta con núcleo oscuro; cada uno con más estela y brillo; ninguno parece un proyectil enemigo (esos son rojo-naranja); el violeta se ve sobre el fondo corrupto | | |
+| ONDA-02 | Colores de la onda | Conserva el fragmento del nivel 1 o del 2 | La tarjeta «Onda de espada» enseña el color nuevo; el destello al impactar es del mismo color | | |
+| ONDA-03 | Daño de la onda | Contra el jefe 2, lanza solo ondas con el nivel 0 (sin fragmentos conservados) durante ~10 golpes y mira cuánta barra baja | Cada onda quita 1 PV de 50; se tardan unos 50 golpes (unos 50 s) | | |
+| ONDA-04 | Daño de la onda | Igual, con un fragmento conservado (nivel 1, esmeralda) | Cada onda quita 2 PV: unos 25 golpes (unos 22 s); se nota el doble que en el nivel 0; la tarjeta dice «Daño ×2,0» | | |
+| ONDA-05 | Daño de la onda | Igual, con los dos conservados (nivel 2, violeta) | Cada onda quita 3 PV: unos 17 golpes (unos 20 s); la tarjeta dice «Daño ×3,0»; el destello del impacto es el más grande; no resulta trivial contra el jefe 1 (#87) | | |
 | PAU-01 | Menús | Pausa con Esc y con P en un nivel; reanuda | Se abre y cierra bien; la música sigue; ninguna entrada se pierde | | |
 | PAU-02 | Menús | Ajusta los volúmenes en la pausa | La música y los efectos obedecen a los deslizadores y al volumen general | | |
 | GAM-01 | Menús | Muere a propósito (cae a un pozo o deja que te maten) | Sonido de muerte, música de Game Over, panel con sonido; «Reintentar» y «Menú» funcionan; el jefe no repite sus líneas | | |
@@ -142,3 +152,42 @@ Para repetir con otras elecciones: Menú principal → «Nueva partida» (confir
 | MEN-04 | Menús | Fundidos entre escenas y entre pausa y Game Over | Suaves, ni muy lentos ni bruscos (#5) | | |
 | GEN-01 | General | Una sesión completa de principio a fin | Sin errores en la consola de Godot; sin cuelgues; sin música apilada tras cambiar de nivel varias veces | | |
 | GEN-02 | General | Apunta la sensación de dificultad de cada nivel con cada perfil | Anota si algún jefe es demasiado fácil o difícil (compara con `docs/BALANCE_REPORT.md` si existe) (#2, #21, #24, #27) | | |
+
+## Jefe 3: El Ojo de la Tormenta (Fase 15e-1)
+
+- [ ] Fase 1: el ojo flota, baja cada ~3 s y puede golpearse con onda desde el suelo en el picado, y con espada desde el salto (simple o doble).
+- [ ] El rayo avisa >= 0,9 s con carril y chevrones; se esquiva saltando o con dash.
+- [ ] Las columnas avisan >= 1,0 s, golpean 0,4 s y siempre queda un carril seguro alcanzable.
+- [ ] Fase 2 (66,7 %): posesión; Kenzo con guardia (espada ligera y onda rebotan con chispa); tajo fuerte o tajo de dash x2 la rompe; aturdido 2,5 s; se regenera.
+- [ ] Fase 3 (33,3 %): segunda posesión, cae la guardia, el ojo vuelve, rayo y columnas más frecuentes.
+- [ ] La barra de vida muestra dos marcas que pulsan al cruzarse.
+- [ ] Con "Efectos de corrupción" desactivado no hay destellos.
+- [ ] Morir o reintentar en cualquier fase reinicia todo en la fase 1.
+
+## Nivel 3: huecos (Fase 15e-2)
+
+- [ ] Hueco 1 (485 px): necesita salto + doble salto + dash. Con solo doble salto o solo dash se cae.
+- [ ] Hueco 2 (460 px, el más fácil): igual combinación; el punto de reaparición es el checkpoint 1 de antes del hueco.
+- [ ] Hueco 3 (525 px, el más duro): doble salto tarde y dash a mitad de la caída; reaparece en el checkpoint 2.
+- [ ] Tras cada hueco hay suelo de sobra para esperar el enfriamiento del dash y ningún enemigo a menos de 150 px del borde (también las variantes corruptas).
+- [ ] Caer en cualquier hueco reaparece en el último checkpoint, sobre suelo firme, nunca pasado el hueco.
+- [ ] La arena del jefe 3 no tiene agujeros en ningún extremo ni se puede salir de ella.
+
+## Nivel 3: huecos tras el reequilibrio (Fase 15e-2b)
+
+- [ ] Hueco 1 (380 px, fácil): se cruza con salto + doble salto, sin dash.
+- [ ] Hueco 2 (450 px, medio): hacen falta las tres acciones.
+- [ ] Hueco 3 (484 px, difícil): las tres acciones con buena sincronía (doble salto tarde, dash a mitad de la caída).
+- [ ] El checkpoint anterior a cada hueco queda en el suelo previo, con carrera suficiente.
+
+## Nivel 3: hueco 1 tras el ajuste (Fase 15e-2c)
+
+- [ ] Hueco 1 (336 px): se cruza cómodamente con salto + doble salto, sin dash; el salto solo no llega.
+
+## Jefe 3: barra y guardia legibles (Fase 15e-3)
+
+- [ ] La barra baja en las tres fases: con espada ligera y onda en las fases 1 y 3, y con golpe pesado o tajo de dash en la fase 2.
+- [ ] En la fase 2 un golpe bloqueado muestra «BLOQUEADO» con escudo, chispa y sonido, y no mueve la barra.
+- [ ] Bajo la barra se ve el medidor de guardia (cajas de escudo) y «ATURDIDO: ¡GOLPEA!» al romperla.
+- [ ] La pista «Rompe la guardia con golpe pesado o tajo de dash» sale una vez por pelea (otra vez tras reintentar).
+- [ ] Con "Efectos de corrupción" desactivado la etiqueta y la pista siguen sin movimiento.

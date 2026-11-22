@@ -295,3 +295,38 @@ El audio lo reproduce `AudioDirector` (`game/frontend/audio/audio_director.gd`, 
 - **Arte propio:** el aspecto del jefe (aura, ojos, pose) está en `DuckRig._draw_possession_aura` / `_draw_possession_eyes`; la viñeta, en `possession_overlay.gdshader`; no hay texturas que sustituir salvo las del jefe mismo.
 - **Sonidos:** `possession_start`, `possession_roar`, `possession_slam` en `default_audio_events.tres` (archivos reutilizados, graves). El sting de la fase 2 de la 14b no suena cuando la secuencia ha corrido.
 - **Pruebas:** `phase15d_smoke_test`; el bucle corrupto de `flow_phase13_leak_test` sale de la fase 2 del jefe 2 con la posesión en marcha.
+
+## 21. Arreglos del jefe 2, nenúfares elevados y color de la onda (Fase 15d-bis)
+
+- **Patrones de reserva:** `BossPattern.fallback_priority` (0 = rotación normal; 1, 2, 3... = reserva, nunca al azar) y `BossStats.max_idle_time`. `BossBase._update_idle` pide un patrón de la rotación; si no hay, `_choose_fallback(false)` (el de menor número que pueda empezar) y, pasado `max_idle_time`, `_choose_fallback(true)` (ignora recargas). En `boss_two.tscn`: `FallbackVolley` (1: `ProjectileVolleyPattern` con `allow_steep_aim`), `FallbackLeap` (2: `LeapPattern` con `target_mode = NEAREST_TO_PLAYER`) y `FallbackStomp` (3: `LeapPattern` con `target_mode = FLOOR`, `skip_perch`, sin recarga). Para dar la misma garantía a otro jefe: poner `max_idle_time` en sus estadísticas y añadir sus nodos de reserva.
+- **Embestida con carril:** `ChargePattern.min_useful_lane` (220 px), `lane_available(boss, dirección)` (rayos contra la capa del mundo) y `planned_lane` (lo que dibuja el telegrafiado). Para que un patrón con trayecto no se desperdicie, hacer lo mismo: medir antes de `can_start`.
+- **Nenúfar elevado:** `BounceConfig.pad_height` (56), `trigger_size` (72×40), `top_margin` (6), `launch_velocity` (−930). La posición del nodo es el centro del área de disparo: `y = suelo − pad_height + (trigger_size.y / 2 − top_margin)`; `BouncePad.top_y()` y `floor_y()` dan la cima y el suelo. El tallo (`BouncePadArt`) no tiene colisión; `compression` (−0,45 a 1) lo lee la prueba. Colocar un nenúfar nuevo: instanciar `bounce_pad.tscn` con el nodo a `y = suelo − 42` para un suelo de 56 px.
+- **Onda por nivel:** cada `SwordWaveTier` tiene `tint`, `rim_color`, `core_color`, `glow_color`, `glow_strength` y `trail_length` (en `default_sword_wave_config.tres`); `ProjectileStats` los copia y `WaveGlow` (dos nodos `GlowBehind` / `RimFront` de `sword_wave_projectile.tscn`) los dibuja; `WaveBurst` es el destello del impacto. `AbilityCard.present(..., swatch)` recibe el nivel para enseñar el color.
+- **Pruebas:** `phase15d2_smoke_test` (mide el barrido de inactividad, el margen de refugio, los números del nenúfar y el contraste de la onda).
+
+## 22. Jefe 3: El Ojo de la Tormenta (Fase 15e-1)
+
+- El jefe 3 tiene 70 de vida y tres fases: ojo flotante (1), Kenzo con guardia en el suelo (2) y ojo con la tormenta a tope (3). Líneas al 66,7 % y 33,3 %.
+- **Añadir fases a un jefe:** rellena `phase_thresholds` en su `BossStats` (lista de ratios en orden descendente; vacía = `[phase_2_health_ratio]`, así los jefes 1 y 2 no cambian). `BossBase` cruza cada línea una vez: cancela el patrón, entra en transición, emite `phase_transition_started(n)` y luego `phase_changed(n)`. Los números de la fase 3 son `phase_3_speed_multiplier`, `phase_3_pattern_gap_multiplier` y `phase_3_cooldown_factor` (solo recorta enfriamientos, nunca telegraphs: `scale_telegraph_with_speed = false` en los patrones de tormenta). La barra de vida dibuja una marca por línea. La posesión corre en cada cruce (override propio en `default_possession_config.tres`).
+- Piezas nuevas: `BossHover` (vuelo, picados y `max_unhittable_time`), `BossGuard` (bloquea `light`/`wave`, se rompe con `heavy`/`dash_slash` tras `guard_break_hits`, aturdimiento, regeneración; engancha a `Hurtbox.hit_filter`), `BeamSweepPattern`, `LightningColumnsPattern` (siempre un carril seguro), `StompPattern`, `StormFx` y `GuardFx` (dibujo por código). `DamageInfo.attack_kind` / `Hitbox.attack_kind` identifican el tipo de golpe.
+- Prueba: `phase15e1_smoke_test`.
+
+## 23. Huecos del nivel 3 con doble salto (Fase 15e-2)
+
+- **Cómo diseñar un hueco desde la tabla de alcance** (alcance efectivo = recorrido del centro con la mejor sincronía + 58 px de margen de las reglas reales: 14 de saliente al despegar, 30 de coyote, 14 de solape al aterrizar; `phase15e2_smoke_test` los calcula de las estadísticas reales):
+  - salto 264, salto + doble salto 440, salto + dash 432, salto + doble salto + dash 609.
+  - Para exigir el dash además del doble salto: ancho > 440 y <= 88 % de 609 (536). Como mucho un tercio de los huecos por encima del 85 % (518).
+  - Tras cada hueco, un suelo de aterrizaje de al menos 200 px más 120 px de enfriamiento del dash (los suelos del nivel 3 miden >= 1025 px).
+- Huecos actuales (antes -> ahora): 285 -> 485, 175 -> 460, 285 -> 525; todos necesitan doble salto + dash. Todo lo posterior se desplazó 200, 485 y 725 px; los checkpoints siguen sobre el suelo previo a cada hueco.
+- Cambiar un ancho: mueve el suelo siguiente y todo lo que cuelga de él (plataformas, checkpoints, enemigos, puerta, muro, encuentro, jefe), la zona de bioma (centro del hueco), `camera_limits`, la zona de muerte y los límites `fallback_left/right` de los patrones de tormenta del jefe 3.
+- Los bots de prueba (`bot_phase13_soak_test`, `balance_measure`) cruzan huecos con salto, doble salto a ~0,6 s (mantenido ~20 fotogramas) y dash a ~1,15 s.
+
+## 24. Reequilibrio de los huecos del nivel 3 (Fase 15e-2b, sustituye a los valores de la sección 23)
+
+- Reglas: un hueco que exige la cadena completa (salto + doble salto + dash) mide como máximo el 88 % del recorrido del centro (550,8 px, es decir 484 px). Un hueco fácil se cruza con salto + doble salto y no exige el dash (máximo 88 % del alcance efectivo de 440 px). Ritmo: fácil, medio, difícil.
+- Huecos (antes -> ahora): 285 -> 380 (salto + doble salto, dash opcional), 175 -> 450 (las tres acciones), 285 -> 484 (las tres acciones).
+- Desplazamientos respecto al nivel original: suelo B +95, C +370 y D +569 px (antes de este ajuste: +200, +485 y +725). Los límites `fallback_left/right` del jefe 3 son 5699 y 6709.
+
+### Ajuste 15e-2c
+
+Hueco 1: 380 -> 336 px (88 % de 382,2; más ancho que los 264 px del salto solo; el dash sigue opcional). Todo lo posterior se desplazó otros -44 px: suelo B +51, C +326 y D +525 respecto al nivel original. `fallback_left/right` del jefe 3: 5655 y 6665. La tabla vigente es: 285 -> 336, 175 -> 450, 285 -> 484.

@@ -286,3 +286,136 @@ Peor valor de cada bioma de los tres niveles (todos los telegrafiados, el aviso 
 | storm | 3,11 |
 
 Peor valor general: **2,59** (telegrafiado del bruto sobre el bioma del pantano). El margen es corto: si en ventana real el rojo estorba, bajar `sky_tint` / `persistent_sky` en `default_possession_config.tres`.
+
+---
+
+## Fase 15d-bis: jefe 2 con 50 PV
+
+Cambio aplicado: vida del jefe 2 de 60 a 50 (línea de la fase 2 en el 55 %: de 33 a 27,5 PV). Ningún otro valor del jefe 2 cambia (el salto de la 15d se mantiene).
+
+Tiempo ideal para matarlo (todos los golpes aciertan, sin pausas; calculado con la tabla de DPS de la sección 1; no cuenta la transición de la fase 2, de unos 3 s con la posesión):
+
+| Ataque | DPS | 60 PV (antes) | 50 PV (ahora) |
+|---|---|---|---|
+| Espada | 2,22 | 27 s | **22,5 s** |
+| Golpe pesado | 2,31 | 26 s | 21,7 s |
+| Tajo de dash | 2,63 | 23 s | 19,0 s |
+| Onda nivel 0 | 1,00 | 60 s | 50 s |
+| Onda nivel 1 | 1,11 | 54 s | 45 s |
+| Onda nivel 2 | 1,67 | 36 s | 30 s |
+
+No se han repetido las simulaciones del bot en esta fase (el bot sigue sin usar nenúfares ni el doble salto); la prueba útil es la manual (`docs/QA_CHECKLIST.md`, LAR-01).
+
+### Números del nenúfar elevado (calculados a partir de las estadísticas del jugador, sin simulación)
+
+| Valor | Cifra |
+|---|---|
+| Cima del nenúfar sobre el suelo | 56 px (el salto del pato sube 112 px) |
+| Velocidad de lanzamiento | −930 px/s (antes −1030 desde el suelo) |
+| Subida desde la cima | 930² / (2 · 1800) = 240 px |
+| Los pies llegan a (56 + 6 de margen + 240) | ≈ 302 px sobre el suelo |
+| Piso alto de la arena | 250 px (margen de 52 px) |
+| Espacio hasta el techo (440 px − 302 px − 52 px del pato) | 86 px |
+| Doble salto desde el suelo (112 + 77 px) | 189 px, no llega al piso alto |
+
+El margen de refugio ante los pinchos con los nenúfares elevados lo calcula la prueba `phase15d2_smoke_test` con las estadísticas reales (línea `MEASURE|shelter with raised pads`). Una simulación previa fuera del juego dio un peor caso de 0,60 s de 1,2 s de aviso, es decir un margen de 0,60 s (se exige al menos 0,3 s).
+
+### Barrido de inactividad del jefe 2
+
+Rejilla de 7 posiciones del jefe (3 de suelo y 4 de plataforma) por 8 del pato (3 de suelo, 4 de plataforma y en el aire sobre un nenúfar), en la fase 1, y una rejilla menor en la fase 2 (91 combinaciones). En la primera ejecución de la prueba **las 91 combinaciones empezaron un ataque** (ninguna se quedó sin atacar): salieron 52 saltos (normales y de reserva), 19 embestidas, 11 tajos y 9 descargas. El jefe espera el hueco entre patrones (1,1 s en la fase 1, menos en la 2) y ese hueco ahora está limitado por `max_idle_time` (1,5 s). La cifra del peor tiempo de esa primera ejecución no es fiable (se contó en ticks de física con la escala de tiempo a 4): la prueba ya corregida mide el tiempo de juego real y lo imprime en la línea `MEASURE|boss 2 idle sweep`; por diseño el techo es 1,1-1,2 s (el hueco) y nunca más de 1,5 s.
+
+### Contraste de los colores de la onda
+
+Calculado fuera del juego con la regla de la 14e (el mejor entre el color, el borde claro, el núcleo oscuro y el contorno oscuro) contra los tres perfiles y los biomas de los tres niveles: nivel 0 4,19, nivel 1 4,04, nivel 2 3,79 en el peor caso; el violeta contra el fondo corrupto (solo borde claro y núcleo oscuro) 3,91. La prueba nueva vuelve a medirlos con los recursos del juego (líneas `MEASURE|wave contrast`).
+
+---
+
+## Fase 15d-ter: daño de la onda por nivel
+
+Solo cambia el daño de los niveles 1 y 2 de la onda (recarga, velocidad, alcance, perforación, caja de golpe y alma por golpe: igual).
+
+| Nivel | Daño antes → ahora | Recarga | Velocidad | Caja de golpe | Daño por segundo antes → ahora |
+|---|---|---|---|---|---|
+| 0 | 1 → 1 | 1,0 s | 520 px/s | 16 × 44 px | 1,00 → 1,00 |
+| 1 | 1 → **2** | 0,9 s | 580 px/s | 21,6 × 59,4 px | 1,11 → **2,22** |
+| 2 | 2 → **3** | 1,2 s | 640 px/s | 27,2 × 74,8 px | 1,67 → **2,50** |
+
+Referencias de la tabla de la sección 1: espada 2,22, golpe pesado 2,31, tajo de dash 2,63. El nivel 2 queda por debajo del tajo de dash y un 8 % por encima del golpe pesado (límite pedido: 15 %).
+
+### Tiempo ideal para matar a cada jefe solo con la onda (todos aciertan, sin pausas)
+
+| Jefe (vida) | Nivel 0 | Nivel 1 | Nivel 2 | Golpes de la onda (0 / 1 / 2) | Espada sola |
+|---|---|---|---|---|---|
+| 1 (40) | 40 s | 18,0 s | 16,0 s | 40 / 20 / 14 | 18 s |
+| 2 (50) | 50 s | 22,5 s | 20,0 s | 50 / 25 / 17 | 22,5 s |
+| 3 (80) | 80 s | 36,0 s | 32,0 s | 80 / 40 / 27 | 36 s |
+
+**Desviación del objetivo y de la regla:**
+- Objetivo del jefe 2: nivel 0 ≈ 50 s (cumplido), **nivel 1 ≈ 32 s (no alcanzable: 22,5 s)** y nivel 2 ≈ 20 s (cumplido). Con daño entero y la misma recarga el nivel 1 solo puede dar 45 s (daño 1) o 22,5 s (daño 2); se eligió 2.
+- Regla del jefe 1: el nivel 2 solo con la onda baja a **16 s**, algo por debajo del límite de unos 18 s. Bajar el daño del nivel 2 a 2 lo arreglaría (24 s) pero igualaría su daño al del nivel 1 y no cumpliría «el daño crece en cada nivel». Se mantiene 3 y se deja marcado (KNOWN_ISSUES #87). Jefe 3 con el nivel 2: 32 s (la espada sola: 36 s).
+- Alternativa si se quiere afinar sin tocar el daño: subir la recarga del nivel 2 (de 1,2 s a 1,35 s con daño 3 da 2,22 de daño por segundo: jefe 1 en 18 s y jefe 2 en 22,5 s, como el nivel 1), o dar al nivel 1 más recarga.
+
+### Enemigos normales (golpes de onda para matar)
+
+| Enemigo (vida) | Nivel 0 | Nivel 1 | Nivel 2 |
+|---|---|---|---|
+| Rápido (2) | 2 | **1** | **1** |
+| A distancia (2) | 2 | **1** | **1** |
+| Cuerpo a cuerpo (3) | 3 | **2** | **1** |
+| Bruto acorazado (8) | 8 | **4** | **3** |
+
+El nivel 0 no cambia. Los niveles superiores matan a algunos en menos golpes (permitido). La onda sigue dando 8 de alma por golpe, así que con menos golpes por enemigo se junta algo menos de alma por enemigo.
+
+## Fase 15e-1: jefe 3
+
+Medido por `phase15e1_smoke_test` (tiempo de juego real).
+
+- Vida 70: fase 1 = 24, fase 2 = 23, fase 3 = 23. Golpe máximo 1 corazón.
+- Solo espada ligera ideal: 31,5 s de daño + 6,4 s de posesiones = 39,8 s (por debajo de 60 s). Con la guardia, Kenzo ronda 12,2 s.
+- Solo onda (todos aciertan): nivel 0 = 70,0 s (70 golpes), nivel 1 = 31,5 s (35), nivel 2 = 28,0 s (24).
+- Ojo: altura 170 px, picado a 80 px cada 3,0 s durante 1,2 s (máximo sin picado medido 3,00 s de 4,0 permitidos); apogeo salto simple 106,8 px, doble 183,9 px.
+- Rayo: 34 x 110 px a 420 px/s, sobre un punto 0,386 s; ventana de salto 0,553 s, doble salto 0,972 s, solape en dash 0,145 s de 0,18 s.
+- Columnas: peor margen del carril seguro 0,67 s (mínimo exigido 0,3 s); hueco mínimo 120 px.
+- Inactividad máxima del jefe: 1,00 s (límite 1,5 s).
+- Contraste peor caso: telegraph rayo 4,18, telegraph columna 4,04, rayo activo 4,83, columna activa 4,83, brillo 3,44; con el rojo de posesión 6,05 (mínimo 2,5).
+
+## Fase 15e-2: alcance y huecos del nivel 3
+
+Alcance medido por `phase15e2_smoke_test` con un modelo paso a paso del movimiento real (recorrido del centro con la mejor sincronía; efectivo = + 58 px de margen de las reglas reales).
+
+| Combinación | Centro (px) | Efectivo (px) |
+|---|---|---|
+| Salto | 206,4 | 264 |
+| Salto + doble salto | 382,2 | 440 |
+| Salto + dash | 374,4 | 432 |
+| Salto + doble salto + dash | 550,8 | 609 |
+
+Mejor sincronía de las tres: doble salto 0,59 s y dash 1,15 s tras el salto.
+
+| Hueco | Antes | Ahora | % del alcance máximo | Necesita |
+|---|---|---|---|---|
+| 1 (x 1300-1785) | 285 | 485 | 80 % | doble salto + dash |
+| 2 (x 2900-3360) | 175 | 460 | 76 % | doble salto + dash |
+| 3 (x 4385-4910) | 285 | 525 | 86 % | doble salto + dash |
+
+Desplazamientos acumulados: +200, +485, +725 px. Enemigo más cercano a un borde: 150 px. Cruce con el jugador real: los tres huecos se cruzan con las tres acciones y no con doble salto solo, dash solo ni salto solo.
+
+## Fase 15e-2b: huecos del nivel 3 reequilibrados
+
+| Hueco | Original | 15e-2 | Ahora | Necesita | Margen (recorrido del centro) | Margen (efectivo) |
+|---|---|---|---|---|---|---|
+| 1 (x 1300-1680) | 285 | 485 | 380 | salto + doble salto (dash opcional) | 0,6 % (2 px de 382,2) | 13,7 % (60 px de 440) |
+| 2 (x 2795-3245) | 175 | 460 | 450 | las tres acciones | 18,3 % (101 px de 550,8) | 26,1 % (159 px de 609) |
+| 3 (x 4270-4754) | 285 | 525 | 484 | las tres acciones | 12,1 % (67 px de 550,8) | 20,5 % (125 px de 609) |
+
+Las cifras de alcance no cambian (206,4 / 382,2 / 374,4 / 550,8 en recorrido del centro). Desplazamientos: +95, +370 y +569 px. El jugador real cruza cada hueco con sus acciones y no sin ellas.
+
+## Fase 15e-2c: tabla vigente de huecos del nivel 3
+
+| Hueco | Original | Ahora | Necesita | Margen (centro) | Margen (efectivo) |
+|---|---|---|---|---|---|
+| 1 (x 1300-1636) | 285 | 336 | salto + doble salto (dash opcional) | 12,1 % (46 px de 382,2) | 23,6 % (104 px de 440) |
+| 2 (x 2751-3201) | 175 | 450 | las tres acciones | 18,3 % (101 px de 550,8) | 26,1 % (159 px de 609) |
+| 3 (x 4226-4710) | 285 | 484 | las tres acciones | 12,1 % (67 px de 550,8) | 20,5 % (125 px de 609) |
+
+Desplazamientos respecto al original: +51, +326 y +525 px.

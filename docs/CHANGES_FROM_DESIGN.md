@@ -121,3 +121,37 @@ Lista para actualizar los documentos de diseño del proyecto. Solo recoge lo que
 - **Después:** brillo rojo del jefe y tinte rojo sutil del fondo hasta que el jefe muere o se cancela el combate; la barra del jefe queda teñida y su línea de mitad late al cruzarla.
 - **Accesibilidad:** con «Efectos de corrupción» desactivado no hay tinte, destello, viñeta ni temblor, solo una pausa de 1 s con el cambio de pose y el sonido. Ningún destello es más rápido que 3 por segundo (hay 2 en 3 s), su opacidad máxima es 0,3 y son rojos, nunca blancos.
 - **Ajuste del jefe 2 (el único cambio de valores de la fase):** peso del salto de la fase 2 de 1,8 a 1,2 y recargas de `Leap` y `LeapLight` de 5 s y 6 s a 7 s y 8 s. Los pinchos (aviso 1,2 s, descanso 4 s), los nenúfares y todo lo demás quedan igual.
+
+## Fase 15d-bis: arreglos del jefe 2, jefe 2 más corto y color de la onda por nivel
+
+- **Embestida en plataformas:** el jefe 2 elegía la embestida estando en una plataforma, corría hasta el borde y se paraba sin hacer nada. Ahora la embestida mide su carril antes de empezar (rayos hasta el primer muro o el primer borde; hace falta un carril útil de 220 px) y no es elegible si no lo hay; el telegrafiado dibuja el carril real (recortado por un muro) y la caja de golpe va activa a lo largo de todo él. Si el pato cambia de lado durante el telegrafiado, el jefe solo se vuelve si el otro lado también tiene carril útil.
+- **El jefe nunca se queda sin atacar:** nuevo campo `fallback_priority` en los patrones y `max_idle_time` en las estadísticas del jefe (1,5 s en el jefe 2, 0 = sin garantía en los otros). Si ningún patrón de la rotación es elegible usa un patrón de reserva por orden: (1) descarga apuntada (permite apuntar hacia arriba o abajo), (2) salto hacia el anclaje más cercano al pato, (3) pisotón al suelo (sin recarga). Los bosses 1 y 3 no se tocan (ver `docs/KNOWN_ISSUES.md` #84).
+- **Nenúfares elevados:** a 56 px del suelo sobre un tallo-muelle dibujado por código (no sólido); el área de disparo pasa a la parte alta del nenúfar; hay que saltar (el salto sube 112 px) y caer encima; andar por debajo no lo activa. Lanzamiento de −1030 a −930 px/s (sube 240 px desde la cima del nenúfar: los pies llegan a unos 302 px sobre el suelo, 52 px por encima del piso alto, que sigue siendo accesible solo por nenúfar o doble salto). El suelo bajo el nenúfar ya no se salva de los pinchos (`cut_out_pads` apagado): el nenúfar y las plataformas están por encima de la banda peligrosa.
+- **Jefe 2 más corto:** 60 → 50 PV. La línea de la fase 2 (55 %) pasa de 33 a 27,5 PV y la posesión se dispara igual, una vez.
+- **Onda de espada:** colores por nivel (azul-blanco, esmeralda, violeta con núcleo oscuro y borde claro), estela más larga y brillo más intenso por nivel, sin tocar la caja de golpe, la velocidad, el daño ni la recarga; la tarjeta de la mejora de la onda enseña el color y el destello del impacto lo usa.
+
+## Fase 15d-ter: daño de la onda de espada por nivel
+
+- **Conservar un fragmento ahora se nota:** el daño de la onda pasa de 1 / 1 / 2 a **1 / 2 / 3** por golpe (niveles 0 / 1 / 2). Contra el jefe 2 (50 PV) son 50, 25 y 17 golpes. Solo cambia el daño: recarga, velocidad, alcance, perforación, caja de golpe y alma por golpe (8) son los de antes; el nivel 0 queda exactamente igual.
+- **Límite del equilibrio:** el daño de la onda es un entero, así que con las recargas actuales los únicos valores posibles son 1 → 45 s o 2 → 22,5 s en el nivel 1. No se puede llegar a los 32 s del objetivo; se eligió 2 (el paso mínimo por encima del nivel 0). El nivel 2 con 3 de daño (2,50 de daño por segundo) queda por debajo del tajo de dash (2,63) y un 8 % por encima del golpe pesado (2,31): dentro del 15 % pedido. A cambio, el jefe 1 con el nivel 2 sólo con la onda caería a 16 s (el límite pedido era unos 18 s): ver `docs/BALANCE_REPORT.md`.
+- **Tarjeta y destello:** la tarjeta de la mejora de la onda dice «Daño ×2,0 (de 1 a 2 por golpe)» (el multiplicador sale del recurso) y el destello del impacto crece por nivel (×1,0 / ×1,25 / ×1,5), solo visual.
+
+## Fase 15e-1: jefe 3 rediseñado en tres fases (cambio deliberado de diseño)
+
+El jefe 3 pasa de 80 a 70 de vida y de una línea (50 %) a dos (66,7 % y 33,3 %). Se pierden sus dos volleys de proyectiles; ahora tiene rayo barredor y columnas de relámpago (ojo flotante), guardia (Kenzo) y ambas cosas más agresivas en la fase 3. Los jefes 1 y 2 no cambian. No hay claves de guardado ni autoloads nuevos.
+
+## Fase 15e-2: huecos del nivel 3 rediseñados para el doble salto (cambio deliberado de diseño)
+
+Los tres huecos del nivel 3 pasan de 285/175/285 px a 485/460/525 px y exigen salto + doble salto + dash. El nivel es 725 px más largo y su arena se desplazó entera sin cambiar su forma. Niveles 1 y 2 sin cambios. Sin claves de guardado ni autoloads nuevos.
+
+## Fase 15e-2b: reequilibrio de los huecos del nivel 3
+
+Los huecos pasan de 485/460/525 a 380/450/484 px para dar ritmo (fácil, medio, difícil): el primero ya no exige el dash. El nivel 3 es 569 px más largo que el original (antes 725).
+
+## Fase 15e-2c: hueco 1 del nivel 3 a 336 px
+
+El primer hueco pasa de 380 a 336 px (regla del 88 % del alcance de salto + doble salto). Los huecos 2 y 3 siguen en 450 y 484 px. El nivel 3 es 525 px más largo que el original.
+
+## Fase 15e-3: retroalimentación de la guardia del jefe 3
+
+Sin cambios de balance: se añadieron la etiqueta «BLOQUEADO», el medidor de guardia bajo la barra del jefe y una pista de una vez por pelea. Jefes 1 y 2 sin cambios.

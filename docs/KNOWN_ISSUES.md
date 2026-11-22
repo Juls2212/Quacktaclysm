@@ -93,7 +93,36 @@ Lista honesta a fecha de la Fase 14g. **Nadie ha jugado el juego con ventana**: 
 | 80 | El **contraste** sobre el fondo rojo se ha calculado (peor 2,59 contra el umbral 2,5), no mirado: queda poco margen en el pantano; las plataformas, los pinchos y los proyectiles pueden leerse peor sobre un fondo rojizo | Media | Comprobarlo en el nivel 2 en la fase 2 |
 | 81 | La secuencia **alarga la transición de 1,5 s a unos 3 s** en las ejecuciones normales; en la fase 2 el jugador espera algo más quieto. En las automáticas (headless) no hay secuencia | Info | Decisión de diseño |
 | 82 | El jefe se eleva solo **visualmente** (el cuerpo y su caja de colisión se quedan en el suelo): no se le puede golpear «en el aire» durante la secuencia porque es invulnerable, pero el dibujo y la caja no coinciden mientras dura | Info | Aceptado |
+| 83 | **Sin verificar en una ventana real (Fase 15d-bis):** la sensación y la altura del nenúfar elevado (salto desde el suelo hasta una cima a 56 px, muelle del tallo), la duración del jefe 2 con 50 PV y la legibilidad de los tres colores de la onda y de su destello | Alta | Jugar el jefe 2; retocar `default_bounce_config.tres` y `default_sword_wave_config.tres` |
+| 84 | **Los jefes 1 y 3 pueden quedarse sin atacar** hasta que termina una recarga (jefe 1: hasta unos 3 s con el pato lejos y la embestida en recarga en la fase 1; jefe 3: hasta unos 2,5 s). No se han tocado para no cambiar su equilibrio; el mecanismo (`max_idle_time` y patrones de reserva) está listo para la fase del jefe 3 | Media | Decidir en la fase del jefe 3 |
+| 85 | Los **patrones de reserva** del jefe 2 (descarga apuntada, salto hacia el pato y pisotón) hacen que el jefe ataque más seguido en plataformas: puede subir la dificultad | Media | Probarlo; bajar su peso no hace falta (no entran al azar) pero se pueden alargar sus recargas |
+| 86 | El suelo **bajo un nenúfar** sí lleva pinchos (el nenúfar ya no está a ras); quien se refugia bajo un nenúfar se pincha | Info | Decisión de diseño |
+| 87 | **No se ha jugado el daño de la onda por nivel (Fase 15d-ter):** si 1 / 2 / 3 se siente como una mejora real y no se pasa de fuerte; el nivel 1 (2,22 de daño por segundo) iguala a la espada ligera y el 2 (2,50) la supera; el jefe 1 con la onda de nivel 2 sola cae a 16 s en teoría | Alta | Probar los tres niveles en el jefe 2 y el nivel 2 en el jefe 1; ajustar `damage` en `default_sword_wave_config.tres` |
+| 88 | El daño de la onda es **entero**: no se puede afinar entre 1 y 2 sin cambiar la recarga (decisión de la Fase 15d-ter: no tocar nada más). Si el nivel 1 resulta demasiado fuerte, la alternativa es volver a daño 1 con más alcance o una recarga mayor | Info | Ver `docs/BALANCE_REPORT.md` |
 
 ## Resultado de las pruebas de resistencia (Fase 13a)
 
 El bot de resistencia (5400 fotogramas por nivel, tres semillas por escena, más duelo con cada jefe) y la prueba de fugas de escenas **no encontraron errores**. Limitaciones del bot: no navega los huecos a propósito (muere y reaparece), casi nunca derrota a los jefes dentro de los niveles (el duelo con vida ampliada sí demuestra que los tres combates terminan) y no juzga la sensación de juego.
+
+## Fase 15e-1 (jefe 3)
+
+- Sin verificar jugando: sensación del rayo, columnas, guardia y destello de tormenta; los números salen de cálculos y de `phase15e1_smoke_test`.
+- No se ejecutaron la suite completa ni la prueba de resistencia tras el cambio; las pruebas antiguas que tocan valores del jefe 3 se actualizaron a propósito pero no se volvieron a correr todas.
+- La geometría del nivel 3 no cambia (la Fase 15e-2 se ocupa de los huecos); el rayo usa el suelo detectado por rayos y valores de reserva exportados.
+
+## Fase 15e-2 (huecos del nivel 3)
+
+- Sin verificar en ventana real: dificultad y ritmo de los tres huecos (el más duro deja un 14 % de margen y pide el doble salto tarde y el dash a mitad de la caída) y la duración del nivel 3 (725 px más largo).
+- No se ejecutaron la suite completa, la prueba de resistencia ni las simulaciones de balance. Los bots de prueba se enseñaron a usar el doble salto; la próxima corrida completa debe confirmarlo.
+- `phase15e1_smoke_test` tiene las coordenadas de la arena desplazadas +725 pero no se volvió a ejecutar tras el desplazamiento.
+
+## Fase 15e-2b
+
+- Sin verificar en ventana real: el ritmo de los huecos. El hueco 1 (380 px) deja solo 2 px de margen sobre el recorrido del centro de salto + doble salto (382,2), aunque el alcance efectivo con coyote y solape da 60 px; el hueco 3 (484 px) deja un 12,1 % sobre el recorrido del centro.
+- No se ejecutaron la suite completa, el soak ni `phase15e1_smoke_test` tras el nuevo desplazamiento (sus coordenadas se movieron -156 px).
+
+## Fase 15e-3: la barra del jefe 3 «no bajaba» tras la fase 1
+
+- Encontrado: no era un fallo de la barra. `phase15e1_smoke_test` comprobó que la barra coincide con la vida del jefe tras cada tipo de golpe en las tres fases y tras las dos posesiones, y que el jefe no queda retenido ni invulnerable. La causa es el diseño de la guardia de Kenzo (fase 2): espada ligera, onda y el primer golpe pesado o de dash se bloquean sin daño, así que la barra solo se mueve con el segundo golpe pesado o de dash, y el jugador no lo notaba.
+- Corregido (solo retroalimentación): etiqueta «BLOQUEADO» con escudo en el punto del golpe, medidor de guardia bajo la barra (con «ATURDIDO: ¡GOLPEA!» al romperla) y una pista, una vez por pelea: «Rompe la guardia con golpe pesado o tajo de dash». Con efectos de corrupción desactivados la etiqueta y la pista siguen, sin ascenso ni chispas.
+- No verificado con el espadazo real en ventana; la prueba usa los mismos tipos de golpe contra la hurtbox. El ritmo de la fase 2 (dos golpes pesados seguidos antes de poder dañar) puede seguir sintiéndose duro: es una decisión de balance pendiente.
