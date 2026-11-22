@@ -208,6 +208,7 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	_release_lock()
+	AudioDirector.release_music_duck(self)
 
 
 func _read_names() -> void:
@@ -393,6 +394,8 @@ func _start_vs() -> void:
 	_hero.visible = true
 	_foe.visible = true
 	_set_vs_alpha(1.0)
+	# The music steps back during the full presentation.
+	AudioDirector.set_music_duck(self, AudioEvents.get_default().duck_presentation_db)
 	if not _holds_lock:
 		_holds_lock = true
 		PauseLock.request(self, get_tree())
@@ -418,6 +421,15 @@ func _start_leaving() -> void:
 	_dark_target = 1.0 if _fight else 0.0
 
 
+## Emitted when the full VS presentation is over (the boss intro waits for it).
+signal presentation_finished
+
+
+## True while the full VS presentation is on screen.
+func is_presenting() -> bool:
+	return _vs == Vs.FULL
+
+
 func _end_vs() -> void:
 	var was_full: bool = _vs == Vs.FULL
 	_vs = Vs.NONE
@@ -427,9 +439,12 @@ func _end_vs() -> void:
 		_layer.visible = false
 		_layer.offset = Vector2.ZERO
 	_release_lock()
+	AudioDirector.release_music_duck(self)
 	# The presentation is over: the fight is framed.
 	if was_full and _fight:
 		_begin_arena_cam()
+	if was_full:
+		presentation_finished.emit()
 
 
 func _clear_vs_bits() -> void:
@@ -1163,6 +1178,11 @@ func _release_cam() -> void:
 
 
 ## A short light shake of the arena shot (only with camera shake on in the settings).
+## A light camera shake from outside (the possession sequence); it respects the camera-shake option.
+func kick(power: float) -> void:
+	_kick(power)
+
+
 func _kick(power: float) -> void:
 	if not _shake_ok or _cam == null:
 		return

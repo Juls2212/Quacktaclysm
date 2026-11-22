@@ -11,6 +11,9 @@ signal activated
 signal encounter_reset
 signal health_changed(current: int, maximum: int)
 signal phase_changed(phase: int)
+## The boss crossed its phase line and entered the transition state; `next_phase` is the phase that follows (Phase 15d).
+## Presentation (the possession sequence) may hold the transition with `hold_transition` until it is over.
+signal phase_transition_started(next_phase: int)
 signal pattern_started(pattern_id: StringName)
 signal pattern_finished(pattern_id: StringName)
 signal pattern_cancelled(pattern_id: StringName)
@@ -55,6 +58,9 @@ var _gap_left: float = 0.0
 var _transition_left: float = 0.0
 var _fade_left: float = 0.0
 var _phase_2_started: bool = false
+## Owners that keep the phase transition open (the possession sequence). While any holds it the boss stays
+## inactive and invulnerable and its pattern cooldowns do not advance.
+var _transition_holders: Array = []
 var _phase_speed_multiplier: float = 1.0
 var _spawn_position: Vector2 = Vector2.ZERO
 var _ledge_origin: Vector2 = Vector2.ZERO
@@ -92,6 +98,11 @@ func _ready() -> void:
 	_wall_target = wall_check.target_position
 	_apply_facing()
 	refresh_patterns()
+
+
+## A random number in [0, 1) from the boss generator (patterns use it so a seed keeps the fight deterministic).
+func roll() -> float:
+	return _rng.randf()
 
 
 ## Seed 0 randomizes; any other value makes pattern choice deterministic.
@@ -160,6 +171,7 @@ func reset_encounter() -> void:
 	_phase_speed_multiplier = 1.0
 	_update_speed_multiplier()
 	_phase_2_started = false
+	_transition_holders.clear()
 	_previous_pattern = null
 	target = null
 	velocity = Vector2.ZERO
@@ -239,10 +251,31 @@ func _update_pattern(delta: float) -> void:
 		pattern_finished.emit(finished_id)
 
 
+## Keeps the phase transition open until `release_transition(owner)` (Phase 15d). Holding is idempotent.
+func hold_transition(owner: Object) -> void:
+	if not _transition_holders.has(owner):
+		_transition_holders.append(owner)
+
+
+func release_transition(owner: Object) -> void:
+	_transition_holders.erase(owner)
+
+
+func is_transition_held() -> bool:
+	_transition_holders = _transition_holders.filter(func(holder: Variant) -> bool: return is_instance_valid(holder))
+	return not _transition_holders.is_empty()
+
+
 func _update_transition(delta: float) -> void:
 	velocity.x = 0.0
-	_tick_cooldowns(delta)
+	var held: bool = is_transition_held()
+	if not held:
+		_tick_cooldowns(delta)
 	_transition_left -= delta
+	if held:
+		# Nothing can hurt it while the sequence plays, however long it lasts.
+		health.grant_invulnerability(0.25)
+		return
 	if _transition_left <= 0.0:
 		current_phase = 2
 		_phase_speed_multiplier = stats.phase_2_speed_multiplier
@@ -347,18 +380,19 @@ func _on_damaged(_info: DamageInfo) -> void:
 	_deactivate_all_hitboxes()
 	_transition_left = stats.phase_transition_time
 	health.grant_invulnerability(stats.phase_transition_time)
-	_drop_health_orbs.call_deferred(stats.health_orbs_on_phase_2)
 	_set_state(State.PHASE_TRANSITION)
+	phase_transition_started.emit(2)
 
 
 func _on_health_died() -> void:
+	_transition_holders.clear()
 	_cancel_current_pattern()
 	_deactivate_all_hitboxes()
 	hurtbox.set_enabled(false)
 	velocity.x = 0.0
 	_fade_left = stats.death_fade_time
 	_set_state(State.DEAD)
-	_drop_health_orbs.call_deferred(stats.health_orbs_on_defeat)
+	_release_soul.call_deferred()
 	defeated.emit(self)
 
 
@@ -392,5 +426,7 @@ func _update_contact_active() -> void:
 
 ## Deferred from the death / phase change: those arrive inside physics callbacks, where new
 ## bodies can't be added. Bound to this node, so it is skipped if the node is gone by then.
-func _drop_health_orbs(count: int) -> void:
-	HealthOrbDrop.burst(get_parent(), global_position, count)
+## The boss's soul leaves as a big wisp the player absorbs (deferred: the death arrives in a physics callback).
+func _release_soul() -> void:
+	if is_inside_tree():
+		SoulPickup.spawn(get_parent(), global_position + Vector2(0.0, -30.0), SoulConfig.get_default().wisp_boss)

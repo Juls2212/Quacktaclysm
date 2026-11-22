@@ -11,6 +11,14 @@ const PURPLE_LIGHT := Color("a66ae8")
 const PURPLE := Color("7a3ac2")
 const PURPLE_DARK := Color("43177a")
 const PURPLE_SHINE := Color("c2a0ff")
+## The possessed bar of phase 2 (Phase 15d) and the lit mid-line.
+const RED_LIGHT := Color("ff6a50")
+const RED := Color("d42a1e")
+const RED_DARK := Color("6e0f0c")
+const RED_SHINE := Color("ffb0a0")
+## The mid-line pulses for this long when the line is crossed, at a calm rate (well under the flash limit).
+const MARKER_PULSE_TIME: float = 3.0
+const MARKER_PULSE_HZ: float = 1.6
 const CREAM := Color(0.98, 0.93, 0.8)
 ## Seconds the lost piece stays white before draining.
 const GHOST_HOLD: float = 0.4
@@ -20,6 +28,10 @@ var displayed_name: String = ""
 var shown_name: String = ""
 var displayed_ratio: float = 0.0
 var marker_ratio: float = 0.0
+## Seconds left of the mid-line pulse, and how possessed the bar looks (0 = purple, 1 = red; phase 2 of the fight).
+var marker_pulse_left: float = 0.0
+var possession_k: float = 0.0
+var possessed: bool = false
 
 var _boss: BossBase
 var _ghost_ratio: float = 0.0
@@ -62,6 +74,8 @@ func bind(boss: BossBase) -> void:
 	boss.health_changed.connect(_update_ratio)
 	boss.encounter_reset.connect(_hide)
 	boss.defeated.connect(_on_defeated)
+	boss.phase_transition_started.connect(_on_phase_transition)
+	boss.phase_changed.connect(_on_phase_changed)
 
 
 func _process(delta: float) -> void:
@@ -71,11 +85,27 @@ func _process(delta: float) -> void:
 		_ghost_hold -= delta
 	else:
 		_ghost_ratio = move_toward(_ghost_ratio, displayed_ratio, delta * 0.8)
+	marker_pulse_left = maxf(marker_pulse_left - delta, 0.0)
+	possession_k = move_toward(possession_k, 1.0 if possessed else 0.0, delta * 1.5)
 	if _drawer != null:
 		_drawer.queue_redraw()
 
 
+## The line was crossed: the mid-line lights up and pulses.
+func _on_phase_transition(_next_phase: int) -> void:
+	marker_pulse_left = MARKER_PULSE_TIME
+
+
+## Phase 2 begins: the bar keeps a possessed tint for the rest of the fight.
+func _on_phase_changed(new_phase: int) -> void:
+	if new_phase >= 2:
+		possessed = true
+
+
 func _on_activated() -> void:
+	possessed = false
+	possession_k = 0.0
+	marker_pulse_left = 0.0
 	_update_ratio(_boss.health.current_health, _boss.health.max_health)
 	_ghost_ratio = displayed_ratio
 	visible = true
@@ -95,10 +125,16 @@ func _update_ratio(current: int, maximum: int) -> void:
 
 func _hide() -> void:
 	visible = false
+	possessed = false
+	possession_k = 0.0
+	marker_pulse_left = 0.0
 
 
 func _on_defeated(_defeated_boss: BossBase) -> void:
 	visible = false
+	possessed = false
+	possession_k = 0.0
+	marker_pulse_left = 0.0
 
 
 func _draw_bar() -> void:
@@ -113,10 +149,16 @@ func _draw_bar() -> void:
 	if ghost_w > fill_w + 0.5:
 		var fade: float = 1.0 if _ghost_hold > 0.0 else 0.75
 		_drawer.draw_rect(Rect2(bar.position + Vector2(fill_w, 0.0), Vector2(ghost_w - fill_w, bar.size.y)), Color(1.0, 0.97, 0.92, fade))
-	StoneUi.fill(_drawer, Rect2(bar.position, Vector2(fill_w, bar.size.y)), PURPLE_LIGHT, PURPLE, PURPLE_DARK, Color(PURPLE_SHINE, 0.85))
+	StoneUi.fill(_drawer, Rect2(bar.position, Vector2(fill_w, bar.size.y)), PURPLE_LIGHT.lerp(RED_LIGHT, possession_k), PURPLE.lerp(RED, possession_k), PURPLE_DARK.lerp(RED_DARK, possession_k), Color(PURPLE_SHINE.lerp(RED_SHINE, possession_k), 0.85))
 	# Phase 2 notch: a chip in the frame and a thin line through the bar.
 	var mx: float = bar.position.x + bar.size.x * clampf(marker_ratio, 0.0, 1.0)
+	var lit: float = 0.0
+	if marker_pulse_left > 0.0:
+		lit = 0.5 + 0.5 * sin((MARKER_PULSE_TIME - marker_pulse_left) * TAU * MARKER_PULSE_HZ)
 	_drawer.draw_line(Vector2(mx, bar.position.y + 1.0), Vector2(mx, bar.end.y - 1.0), Color(StoneUi.INK, 0.8), 2.0, true)
+	if lit > 0.0:
+		_drawer.draw_line(Vector2(mx, bar.position.y - 3.0), Vector2(mx, bar.end.y + 3.0), Color(RED_LIGHT, 0.35 + 0.4 * lit), 7.0, true)
+		_drawer.draw_line(Vector2(mx, bar.position.y - 1.0), Vector2(mx, bar.end.y + 1.0), Color(1.0, 0.85, 0.75, 0.55 + 0.45 * lit), 2.5, true)
 	var notch := PackedVector2Array([Vector2(mx - 5.0, bar.position.y - 8.5), Vector2(mx + 5.0, bar.position.y - 8.5), Vector2(mx, bar.position.y - 1.0)])
 	_drawer.draw_colored_polygon(notch, PURPLE_SHINE)
 	var ring := PackedVector2Array(notch)
