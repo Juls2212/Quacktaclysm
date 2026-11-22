@@ -1,11 +1,15 @@
 class_name OptionsBoard
 extends PanelContainer
 ## Options as a cork board with an old sheet of paper pinned on it: fullscreen, master / music /
-## effects volume, camera shake, and the controls read from the InputMap (read only). Values go
+## effects volume, camera shake, and a button to the editable controls page (ControlsEditor). Values go
 ## through GameSettings (user://settings.cfg), never the save game. Builds its own rows, so it can
 ## be dropped into any menu (the pause menu uses it). Esc or "Volver" emits `closed`.
 
 signal closed
+
+## Group of the level's ProfilePresenter (a literal: referencing its class from here makes a script cycle).
+const PRESENTER_GROUP: StringName = &"profile_presenter"
+const PRESENTATION_PATH: String = "res://frontend/presentation/default_profile_presentation.tres"
 
 @export var title_text: String = "Opciones"
 @export var fullscreen_text: String = "Pantalla completa"
@@ -13,26 +17,20 @@ signal closed
 @export var music_text: String = "Música"
 @export var sfx_text: String = "Efectos"
 @export var shake_text: String = "Sacudida de cámara"
-@export var controls_text: String = "Controles"
 @export var back_text: String = "Volver"
-
-## InputMap action(s) -> label shown in the controls list, in display order.
-const CONTROLS: Array = [
-	[["move_left", "move_right"], "Mover"],
-	[["jump"], "Saltar"],
-	[["dash"], "Esquivar (dash)"],
-	[["attack"], "Ataque"],
-	[["wave"], "Onda de espada"],
-	[["heavy_attack"], "Golpe pesado"],
-	[["pause"], "Pausa"],
-]
 
 var fullscreen_check: CheckButton
 var volume_slider: HSlider
 var music_slider: HSlider
 var sfx_slider: HSlider
 var shake_check: CheckButton
+var corruption_check: CheckButton
 var back_button: Button
+var controls_button: Button
+## The editable controls page; it takes the place of the settings while it is open.
+var controls_editor: ControlsEditor = null
+
+var _settings_box: VBoxContainer
 
 var _settings: Dictionary = {}
 
@@ -45,6 +43,7 @@ func _ready() -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
 	add_child(box)
+	_settings_box = box
 	var title := InkLabel.new()
 	title.text = title_text
 	title.cap_height = 30.0
@@ -58,16 +57,18 @@ func _ready() -> void:
 	shake_check = CheckButton.new()
 	shake_check.text = shake_text
 	box.add_child(shake_check)
-	var controls_title := Label.new()
-	controls_title.text = controls_text
-	controls_title.theme_type_variation = &"HeaderLabel"
-	box.add_child(controls_title)
-	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 14)
-	grid.add_theme_constant_override("v_separation", 2)
-	box.add_child(grid)
-	fill_controls(grid)
+	corruption_check = CheckButton.new()
+	corruption_check.text = (load(PRESENTATION_PATH) as ProfilePresentation).toggle_text
+	box.add_child(corruption_check)
+	controls_button = Button.new()
+	controls_button.text = (load(ControlsConfig.CATALOG_PATH) as ControlsCatalog).open_button_text
+	controls_button.custom_minimum_size = Vector2(240, 40)
+	controls_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	box.add_child(controls_button)
+	controls_editor = ControlsEditor.new()
+	add_child(controls_editor)
+	controls_button.pressed.connect(_open_controls)
+	controls_editor.closed.connect(_close_controls)
 	var back := SignButton.new()
 	back.ropes = false
 	back.look = SignButton.Look.CARDBOARD
@@ -84,16 +85,20 @@ func _ready() -> void:
 	music_slider.value = _settings["music_volume"]
 	sfx_slider.value = _settings["sfx_volume"]
 	shake_check.button_pressed = _settings["camera_shake"]
+	corruption_check.button_pressed = _settings["corruption_effects"]
 	fullscreen_check.toggled.connect(_store.bind("fullscreen"))
 	volume_slider.value_changed.connect(_store.bind("volume"))
 	music_slider.value_changed.connect(_store.bind("music_volume"))
 	sfx_slider.value_changed.connect(_store.bind("sfx_volume"))
 	shake_check.toggled.connect(_store.bind("camera_shake"))
+	corruption_check.toggled.connect(_store.bind("corruption_effects"))
 	back_button.pressed.connect(close)
 	visible = false
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if controls_editor != null and controls_editor.is_open():
+		return
 	if visible and event.is_action_pressed("ui_cancel"):
 		close()
 		get_viewport().set_input_as_handled()
@@ -103,8 +108,20 @@ func is_open() -> bool:
 	return visible
 
 
+func _open_controls() -> void:
+	_settings_box.visible = false
+	controls_editor.open()
+
+
+func _close_controls() -> void:
+	_settings_box.visible = true
+	controls_button.grab_focus()
+
+
 func open() -> void:
 	_settings = GameSettings.load_settings()
+	_settings_box.visible = true
+	controls_editor.visible = false
 	visible = true
 	fullscreen_check.grab_focus()
 
@@ -112,58 +129,10 @@ func open() -> void:
 func close() -> void:
 	if not visible:
 		return
+	if controls_editor.is_open():
+		controls_editor.close()
 	visible = false
 	closed.emit()
-
-
-## Fills a 2-column grid (action, keys) from the InputMap.
-static func fill_controls(grid: GridContainer) -> void:
-	for entry in CONTROLS:
-		var action_label := Label.new()
-		action_label.text = String(entry[1])
-		action_label.theme_type_variation = &"NoteLabel"
-		grid.add_child(action_label)
-		var keys := Label.new()
-		keys.text = keys_text(entry[0])
-		keys.theme_type_variation = &"KeyLabel"
-		grid.add_child(keys)
-
-
-## Human-readable keys bound to `actions` (keyboard and mouse), e.g. "A / D".
-static func keys_text(actions: Array) -> String:
-	var parts: PackedStringArray = []
-	for action in actions:
-		if not InputMap.has_action(StringName(action)):
-			continue
-		var names: PackedStringArray = []
-		for ev in InputMap.action_get_events(StringName(action)):
-			var key := ev as InputEventKey
-			if key != null:
-				var code: Key = key.physical_keycode if key.keycode == KEY_NONE else key.keycode
-				names.append(key_name(OS.get_keycode_string(code)))
-				continue
-			var mouse := ev as InputEventMouseButton
-			if mouse != null:
-				match mouse.button_index:
-					MOUSE_BUTTON_LEFT:
-						names.append("Clic izq.")
-					MOUSE_BUTTON_RIGHT:
-						names.append("Clic der.")
-					MOUSE_BUTTON_MIDDLE:
-						names.append("Clic central")
-		if not names.is_empty():
-			parts.append(" o ".join(names.slice(0, 2)))
-	return " / ".join(parts) if not parts.is_empty() else "—"
-
-
-## Spanish name of a key as Godot spells it ("Left" -> "Izquierda").
-static func key_name(godot_name: String) -> String:
-	var names: Dictionary = {
-		"Left": "Izquierda", "Right": "Derecha", "Up": "Arriba", "Down": "Abajo", "Space": "Espacio",
-		"Shift": "Mayús", "Escape": "Esc", "Enter": "Intro", "Kp Enter": "Intro", "Tab": "Tab",
-		"Backspace": "Retroceso", "Ctrl": "Ctrl", "Alt": "Alt", "Delete": "Supr",
-	}
-	return String(names.get(godot_name, godot_name))
 
 
 func _slider_row(box: VBoxContainer, label_text: String) -> HSlider:
@@ -188,3 +157,5 @@ func _store(value: Variant, key: String) -> void:
 	_settings[key] = value
 	GameSettings.apply(_settings)
 	GameSettings.save_settings(_settings)
+	# A level in the background re-reads the corruption effects option (no polling).
+	get_tree().call_group(PRESENTER_GROUP, "refresh_settings")

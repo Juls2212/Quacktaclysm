@@ -258,15 +258,10 @@ value = 0.8
 [node name="ShakeCheck" type="CheckButton" parent="OptionsPanel/Margin/Box"]
 layout_mode = 2
 
-[node name="ControlsTitle" type="Label" parent="OptionsPanel/Margin/Box"]
+[node name="ControlsButton" type="Button" parent="OptionsPanel/Margin/Box"]
+custom_minimum_size = Vector2(240, 44)
 layout_mode = 2
-theme_type_variation = &"HeaderLabel"
-
-[node name="ControlsGrid" type="GridContainer" parent="OptionsPanel/Margin/Box"]
-layout_mode = 2
-theme_override_constants/h_separation = 14
-theme_override_constants/v_separation = 2
-columns = 2
+size_flags_horizontal = 4
 
 [node name="OptionsBackButton" type="Button" parent="OptionsPanel/Margin/Box"]
 custom_minimum_size = Vector2(240, 56)

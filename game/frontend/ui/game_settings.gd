@@ -15,17 +15,26 @@ const DEFAULTS: Dictionary = {
 	"music_volume": 0.8,
 	"sfx_volume": 0.8,
 	"camera_shake": true,
+	"corruption_effects": true,
 }
+## Tests point this at a throwaway file so they never read or write the player's settings.
+static var path_override: String = ""
+
+
+## The settings file in use (`PATH` unless a test overrides it).
+static func settings_file_path() -> String:
+	return path_override if not path_override.is_empty() else PATH
 
 
 static func load_settings() -> Dictionary:
 	var cfg := ConfigFile.new()
 	var result: Dictionary = DEFAULTS.duplicate()
-	if cfg.load(PATH) == OK:
+	if cfg.load(settings_file_path()) == OK:
 		result["fullscreen"] = bool(cfg.get_value(SECTION, "fullscreen", DEFAULTS["fullscreen"]))
 		for key in ["volume", "music_volume", "sfx_volume"]:
 			result[key] = clampf(float(cfg.get_value(SECTION, key, DEFAULTS[key])), 0.0, 1.0)
 		result["camera_shake"] = bool(cfg.get_value(SECTION, "camera_shake", DEFAULTS["camera_shake"]))
+		result["corruption_effects"] = bool(cfg.get_value(SECTION, "corruption_effects", DEFAULTS["corruption_effects"]))
 	return result
 
 
@@ -35,7 +44,8 @@ static func save_settings(values: Dictionary) -> void:
 	for key in ["volume", "music_volume", "sfx_volume"]:
 		cfg.set_value(SECTION, key, clampf(float(values.get(key, DEFAULTS[key])), 0.0, 1.0))
 	cfg.set_value(SECTION, "camera_shake", bool(values.get("camera_shake", DEFAULTS["camera_shake"])))
-	cfg.save(PATH)
+	cfg.set_value(SECTION, "corruption_effects", bool(values.get("corruption_effects", DEFAULTS["corruption_effects"])))
+	cfg.save(settings_file_path())
 
 
 static func apply(values: Dictionary) -> void:
@@ -53,6 +63,11 @@ static func apply(values: Dictionary) -> void:
 ## Whether gameplay code may shake the camera (read from the settings file each call).
 static func is_camera_shake_enabled() -> bool:
 	return bool(load_settings()["camera_shake"])
+
+
+## Whether the world, duck, enemy and music effects of the adaptive profile are on (default on).
+static func is_corruption_effects_enabled() -> bool:
+	return bool(load_settings()["corruption_effects"])
 
 
 ## Creates the Music and SFX buses (sending to Master) if the project does not define them.
