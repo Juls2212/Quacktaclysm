@@ -13,7 +13,7 @@ const EVENT_IDS: Array[StringName] = [
 	&"wave_impact", &"wave_impact_world", &"game_over",
 	&"soul_gain", &"focus_start", &"heal_done", &"heal_denied", &"soul_full",
 	&"pad_bounce", &"double_jump", &"spike_warning", &"spike_rise", &"boss_leap", &"leap_land",
-	&"possession_start", &"possession_roar", &"possession_slam",
+	&"possession_start", &"possession_roar", &"possession_slam", &"grandfather_voice",
 ]
 
 @export var events: Array = []
