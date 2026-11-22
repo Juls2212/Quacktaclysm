@@ -126,3 +126,24 @@ El bot de resistencia (5400 fotogramas por nivel, tres semillas por escena, más
 - Encontrado: no era un fallo de la barra. `phase15e1_smoke_test` comprobó que la barra coincide con la vida del jefe tras cada tipo de golpe en las tres fases y tras las dos posesiones, y que el jefe no queda retenido ni invulnerable. La causa es el diseño de la guardia de Kenzo (fase 2): espada ligera, onda y el primer golpe pesado o de dash se bloquean sin daño, así que la barra solo se mueve con el segundo golpe pesado o de dash, y el jugador no lo notaba.
 - Corregido (solo retroalimentación): etiqueta «BLOQUEADO» con escudo en el punto del golpe, medidor de guardia bajo la barra (con «ATURDIDO: ¡GOLPEA!» al romperla) y una pista, una vez por pelea: «Rompe la guardia con golpe pesado o tajo de dash». Con efectos de corrupción desactivados la etiqueta y la pista siguen, sin ascenso ni chispas.
 - No verificado con el espadazo real en ventana; la prueba usa los mismos tipos de golpe contra la hurtbox. El ritmo de la fase 2 (dos golpes pesados seguidos antes de poder dañar) puede seguir sintiéndose duro: es una decisión de balance pendiente.
+
+## Fase 16a (Director local)
+
+- Sin verificar en ventana real: cuánto se nota el plan y el equilibrio de los enemigos extra y de los pesos (umbrales en `default_telemetry_config.tres`, pensados a ojo).
+- Al continuar desde disco no hay telemetría: el nivel usa el plan neutro (por diseño).
+- El plan de un nivel usa la telemetría del anterior, así que los pesos se aplican por identificador de patrón entre jefes distintos (por ejemplo `charge`); un patrón que el jefe no tiene se descarta.
+- No se ejecutaron la suite completa ni el soak. Pruebas antiguas que podrían notar el cambio: `level_phase12b_smoke_test`, `adaptive_phase9_smoke_test`, `ai_phase10_smoke_test` y los tests de flujo (no se tocaron: con el plan neutro el comportamiento es el mismo).
+
+## Fase 16b (Director remoto)
+
+- Sin verificar: respuestas reales de OpenAI, la latencia en una partida real (presupuesto de 3 s, el modelo tiene 2,5 s sin reintento) y si el plan remoto se nota distinto del local.
+- Las pruebas usan una red simulada; los tests de Python usan un cliente falso. Hace falta una pasada manual con el servicio en modo `openai`.
+- El servicio no tiene autenticación: hace falta antes de alojarlo públicamente (el límite por IP no la sustituye).
+- Un servicio en modo mock o respaldo devuelve el plan base, así que no cambia nada respecto a la Fase 16a (por diseño).
+- No se ejecutaron la suite completa ni el soak. Pruebas antiguas que podrían notar el cambio: `ai_phase10_smoke_test` y `ai_phase10_integration_test` (flujo de decisión), `adaptive_phase9_smoke_test`, `phase14c_smoke_test` (opciones) y los tests de flujo/menú; no se tocaron.
+
+## Fase 16c (línea del abuelo, reflejo y epílogos)
+
+- Sin verificar en una ventana real: el tono de las líneas del banco y de los 12 epílogos (el responsable y la Ingeniera 2 deben revisar el español), la legibilidad y el tiempo de la línea (6,5 s), el aspecto del reflejo (silueta de estrellas borrosa/nítida) y que la línea no moleste en la práctica.
+- La lista de palabras prohibidas está duplicada (recurso de Godot y `director.py`); si se cambia una, hay que cambiar la otra.
+- No se ejecutaron la suite completa ni el soak. Se actualizaron a propósito dos comprobaciones de `phase16b_smoke_test` (la petición del nivel 3 ahora pide el final) y no se volvió a ejecutar esa escena. Pruebas antiguas que podrían notar el cambio: `phase14d_smoke_test` y los tests del final (la tarjeta tiene una etiqueta más), `phase14f_smoke_test` (la tabla de audio tiene un evento más) y los tests de nivel/flujo (cada nivel numerado tiene un nodo más).
