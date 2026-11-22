@@ -1,0 +1,84 @@
+[gd_resource type="Resource" script_class="TelemetryConfig" load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://backend/ai/director/telemetry_config.gd" id="1_cfg"]
+[ext_resource type="Script" path="res://backend/ai/director/theme_rule.gd" id="2_rule"]
+
+[sub_resource type="Resource" id="Rule_recursos"]
+script = ExtResource("2_rule")
+theme = "recursos"
+conditions = {"heals": ["low"], "low_health_time": ["mid", "high"]}
+
+[sub_resource type="Resource" id="Rule_distancia"]
+script = ExtResource("2_rule")
+theme = "distancia"
+conditions = {"ranged_damage": ["mid", "high"]}
+
+[sub_resource type="Resource" id="Rule_calma"]
+script = ExtResource("2_rule")
+theme = "calma"
+conditions = {"deaths": ["mid", "high"], "melee_damage": ["mid", "high"]}
+
+[sub_resource type="Resource" id="Rule_ritmo"]
+script = ExtResource("2_rule")
+theme = "ritmo"
+conditions = {"boss_damage": ["mid", "high"]}
+
+[sub_resource type="Resource" id="Rule_paciencia"]
+script = ExtResource("2_rule")
+theme = "paciencia"
+conditions = {"damage_taken": ["mid", "high"], "time_in_level": ["low"]}
+
+[sub_resource type="Resource" id="Rule_valor"]
+script = ExtResource("2_rule")
+theme = "valor"
+conditions = {"light_use": ["low"], "wave_use": ["low"], "time_in_level": ["mid", "high"]}
+
+[resource]
+script = ExtResource("1_cfg")
+thresholds = {
+"damage_taken": Vector2(6, 14),
+"dash_slash_use": Vector2(2, 8),
+"dash_use": Vector2(10, 40),
+"deaths": Vector2(2, 5),
+"double_jump_use": Vector2(5, 20),
+"fall_deaths": Vector2(1, 3),
+"hazard_damage": Vector2(2, 5),
+"heals": Vector2(1, 4),
+"heavy_use": Vector2(3, 12),
+"kills": Vector2(4, 12),
+"light_use": Vector2(15, 60),
+"low_health_time": Vector2(10, 30),
+"melee_damage": Vector2(3, 8),
+"ranged_damage": Vector2(3, 8),
+"boss_damage": Vector2(3, 8),
+"time_in_boss": Vector2(30, 90),
+"time_in_level": Vector2(90, 240),
+"wave_use": Vector2(5, 20)
+}
+low_health_hearts = 3
+themes = PackedStringArray("calma", "paciencia", "distancia", "ritmo", "recursos", "valor", "equilibrio")
+default_theme = "equilibrio"
+theme_rules = Array[ExtResource("2_rule")]([SubResource("Rule_recursos"), SubResource("Rule_distancia"), SubResource("Rule_calma"), SubResource("Rule_ritmo"), SubResource("Rule_paciencia"), SubResource("Rule_valor")])
+active_from_level = 2
+struggle_delta_mid = -1
+struggle_delta_high = -2
+struggle_weight_mid = 0.8
+struggle_weight_high = 0.6
+comfort_delta = 1
+comfort_weight = 1.4
+epilogue_neutral = 0
+epilogue_comfortable = 1
+epilogue_struggle = 2
+extras_delta_min = -2
+extras_delta_max = 1
+extras_total_cap = 3
+weight_min = 0.6
+weight_max = 1.5
+epilogue_max = 2
+forbidden_keys = PackedStringArray("profile", "adaptive_profile", "boss_hp", "max_health", "hp", "damage", "aggression", "boss_aggression", "cooldown", "cooldowns", "telegraph", "telegraph_time")
+boss_scenes = {
+2: "res://backend/bosses/boss_two.tscn",
+3: "res://backend/bosses/boss_three.tscn"
+}
+slot_min_gap_edge_distance = 150.0
+gap_min_width = 40.0
