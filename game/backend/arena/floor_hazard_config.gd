@@ -17,8 +17,11 @@ const DEFAULT_PATH: String = "res://backend/arena/default_floor_hazard_config.tr
 @export_range(0.1, 5.0, 0.05, "suffix:s") var rehit_interval: float = 0.5
 ## Height of the dangerous band over the floor (platforms and pads sit above it or are cut out of it).
 @export_range(4.0, 80.0, 1.0, "suffix:px") var band_height: float = 26.0
-## Free space left on each side of a lily pad (pads are always safe).
+## Free space left on each side of a lily pad when `cut_out_pads` is on.
 @export_range(0.0, 80.0, 1.0, "suffix:px") var pad_margin: float = 6.0
+## Pads used to sit flush with the floor and were cut out of the spikes. Now they are raised: the pad itself is always safe
+## (it is above the dangerous band) but the floor under it is not, so this is off.
+@export var cut_out_pads: bool = false
 
 
 static func get_default() -> FloorHazardConfig:

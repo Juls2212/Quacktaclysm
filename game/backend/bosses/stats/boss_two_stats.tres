@@ -10,9 +10,10 @@ script = ExtResource("1_stats")
 ; pattern of this boss) come back quickly.
 boss_id = &"boss_two"
 display_name = "La Cosa del Pantano"
-max_health = 60
+max_health = 50
 phase_2_health_ratio = 0.55
 phase_transition_time = 1.5
 phase_2_speed_multiplier = 1.35
 phase_2_pattern_gap_multiplier = 0.55
 pattern_gap_time = 1.1
+max_idle_time = 1.5

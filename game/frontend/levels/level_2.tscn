@@ -256,13 +256,13 @@ color = Color(0.28, 0.42, 0.32, 1)
 skin = 6
 
 [node name="ArenaPadA" parent="Content" instance=ExtResource("96_pad")]
-position = Vector2(4800, 578)
+position = Vector2(4800, 558)
 
 [node name="ArenaPadB" parent="Content" instance=ExtResource("96_pad")]
-position = Vector2(5150, 578)
+position = Vector2(5150, 558)
 
 [node name="ArenaPadC" parent="Content" instance=ExtResource("96_pad")]
-position = Vector2(5450, 578)
+position = Vector2(5450, 558)
 
 [node name="AnchorLowA" type="Marker2D" parent="Content"]
 position = Vector2(4900, 466)

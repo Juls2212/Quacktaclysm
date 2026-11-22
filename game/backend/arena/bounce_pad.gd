@@ -4,8 +4,9 @@ extends Area2D
 ## player straight up with `config.launch_velocity`, then waits `config.cooldown`. Enemies and bosses ignore it
 ## (its mask only sees the player). Gameplay only: the drawing is the child BouncePadArt, which listens to
 ## `launched`. `texture` is an optional replacement for the drawn pad (null = drawn in code).
-## The node position is the CENTER of the trigger area, at the top of the pad (a pad sits on the floor, so the
-## floor top is at y + trigger_size.y / 2).
+## Phase 15d-bis: the pad is raised `config.pad_height` px above the floor on a spring stem (drawn by BouncePadArt, not
+## solid). The node position is the CENTER of the trigger area: the top of the pad is at y - (trigger_size.y / 2 - top_margin)
+## and the floor under it at that plus `pad_height`.
 
 signal launched(player: Player)
 
@@ -34,6 +35,16 @@ func _ready() -> void:
 		var rect := RectangleShape2D.new()
 		rect.size = config.trigger_size
 		shape_node.shape = rect
+
+
+## Global y of the top surface of the pad.
+func top_y() -> float:
+	return global_position.y - (config.trigger_size.y * 0.5 - config.top_margin)
+
+
+## Global y of the floor the stem stands on.
+func floor_y() -> float:
+	return top_y() + config.pad_height
 
 
 ## Horizontal extent of the pad in global x (the floor hazard leaves pads safe).

@@ -6,7 +6,7 @@ extends Node2D
 ## the boss dies, the fight is cancelled (encounter reset) or the target dies; it never runs outside the fight.
 ## Damage goes through the normal Hitbox / DamageInfo path (ENEMY team: it can hurt only the player, never the boss
 ## or its drops), so the hurt invulnerability and the dash invulnerability of the player apply; it is NOT a KillZone.
-## Lily pads are cut out of the dangerous band, and platforms sit above it, so they are always safe.
+## Platforms and the raised lily pads sit above the dangerous band, so they are always safe (the floor under a pad is not).
 ## The node position is the LEFT end of the arena floor at its top surface; `length` runs to the right.
 ## Gameplay only: the drawing is the child FloorHazardArt (it listens to `state_changed`).
 
@@ -137,7 +137,8 @@ func _set_state(new_state: State) -> void:
 func _rebuild_segments() -> void:
 	segments.clear()
 	var cuts: Array[Vector2] = []
-	for pad in get_tree().get_nodes_in_group(BouncePad.GROUP):
+	var pads_to_cut: Array = get_tree().get_nodes_in_group(BouncePad.GROUP) if config.cut_out_pads else []
+	for pad in pads_to_cut:
 		var span: Vector2 = (pad as BouncePad).global_x_range()
 		cuts.append(Vector2(span.x - config.pad_margin - global_position.x, span.y + config.pad_margin - global_position.x))
 	cuts.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.x < b.x)

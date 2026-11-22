@@ -118,5 +118,50 @@ cooldown = 7.0
 telegraph_time = 0.7
 recovery_time = 0.8
 
+[node name="FallbackVolley" type="Node" parent="Patterns" index="6"]
+script = ExtResource("5_volley")
+pattern_id = &"volley_fallback"
+weight = 0.0
+min_phase = 1
+max_phase = 99
+fallback_priority = 1
+cooldown = 2.0
+telegraph_time = 0.8
+recovery_time = 0.7
+projectile_count = 3
+spread_angle_degrees = 18.0
+shot_interval = 0.25
+spawn_offset = Vector2(30, -8)
+allow_steep_aim = true
+
+[node name="FallbackLeap" type="Node" parent="Patterns" index="7" node_paths=PackedStringArray("landing_hitbox", "volley")]
+script = ExtResource("7_leap")
+landing_hitbox = NodePath("../../AttackPivot/LandingHitbox")
+volley = NodePath("../LeapVolley")
+target_mode = 1
+pattern_id = &"leap_fallback"
+weight = 0.0
+min_phase = 1
+max_phase = 99
+fallback_priority = 2
+cooldown = 2.5
+telegraph_time = 0.7
+recovery_time = 0.8
+
+[node name="FallbackStomp" type="Node" parent="Patterns" index="8" node_paths=PackedStringArray("landing_hitbox")]
+script = ExtResource("7_leap")
+landing_hitbox = NodePath("../../AttackPivot/LandingHitbox")
+target_mode = 2
+skip_perch = true
+min_leap_distance = 0.0
+pattern_id = &"leap_stomp"
+weight = 0.0
+min_phase = 1
+max_phase = 99
+fallback_priority = 3
+cooldown = 0.0
+telegraph_time = 0.5
+recovery_time = 0.6
+
 [node name="Visual" parent="."]
 look = 6

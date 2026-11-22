@@ -13,6 +13,11 @@ extends BossPattern
 ## Flights end by LANDING, not by a timer, so the aggression multiplier cannot cut a jump short; `flight_timeout_factor`
 ## is only a safety net. All numbers are exported.
 
+## Where the first jump goes (Phase 15d-bis): PLATFORM is the normal leap (a platform anchor, then the perch);
+## NEAREST_TO_PLAYER goes to the anchor closest to the player whatever its tier; FLOOR goes down to the floor anchor
+## closest to the player (the stomp).
+enum TargetMode { PLATFORM, NEAREST_TO_PLAYER, FLOOR }
+
 const PHASE_PERCH: StringName = &"perch"
 const PHASE_RETURN: StringName = &"return"
 
@@ -27,6 +32,9 @@ signal marker_changed(world_position: Vector2, shown: bool)
 ## The volley used on the perch (a sibling pattern with min_phase above max_phase, so it never starts alone).
 @export var volley: ProjectileVolleyPattern
 @export var anchor_group: StringName = BossAnchor.GROUP
+@export var target_mode: TargetMode = TargetMode.PLATFORM
+## true: after the landing the pattern goes straight to its recovery (no perch, no volley, no second jump): the stomp.
+@export var skip_perch: bool = false
 ## The apex of a jump is this far above the higher of the two spots.
 @export_range(0.0, 400.0, 1.0, "suffix:px") var apex_clearance: float = 60.0
 ## Anchors that need a bigger rise than this are never chosen.
@@ -69,6 +77,12 @@ func can_start(boss: BossBase) -> bool:
 	return _pick_first(boss, false) != Vector2.INF
 
 
+func can_start_fallback(boss: BossBase, ignore_cooldown: bool) -> bool:
+	if not super.can_start_fallback(boss, ignore_cooldown):
+		return false
+	return boss.is_on_floor() and boss.is_target_valid() and _pick_first(boss, false) != Vector2.INF
+
+
 func _active_duration() -> float:
 	return maxf(_flight_expected * flight_timeout_factor, 1.0)
 
@@ -88,7 +102,7 @@ func _next_phase(current: StringName) -> StringName:
 		PHASE_TELEGRAPH:
 			return PHASE_ACTIVE
 		PHASE_ACTIVE:
-			return PHASE_PERCH
+			return PHASE_RECOVERY if skip_perch else PHASE_PERCH
 		PHASE_PERCH:
 			return PHASE_RETURN
 		PHASE_RETURN:
@@ -187,7 +201,9 @@ func _pick_first(boss: BossBase, roll: bool) -> Vector2:
 	var options: Array[Vector2] = []
 	var target_x: float = boss.target.global_position.x if boss.is_target_valid() else boss.global_position.x
 	for anchor in _anchors(boss):
-		if anchor.tier != BossAnchor.Tier.PLATFORM:
+		if target_mode == TargetMode.PLATFORM and anchor.tier != BossAnchor.Tier.PLATFORM:
+			continue
+		if target_mode == TargetMode.FLOOR and anchor.tier != BossAnchor.Tier.FLOOR:
 			continue
 		if boss.global_position.y - anchor.global_position.y > max_rise:
 			continue
@@ -198,6 +214,8 @@ func _pick_first(boss: BossBase, roll: bool) -> Vector2:
 			best = anchor.global_position
 	if options.is_empty():
 		return Vector2.INF
+	if target_mode != TargetMode.PLATFORM:
+		return best
 	if roll and options.size() > 1 and boss.roll() > aim_at_player_chance:
 		return options[int(boss.roll() * float(options.size())) % options.size()]
 	return best
