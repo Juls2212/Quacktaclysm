@@ -4,14 +4,20 @@
 
 [resource]
 script = ExtResource("1_stats")
-; Final guardian (name shown by BossNames). Reasoning: 80 HP (2x the first boss) for the longest fight;
-; phase 2 at 50% with a short transition (1.2 s), 1.45x speed and half the usual gap between
-; patterns, so the heavy volley arrives often. The base gap (0.9 s) is the shortest of the three.
+; Final guardian (name shown by BossNames), redesigned in Phase 15e-1 in three phases: the floating eye (1), Kenzo on the
+; floor behind a guard (2) and the eye again with the storm at full strength (3). 70 HP (was 80), lines at 66.7% and 33.3%.
+; Telegraphs of the storm patterns never shrink (scale_telegraph_with_speed is off for them), so the speed multipliers are
+; 1.0 and the harder phases come from shorter gaps and cooldowns instead.
 boss_id = &"boss_three"
 display_name = "El Ojo de la Tormenta"
-max_health = 80
-phase_2_health_ratio = 0.5
+max_health = 70
+phase_2_health_ratio = 0.667
+phase_thresholds = PackedFloat32Array(0.667, 0.333)
 phase_transition_time = 1.2
-phase_2_speed_multiplier = 1.45
-phase_2_pattern_gap_multiplier = 0.5
+phase_2_speed_multiplier = 1.0
+phase_2_pattern_gap_multiplier = 0.7
+phase_3_speed_multiplier = 1.0
+phase_3_pattern_gap_multiplier = 0.4
+phase_3_cooldown_factor = 0.75
 pattern_gap_time = 0.9
+max_idle_time = 1.5

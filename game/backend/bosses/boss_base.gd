@@ -55,9 +55,15 @@ var current_pattern_id: StringName:
 var _rng := RandomNumberGenerator.new()
 var _previous_pattern: BossPattern = null
 var _gap_left: float = 0.0
+var _idle_time: float = 0.0
 var _transition_left: float = 0.0
 var _fade_left: float = 0.0
 var _phase_2_started: bool = false
+## How many phase thresholds the boss has crossed (Phase 15e-1: a boss may have several; bosses 1 and 2 have one).
+var _phases_crossed: int = 0
+var _transition_target: int = 2
+## Optional floating controller (a BossHover): while it says the boss floats, gravity does not pull it down.
+@export var hover: Node
 ## Owners that keep the phase transition open (the possession sequence). While any holds it the boss stays
 ## inactive and invulnerable and its pattern cooldowns do not advance.
 var _transition_holders: Array = []
@@ -154,6 +160,9 @@ func activate(new_target: Node2D) -> void:
 		return
 	target = new_target
 	_gap_left = _gap_time()
+	if stats.max_idle_time > 0.0:
+		_gap_left = minf(_gap_left, stats.max_idle_time)
+	_idle_time = 0.0
 	_set_state(State.IDLE)
 	activated.emit()
 
@@ -171,6 +180,8 @@ func reset_encounter() -> void:
 	_phase_speed_multiplier = 1.0
 	_update_speed_multiplier()
 	_phase_2_started = false
+	_phases_crossed = 0
+	_transition_target = 2
 	_transition_holders.clear()
 	_previous_pattern = null
 	target = null
@@ -217,7 +228,9 @@ func _physics_process(delta: float) -> void:
 		State.DEAD:
 			_update_dead(delta)
 
-	if not is_on_floor():
+	if hover != null and state != State.DEAD and bool(hover.call(&"is_floating")):
+		hover.call(&"drive", self, delta)
+	elif not is_on_floor():
 		velocity.y = minf(velocity.y + stats.gravity * delta, stats.max_fall_speed)
 	move_and_slide()
 
@@ -228,10 +241,16 @@ func _update_idle(delta: float) -> void:
 	if not is_target_valid():
 		return
 	face_towards(target.global_position.x)
+	_idle_time += delta
 	_gap_left -= delta
 	if _gap_left > 0.0:
 		return
 	var chosen: BossPattern = _choose_pattern()
+	if chosen == null:
+		# Nothing of the rotation fits (a platform, a far tier...): a fallback attack, so the boss is never idle.
+		chosen = _choose_fallback(false)
+		if chosen == null and stats.max_idle_time > 0.0 and _idle_time >= stats.max_idle_time:
+			chosen = _choose_fallback(true)
 	if chosen != null:
 		_start_pattern(chosen)
 
@@ -277,11 +296,13 @@ func _update_transition(delta: float) -> void:
 		health.grant_invulnerability(0.25)
 		return
 	if _transition_left <= 0.0:
-		current_phase = 2
-		_phase_speed_multiplier = stats.phase_2_speed_multiplier
+		current_phase = _transition_target
+		_phase_speed_multiplier = stats.speed_multiplier_for(current_phase)
 		_update_speed_multiplier()
-		phase_changed.emit(2)
+		phase_changed.emit(current_phase)
 		_enter_idle()
+		# One heavy hit may have crossed two lines: the next transition starts at once.
+		_check_phase_threshold()
 
 
 func _update_dead(delta: float) -> void:
@@ -293,13 +314,16 @@ func _update_dead(delta: float) -> void:
 
 func _enter_idle() -> void:
 	_gap_left = _gap_time()
+	if stats.max_idle_time > 0.0:
+		_gap_left = minf(_gap_left, stats.max_idle_time)
+	_idle_time = 0.0
 	_set_state(State.IDLE)
 
 
 func _gap_time() -> float:
 	var gap: float = stats.pattern_gap_time
 	if current_phase >= 2:
-		gap *= stats.phase_2_pattern_gap_multiplier
+		gap *= stats.gap_multiplier_for(current_phase)
 	return gap / aggression_multiplier
 
 
@@ -317,7 +341,7 @@ func _tick_cooldowns(delta: float) -> void:
 func _choose_pattern() -> BossPattern:
 	var candidates: Array[BossPattern] = []
 	for pattern in patterns:
-		if pattern.can_start(self):
+		if pattern.fallback_priority == 0 and pattern.can_start(self):
 			candidates.append(pattern)
 	if stats.avoid_immediate_repeat and candidates.size() > 1:
 		candidates.erase(_previous_pattern)
@@ -334,6 +358,16 @@ func _choose_pattern() -> BossPattern:
 		if roll <= 0.0:
 			return pattern
 	return candidates[candidates.size() - 1]
+
+
+## The lowest-numbered fallback pattern that can start now (null if none).
+func _choose_fallback(ignore_cooldown: bool) -> BossPattern:
+	var best: BossPattern = null
+	for pattern in patterns:
+		if pattern.fallback_priority > 0 and pattern.can_start_fallback(self, ignore_cooldown):
+			if best == null or pattern.fallback_priority < best.fallback_priority:
+				best = pattern
+	return best
 
 
 func _start_pattern(pattern: BossPattern) -> void:
@@ -367,21 +401,35 @@ func _on_pattern_phase_changed(phase_name: StringName, pattern: BossPattern) -> 
 	pattern_phase_changed.emit(pattern.pattern_id, phase_name)
 
 
-## Armor: damage never interrupts a pattern. It only can trigger the phase change.
+## Armor: damage never interrupts a pattern. It only can trigger a phase change.
 func _on_damaged(_info: DamageInfo) -> void:
-	if current_phase != 1 or _phase_2_started or health.current_health <= 0:
+	_check_phase_threshold()
+
+
+## Starts the transition to the next phase if the health went under its line (one line at a time, in order). Bosses with a
+## single threshold (1 and 2) go to phase 2 exactly as before. Never when the same hit killed the boss.
+func _check_phase_threshold() -> void:
+	var thresholds: PackedFloat32Array = stats.get_phase_thresholds()
+	if _phases_crossed >= thresholds.size() or health.current_health <= 0:
 		return
 	if state != State.IDLE and state != State.PATTERN:
 		return
-	if health.current_health > health.max_health * stats.phase_2_health_ratio:
+	if health.current_health > health.max_health * thresholds[_phases_crossed]:
 		return
+	_phases_crossed += 1
 	_phase_2_started = true
+	_transition_target = _phases_crossed + 1
 	_cancel_current_pattern()
 	_deactivate_all_hitboxes()
 	_transition_left = stats.phase_transition_time
 	health.grant_invulnerability(stats.phase_transition_time)
 	_set_state(State.PHASE_TRANSITION)
-	phase_transition_started.emit(2)
+	phase_transition_started.emit(_transition_target)
+
+
+## The multiplier of every pattern cooldown in the current phase (boss 3 phase 3 shortens them; the others are 1).
+func cooldown_factor() -> float:
+	return stats.cooldown_factor_for(current_phase)
 
 
 func _on_health_died() -> void:

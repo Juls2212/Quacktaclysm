@@ -14,6 +14,8 @@ signal hit_landed(hurtbox: Hurtbox, info: DamageInfo)
 ## Used to resolve knockback direction. Falls back to this hitbox's own position.
 @export var owner_body: Node2D
 @export var active_on_ready: bool = false
+## What this hitbox is, copied into every DamageInfo it makes (the player sets it per sword kind; the wave scene sets &"wave").
+@export var attack_kind: StringName = &""
 ## 0 resolves the knockback side from positions. 1 or -1 forces it (e.g. projectiles).
 @export_range(-1, 1, 1) var knockback_direction_override: int = 0
 
@@ -74,7 +76,7 @@ func _try_hit(area: Area2D) -> void:
 	if _hit_times.has(hurtbox):
 		if rehit_interval <= 0.0 or _clock - float(_hit_times[hurtbox]) < rehit_interval:
 			return
-	var info := DamageInfo.create(damage, _resolve_knockback(hurtbox), owner_body if owner_body else self, team)
+	var info := DamageInfo.create(damage, _resolve_knockback(hurtbox), owner_body if owner_body else self, team, attack_kind)
 	var applied: bool = hurtbox.receive_hit(info)
 	# With a rehit interval, a blocked hit (i-frames) is retried on the next frame.
 	if applied or rehit_interval <= 0.0:

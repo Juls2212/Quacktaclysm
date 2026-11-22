@@ -15,6 +15,10 @@ enum Shape {
 	AIM_FAN,
 	## A ring and a cross on the floor spot where a leaping boss will land (drawn by LeapMarker; `size` is the radius).
 	MARKER,
+	## The floor lane of the sweeping beam of boss 3 (drawn by StormFx; `width` is the beam height).
+	BEAM,
+	## The vertical lightning columns of boss 3 (drawn by StormFx; `width` is the column width).
+	COLUMNS,
 }
 
 @export var kind: StringName = &""

@@ -11,6 +11,9 @@ signal hit_received(info: DamageInfo, applied: bool)
 @export var health: HealthComponent
 ## Optional node with `is_invulnerable()`. Falls back to the scene owner.
 @export var invulnerability_provider: Node
+## Optional node with `filter_hit(info) -> bool`: when it returns true the hit is blocked (no damage, `hit_received` with
+## applied = false, so the clash sound plays). A boss guard uses it.
+@export var hit_filter: Node
 
 var enabled: bool = true
 
@@ -37,6 +40,9 @@ func set_enabled(value: bool) -> void:
 ## Returns true if the hit damaged the owner.
 func receive_hit(info: DamageInfo) -> bool:
 	if not enabled or health == null or info.team == team:
+		return false
+	if hit_filter != null and hit_filter.has_method(&"filter_hit") and bool(hit_filter.call(&"filter_hit", info)):
+		hit_received.emit(info, false)
 		return false
 	var applied: bool = false
 	if not _provider_is_invulnerable():

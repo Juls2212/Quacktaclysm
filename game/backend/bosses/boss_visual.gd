@@ -83,6 +83,11 @@ func _update_rig() -> void:
 	rig.grounded = _boss.is_on_floor()
 	rig.vertical_speed = _boss.velocity.y
 	rig.enraged = _boss.current_phase >= 2
+	# Boss 3: the floating eye in phases 1 and 3, Kenzo in phase 2 (the same rig).
+	var hover := _boss.hover as BossHover
+	rig.eye_form = hover != null and hover.eye_form and _boss.state != BossBase.State.DEAD
+	if rig.eye_form and _boss.is_target_valid():
+		rig.eye_look = (_boss.target.global_position - _boss.global_position) / 120.0
 	# The phase transition is a roar: the guardian shudders before its rage starts.
 	rig.hurt = _boss.state == BossBase.State.PHASE_TRANSITION and possession_pose < 0.05
 	if possession_rise > 0.02:
@@ -233,7 +238,8 @@ func _show_telegraph(pattern_id: StringName) -> void:
 	_telegraph.fan_degrees = 0.0
 	var pattern: BossPattern = _boss.current_pattern
 	if pattern is ChargePattern:
-		_telegraph.reach = (pattern as ChargePattern).charge_speed * (pattern as ChargePattern).charge_duration
+		# The real lane (clipped by a wall or a ledge), never the nominal reach.
+		_telegraph.reach = maxf((pattern as ChargePattern).planned_lane, 1.0)
 	elif pattern is ProjectileVolleyPattern:
 		var volley := pattern as ProjectileVolleyPattern
 		_telegraph.fan_count = volley.projectile_count

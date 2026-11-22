@@ -111,6 +111,10 @@ var possession_color: Color = Color(0.95, 0.12, 0.08)
 var possession_hz: float = 1.5
 ## 0..1: how far the body has straightened up into the possessed pose (upright, limbs hanging, no shudder).
 var possession_pose: float = 0.0
+## Boss 3 (Phase 15e-1): drawn as a floating storm EYE instead of the duck figure while true (phases 1 and 3); `eye_look` is
+## where the pupil points (a unit-ish vector toward the player). Kenzo, the duck figure, is the same rig with this off.
+var eye_form: bool = false
+var eye_look: Vector2 = Vector2.ZERO
 var eye_tint: Color = Color(1, 1, 1, 0)
 var glow_color: Color = Color(1, 1, 1, 0)
 var ground_speed: float = 0.0
@@ -631,7 +635,10 @@ func _draw() -> void:
 		Look.SLINGER:
 			_draw_slinger()
 		Look.BOSS_WOODCUTTER, Look.BOSS_SWAMP, Look.BOSS_STORM:
-			_draw_boss()
+			if look == Look.BOSS_STORM and eye_form and not dead:
+				_draw_storm_eye()
+			else:
+				_draw_boss()
 		Look.GRANDFATHER:
 			_draw_grandfather()
 	if dressed:
@@ -657,6 +664,35 @@ func _draw_focus_effect() -> void:
 		var rise: float = fposmod(_time * 0.9 + float(i) * 0.17, 1.0)
 		var x: float = sin(float(i) * 2.3 + _time * 3.0) * 12.0
 		draw_circle(c + Vector2(x, 18.0 - 46.0 * rise), 1.6 + 1.2 * k, Color(1.0, 1.0, 1.0, 0.8 * (1.0 - rise)))
+
+
+## The floating storm eye: a big pale eye with veins, a blue iris that follows the target, a dark slit pupil and a few arcs of
+## lightning round it. Visual only.
+func _draw_storm_eye() -> void:
+	var center := Vector2(0.0, -14.0)
+	var pulse: float = 0.5 + 0.5 * sin(_time * 3.0)
+	draw_circle(center, 50.0 + 3.0 * pulse, Color(0.7, 0.85, 1.0, 0.1))
+	draw_circle(center, 40.0, Color(0.7, 0.85, 1.0, 0.16))
+	draw_set_transform(center, 0.0, Vector2(1.0, 0.86))
+	draw_circle(Vector2.ZERO, 34.0, Color(INK, 0.95))
+	draw_circle(Vector2.ZERO, 31.0, Color(0.93, 0.96, 1.0))
+	for i in 7:
+		var angle: float = float(i) * TAU / 7.0 + 0.3
+		draw_line(Vector2(cos(angle), sin(angle)) * 31.0, Vector2(cos(angle), sin(angle)) * 17.0, Color(0.55, 0.62, 0.8, 0.8), 1.4)
+	var gaze: Vector2 = eye_look.limit_length(1.0) * 9.0
+	draw_circle(gaze, 15.0, Color(INK, 0.9))
+	draw_circle(gaze, 13.0, Color(0.32, 0.55, 0.95))
+	draw_circle(gaze, 8.0, Color(0.55, 0.78, 1.0))
+	draw_colored_polygon(PackedVector2Array([gaze + Vector2(0.0, -11.0), gaze + Vector2(3.0, 0.0), gaze + Vector2(0.0, 11.0), gaze + Vector2(-3.0, 0.0)]), Color(0.05, 0.06, 0.12))
+	draw_circle(gaze + Vector2(-4.0, -5.0), 2.2, Color(1.0, 1.0, 1.0, 0.9))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	# Arcs of lightning crackle round the eye.
+	for i in 5:
+		var angle: float = float(i) * TAU / 5.0 + _time * 0.7
+		var from: Vector2 = center + Vector2(cos(angle), sin(angle) * 0.86) * 36.0
+		var mid: Vector2 = center + Vector2(cos(angle + 0.12), sin(angle + 0.12) * 0.86) * (46.0 + 4.0 * sin(_time * 18.0 + float(i)))
+		var to: Vector2 = center + Vector2(cos(angle + 0.05), sin(angle + 0.05) * 0.86) * 56.0
+		draw_polyline(PackedVector2Array([from, mid, to]), Color(0.8, 0.9, 1.0, 0.55 + 0.3 * pulse), 2.0, true)
 
 
 ## The red aura of a possessed guardian: soft discs behind the body and a pulsing glowing outline. Visual only.

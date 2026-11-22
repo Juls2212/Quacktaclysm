@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource type="PackedScene" path="res://backend/bosses/boss_base.tscn" id="1_base"]
 [ext_resource type="Resource" path="res://backend/bosses/stats/boss_three_stats.tres" id="2_stats"]
@@ -6,7 +6,13 @@
 [ext_resource type="Script" path="res://backend/bosses/patterns/charge_pattern.gd" id="4_charge"]
 [ext_resource type="Script" path="res://backend/bosses/patterns/projectile_volley_pattern.gd" id="5_volley"]
 [ext_resource type="Script" path="res://backend/combat/hitbox.gd" id="6_hitbox"]
-[ext_resource type="Resource" path="res://backend/bosses/stats/boss_heavy_projectile_stats.tres" id="7_heavy"]
+[ext_resource type="Script" path="res://backend/bosses/patterns/beam_sweep_pattern.gd" id="8_beam"]
+[ext_resource type="Script" path="res://backend/bosses/patterns/lightning_columns_pattern.gd" id="9_columns"]
+[ext_resource type="Script" path="res://backend/bosses/patterns/stomp_pattern.gd" id="10_stomp"]
+[ext_resource type="Script" path="res://backend/bosses/boss_hover.gd" id="11_hover"]
+[ext_resource type="Script" path="res://backend/bosses/boss_guard.gd" id="12_guard"]
+[ext_resource type="Script" path="res://frontend/fx/storm_fx.gd" id="13_storm"]
+[ext_resource type="Script" path="res://frontend/fx/guard_fx.gd" id="14_guardfx"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_swipe"]
 size = Vector2(90, 66)
@@ -14,8 +20,18 @@ size = Vector2(90, 66)
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_charge"]
 size = Vector2(52, 82)
 
-[node name="BossThree" instance=ExtResource("1_base")]
+[sub_resource type="CircleShape2D" id="CircleShape2D_landing"]
+radius = 62.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_beam"]
+size = Vector2(110, 34)
+
+[node name="BossThree" instance=ExtResource("1_base") node_paths=PackedStringArray("hover")]
 stats = ExtResource("2_stats")
+hover = NodePath("Hover")
+
+[node name="Hurtbox" parent="." index="2" node_paths=PackedStringArray("hit_filter")]
+hit_filter = NodePath("../Guard")
 
 [node name="Hitbox" parent="AttackPivot" index="0"]
 knockback = Vector2(300, -170)
@@ -27,17 +43,52 @@ shape = SubResource("RectangleShape2D_swipe")
 [node name="ChargeHitbox" type="Area2D" parent="AttackPivot" index="1"]
 script = ExtResource("6_hitbox")
 team = 1
-damage = 2
+damage = 1
 knockback = Vector2(420, -210)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AttackPivot/ChargeHitbox"]
 position = Vector2(40, 0)
 shape = SubResource("RectangleShape2D_charge")
 
+[node name="LandingHitbox" type="Area2D" parent="AttackPivot" index="2"]
+script = ExtResource("6_hitbox")
+team = 1
+damage = 1
+knockback = Vector2(320, -260)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackPivot/LandingHitbox"]
+position = Vector2(0, 30)
+shape = SubResource("CircleShape2D_landing")
+
+[node name="BeamHitbox" type="Area2D" parent="AttackPivot" index="3"]
+top_level = true
+script = ExtResource("6_hitbox")
+team = 1
+damage = 1
+knockback = Vector2(240, -260)
+rehit_interval = 0.4
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackPivot/BeamHitbox"]
+shape = SubResource("RectangleShape2D_beam")
+
+[node name="Hover" type="Node" parent="." index="8"]
+script = ExtResource("11_hover")
+
+[node name="Guard" type="Node" parent="." index="9"]
+script = ExtResource("12_guard")
+
+[node name="StormFx" type="Node2D" parent="." index="10"]
+script = ExtResource("13_storm")
+
+[node name="GuardFx" type="Node2D" parent="." index="11"]
+script = ExtResource("14_guardfx")
+
 [node name="Swipe" type="Node" parent="Patterns" index="0" node_paths=PackedStringArray("hitbox")]
 script = ExtResource("3_swipe")
 hitbox = NodePath("../../AttackPivot/Hitbox")
 pattern_id = &"swipe"
+min_phase = 2
+max_phase = 2
 cooldown = 1.2
 max_distance_to_target = 140.0
 telegraph_time = 0.5
@@ -48,6 +99,8 @@ active_time = 0.2
 script = ExtResource("4_charge")
 hitbox = NodePath("../../AttackPivot/ChargeHitbox")
 pattern_id = &"charge"
+min_phase = 2
+max_phase = 2
 cooldown = 2.5
 min_distance_to_target = 120.0
 telegraph_time = 0.7
@@ -55,30 +108,107 @@ recovery_time = 0.8
 charge_speed = 500.0
 charge_duration = 0.7
 
-[node name="VolleyLight" type="Node" parent="Patterns" index="2"]
-script = ExtResource("5_volley")
-pattern_id = &"volley_light"
-weight = 0.8
+[node name="Beam" type="Node" parent="Patterns" index="2" node_paths=PackedStringArray("hitbox")]
+script = ExtResource("8_beam")
+hitbox = NodePath("../../AttackPivot/BeamHitbox")
+pattern_id = &"beam"
+weight = 1.0
+min_phase = 1
 max_phase = 1
-cooldown = 4.0
-telegraph_time = 0.7
-recovery_time = 0.8
-projectile_count = 3
-spread_angle_degrees = 20.0
-shot_interval = 0.15
+cooldown = 6.0
+telegraph_time = 0.9
+scale_telegraph_with_speed = false
+recovery_time = 1.0
 
-[node name="VolleyHeavy" type="Node" parent="Patterns" index="3"]
-script = ExtResource("5_volley")
-projectile_stats = ExtResource("7_heavy")
-pattern_id = &"volley_heavy"
-weight = 2.0
+[node name="Columns" type="Node" parent="Patterns" index="3"]
+script = ExtResource("9_columns")
+pattern_id = &"columns"
+weight = 1.4
+min_phase = 1
+max_phase = 1
+cooldown = 5.0
+telegraph_time = 1.0
+scale_telegraph_with_speed = false
+recovery_time = 0.9
+column_count = 4
+
+[node name="ColumnsKenzo" type="Node" parent="Patterns" index="4"]
+script = ExtResource("9_columns")
+pattern_id = &"columns_kenzo"
+weight = 0.7
 min_phase = 2
-cooldown = 3.5
-telegraph_time = 0.7
-recovery_time = 0.8
-projectile_count = 7
-spread_angle_degrees = 70.0
-shot_interval = 0.1
+max_phase = 2
+cooldown = 7.0
+telegraph_time = 1.0
+scale_telegraph_with_speed = false
+recovery_time = 0.9
+column_count = 2
+
+[node name="BeamStorm" type="Node" parent="Patterns" index="5" node_paths=PackedStringArray("hitbox")]
+script = ExtResource("8_beam")
+hitbox = NodePath("../../AttackPivot/BeamHitbox")
+pattern_id = &"beam_storm"
+weight = 1.2
+min_phase = 3
+max_phase = 3
+cooldown = 6.0
+telegraph_time = 0.9
+scale_telegraph_with_speed = false
+recovery_time = 0.7
+
+[node name="ColumnsStorm" type="Node" parent="Patterns" index="6"]
+script = ExtResource("9_columns")
+pattern_id = &"columns_storm"
+weight = 1.6
+min_phase = 3
+max_phase = 3
+cooldown = 5.0
+telegraph_time = 1.0
+scale_telegraph_with_speed = false
+recovery_time = 0.7
+column_count = 6
+
+[node name="FallbackVolley" type="Node" parent="Patterns" index="7"]
+script = ExtResource("5_volley")
+pattern_id = &"volley_fallback"
+weight = 0.0
+min_phase = 1
+max_phase = 3
+fallback_priority = 1
+cooldown = 1.6
+telegraph_time = 0.8
+recovery_time = 0.7
+projectile_count = 3
+spread_angle_degrees = 18.0
+shot_interval = 0.2
+allow_steep_aim = true
+
+[node name="FallbackCharge" type="Node" parent="Patterns" index="8" node_paths=PackedStringArray("hitbox")]
+script = ExtResource("4_charge")
+hitbox = NodePath("../../AttackPivot/ChargeHitbox")
+pattern_id = &"charge_short"
+weight = 0.0
+min_phase = 2
+max_phase = 2
+fallback_priority = 2
+cooldown = 2.0
+telegraph_time = 0.6
+recovery_time = 0.7
+charge_speed = 380.0
+charge_duration = 0.35
+min_useful_lane = 100.0
+
+[node name="FallbackStomp" type="Node" parent="Patterns" index="9" node_paths=PackedStringArray("landing_hitbox")]
+script = ExtResource("10_stomp")
+landing_hitbox = NodePath("../../AttackPivot/LandingHitbox")
+pattern_id = &"stomp"
+weight = 0.0
+min_phase = 1
+max_phase = 3
+fallback_priority = 3
+cooldown = 0.0
+telegraph_time = 0.6
+recovery_time = 0.7
 
 [node name="Visual" parent="."]
 look = 7

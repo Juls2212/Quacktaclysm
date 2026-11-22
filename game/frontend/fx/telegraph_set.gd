@@ -12,7 +12,9 @@ const KIND_BOSS_SWIPE: StringName = &"boss_swipe"
 const KIND_BOSS_CHARGE: StringName = &"boss_charge"
 const KIND_BOSS_VOLLEY: StringName = &"boss_volley"
 const KIND_BOSS_LEAP: StringName = &"boss_leap"
-const KINDS: Array[StringName] = [KIND_MELEE, KIND_MELEE_TOUGH, KIND_FAST, KIND_RANGED, KIND_BOSS_SWIPE, KIND_BOSS_CHARGE, KIND_BOSS_VOLLEY, KIND_BOSS_LEAP]
+const KIND_BOSS_BEAM: StringName = &"boss_beam"
+const KIND_BOSS_COLUMNS: StringName = &"boss_columns"
+const KINDS: Array[StringName] = [KIND_MELEE, KIND_MELEE_TOUGH, KIND_FAST, KIND_RANGED, KIND_BOSS_SWIPE, KIND_BOSS_CHARGE, KIND_BOSS_VOLLEY, KIND_BOSS_LEAP, KIND_BOSS_BEAM, KIND_BOSS_COLUMNS]
 ## Max health from which a melee enemy counts as the tough variant (same rule as EnemyVisual).
 const TOUGH_HEALTH: int = 6
 
@@ -60,4 +62,8 @@ static func kind_of_pattern(pattern_id: StringName) -> StringName:
 		return KIND_BOSS_VOLLEY
 	if id.begins_with("leap"):
 		return KIND_BOSS_LEAP
+	if id.begins_with("beam"):
+		return KIND_BOSS_BEAM
+	if id.begins_with("columns"):
+		return KIND_BOSS_COLUMNS
 	return KIND_BOSS_SWIPE

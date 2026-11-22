@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="TelegraphSet" load_steps=11 format=3]
+[gd_resource type="Resource" script_class="TelegraphSet" load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://frontend/fx/telegraph_set.gd" id="1_set"]
 [ext_resource type="Script" path="res://frontend/fx/telegraph_style.gd" id="2_style"]
@@ -91,6 +91,28 @@ arc_degrees = 80.0
 exclamation = false
 windup_sounds = [["ducks/quack_boss.wav", 0.03, 0.0, 0.85], ["land.ogg", 0.0, -6.0, 0.6]]
 
+[sub_resource type="Resource" id="Style_boss_beam"]
+script = ExtResource("2_style")
+kind = &"boss_beam"
+shape = 5
+color = Color(0.82, 0.93, 1, 0.92)
+size = 1000.0
+width = 34.0
+arc_degrees = 80.0
+exclamation = false
+windup_sounds = [["wave_cast.wav", 0.03, -1.0, 0.55], ["hit_heavy.ogg", 0.0, -5.0, 0.9]]
+
+[sub_resource type="Resource" id="Style_boss_columns"]
+script = ExtResource("2_style")
+kind = &"boss_columns"
+shape = 6
+color = Color(0.86, 0.9, 1, 0.92)
+size = 60.0
+width = 60.0
+arc_degrees = 80.0
+exclamation = false
+windup_sounds = [["wave_cast.wav", 0.03, -2.0, 0.7], ["land.ogg", 0.0, -6.0, 0.45]]
+
 [resource]
 script = ExtResource("1_set")
-entries = [SubResource("Style_melee"), SubResource("Style_melee_tough"), SubResource("Style_fast"), SubResource("Style_ranged"), SubResource("Style_boss_swipe"), SubResource("Style_boss_charge"), SubResource("Style_boss_volley"), SubResource("Style_boss_leap")]
+entries = [SubResource("Style_melee"), SubResource("Style_melee_tough"), SubResource("Style_fast"), SubResource("Style_ranged"), SubResource("Style_boss_swipe"), SubResource("Style_boss_charge"), SubResource("Style_boss_volley"), SubResource("Style_boss_leap"), SubResource("Style_boss_beam"), SubResource("Style_boss_columns")]

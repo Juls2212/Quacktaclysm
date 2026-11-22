@@ -583,6 +583,7 @@ func _set_sword_profile(kind: SwordKind) -> void:
 	var near_edge: float = _sword_base_position.x - _sword_base_size.x * 0.5
 	_sword_shape_node.position = Vector2(near_edge + rect.size.x * 0.5, _sword_base_position.y)
 	current_sword_kind = kind
+	attack_hitbox.attack_kind = [&"light", &"heavy", &"dash_slash"][kind]
 
 
 ## A slash (extra active time or recovery lock) still owns the shared hitbox / blocks new attacks.
