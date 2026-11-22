@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3]
+[gd_scene load_steps=21 format=3]
 
 [ext_resource type="PackedScene" path="res://frontend/levels/level_base.tscn" id="1_base"]
 [ext_resource type="PackedScene" path="res://frontend/levels/blocks/placeholder_platform.tscn" id="2_platform"]
@@ -19,6 +19,7 @@
 [ext_resource type="Resource" path="res://frontend/levels/biome/storm_biome.tres" id="92_zone_b"]
 [ext_resource type="Script" path="res://frontend/levels/blocks/enemy_level_style.gd" id="95_enemy_style"]
 [ext_resource type="Script" path="res://frontend/levels/backdrop/storm_weather.gd" id="96_storm"]
+[ext_resource type="Script" path="res://frontend/story/elder_scene.gd" id="97_elder"]
 
 [node name="Level3" instance=ExtResource("1_base") node_paths=PackedStringArray("boss", "encounter", "fragment_drop", "arena_gates")]
 biome = ExtResource("90_biome")
@@ -33,9 +34,12 @@ encounter = NodePath("Content/Encounter")
 fragment_drop = NodePath("SoulFragmentDrop")
 arena_gates = [NodePath("Content/ArenaGate")]
 background_color = Color(0.12, 0.09, 0.16, 1)
-intro_lines = {"mercy": "La tormenta ruge, pero tu paso es ligero.", "mercy_hopeful": "Tras la tormenta, quiza amanezca.", "balanced": "La tormenta espera tu decision final.", "burden": "Los truenos suenan a reproche.", "burden_bitter": "La tormenta es el eco de todo lo que guardaste."}
+intro_lines = {"mercy": "La tormenta ruge, pero tu paso es ligero.", "mercy_hopeful": "Tras la tormenta, quizá amanezca.", "balanced": "La tormenta espera tu decisión final.", "burden": "Los truenos suenan a reproche.", "burden_bitter": "La tormenta es el eco de todo lo que guardaste."}
 intro_duration = 4.0
 variant_groups = {"calm": [], "corrupted": [NodePath("Content/ExtraRanged"), NodePath("Content/ExtraMelee"), NodePath("Content/ExtraFast")], "standard": []}
+
+[node name="ElderScene" type="Node" parent="." index="0"]
+script = ExtResource("97_elder")
 
 [node name="WallLeft" parent="Content" index="0" instance=ExtResource("3_wall")]
 position = Vector2(-20, 400)
