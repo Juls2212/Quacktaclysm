@@ -76,6 +76,7 @@ func _exit_tree() -> void:
 	if _holds_lock:
 		_holds_lock = false
 		PauseLock.release(self, get_tree())
+	_emit_finished()
 
 
 func _process(delta: float) -> void:
@@ -116,10 +117,23 @@ func _input(event: InputEvent) -> void:
 		_leaving = 0.0
 
 
+## Emitted once when the cutscene is over (also if it is removed some other way): the presentation queue waits for it.
+signal finished
+
+var _finished_emitted: bool = false
+
+
+func _emit_finished() -> void:
+	if not _finished_emitted:
+		_finished_emitted = true
+		finished.emit()
+
+
 func _finish() -> void:
 	if _holds_lock:
 		_holds_lock = false
 		PauseLock.release(self, get_tree())
+	_emit_finished()
 	queue_free()
 
 

@@ -31,6 +31,8 @@ boss = NodePath("Content/Boss")
 encounter = NodePath("Content/Encounter")
 fragment_drop = NodePath("SoulFragmentDrop")
 arena_gates = [NodePath("Content/ArenaGate")]
+intro_lines = {"balanced": "La ciudad cayó. Alguien tiene que seguir avanzando.", "burden": "La ciudad cayó, y cargas con su peso.", "burden_bitter": "La ciudad cayó, y su rencor camina contigo.", "mercy": "La ciudad cayó, pero aún queda algo que salvar.", "mercy_hopeful": "Entre las ruinas de la ciudad todavía brilla una esperanza."}
+intro_duration = 4.0
 
 [node name="WallLeft" parent="Content" index="0" instance=ExtResource("3_wall")]
 position = Vector2(-20, 400)
@@ -41,8 +43,8 @@ position = Vector2(1200, 620)
 size = Vector2(2400, 40)
 
 [node name="FloorEnd" parent="Content" index="2" instance=ExtResource("2_platform")]
-position = Vector2(4042.5, 620)
-size = Vector2(2715, 40)
+position = Vector2(4087.5, 620)
+size = Vector2(2805, 40)
 
 [node name="PlatformStart1" parent="Content" index="3" instance=ExtResource("2_platform")]
 position = Vector2(600, 520)
