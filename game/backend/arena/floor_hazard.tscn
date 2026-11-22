@@ -1,0 +1,19 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://backend/arena/floor_hazard.gd" id="1_hazard"]
+[ext_resource type="Script" path="res://backend/combat/hitbox.gd" id="2_hitbox"]
+[ext_resource type="Script" path="res://frontend/arena/floor_hazard_art.gd" id="3_art"]
+[ext_resource type="Resource" path="res://backend/arena/default_floor_hazard_config.tres" id="4_cfg"]
+
+[node name="FloorHazard" type="Node2D"]
+script = ExtResource("1_hazard")
+config = ExtResource("4_cfg")
+
+[node name="Hitbox" type="Area2D" parent="."]
+script = ExtResource("2_hitbox")
+team = 1
+damage = 1
+rehit_interval = 0.5
+
+[node name="Art" type="Node2D" parent="."]
+script = ExtResource("3_art")

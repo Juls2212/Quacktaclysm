@@ -13,6 +13,8 @@ extends BossPattern
 @export var spawn_offset: Vector2 = Vector2(50.0, -10.0)
 ## true aims at the target's position (kept in the half-plane the boss faces); false is horizontal.
 @export var aim_at_target: bool = true
+## true aims at the target even when it is not in the half-plane the boss faces (e.g. straight down from a platform).
+@export var allow_steep_aim: bool = false
 
 var _shots_fired: int = 0
 var _active_elapsed: float = 0.0
@@ -57,7 +59,7 @@ func _compute_aim(boss: BossBase) -> Vector2:
 	var direction := Vector2(boss.facing_direction, 0.0)
 	if aim_at_target and boss.is_target_valid():
 		var aim: Vector2 = boss.target.global_position - _spawn_position(boss)
-		if aim.x * boss.facing_direction > 0.0:
+		if aim.x * boss.facing_direction > 0.0 or allow_steep_aim:
 			direction = aim.normalized()
 	return direction
 

@@ -1,0 +1,14 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://backend/arena/bounce_pad.gd" id="1_pad"]
+[ext_resource type="Script" path="res://frontend/arena/bounce_pad_art.gd" id="2_art"]
+[ext_resource type="Resource" path="res://backend/arena/default_bounce_config.tres" id="3_cfg"]
+
+[node name="BouncePad" type="Area2D"]
+script = ExtResource("1_pad")
+config = ExtResource("3_cfg")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+
+[node name="Art" type="Node2D" parent="."]
+script = ExtResource("2_art")
