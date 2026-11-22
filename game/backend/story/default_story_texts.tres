@@ -73,6 +73,7 @@ lines = Array[String](["Daigo, Hana y Kenzo subieron juntos, sin peso y sin hamb
 style = "full"
 music = "title_screen.ogg"
 summary_line = "Liberaste las tres almas. El cielo volvió a ser un cielo."
+epilogues = Array[String](["Abuelo: Mira el cielo entero, nieto. Cada estrella volvió a casa gracias a tus manos.", "Abuelo: Caminaste ligero y el cielo lo notó. Descansa, nieto: la noche ya es tuya.", "Abuelo: El camino pesó y aun así llegaste. Esa constancia también ilumina, nieto."])
 
 [sub_resource type="Resource" id="End_ending_scar"]
 script = ExtResource("4_ending")
@@ -82,6 +83,7 @@ lines = Array[String](["Dos almas subieron al cielo. La de {kept} se quedó cont
 style = "scar"
 music = "castle_on_the_mountain.ogg"
 summary_line = "Liberaste dos almas y guardaste una. El cielo sanó con una cicatriz."
+epilogues = Array[String](["Abuelo: Toda cicatriz recuerda que hubo amor. Llévala con la cabeza alta, nieto.", "Abuelo: Fuiste firme y sereno hasta el final. La cicatriz será solo un recuerdo tibio.", "Abuelo: Fue un camino duro y lo recorriste entero. Tu cicatriz es la de quien no se rindió."])
 
 [sub_resource type="Resource" id="End_ending_doubt"]
 script = ExtResource("4_ending")
@@ -91,6 +93,7 @@ lines = Array[String](["Tu katana nunca fue tan poderosa. Nunca pesó tanto.", "
 style = "doubt"
 music = "dungeon.ogg"
 summary_line = "Liberaste una sola alma. Tienes el poder, y tienes la duda."
+epilogues = Array[String](["Abuelo: Dudar no es perder el rumbo, nieto: es escuchar al corazón. Aún estás a tiempo.", "Abuelo: Tu filo fue seguro y limpio. Ahora déjalo aprender a soltar, nieto.", "Abuelo: Cada tropiezo te enseñó a pesar la hoja. Sigue aprendiendo; yo camino contigo."])
 
 [sub_resource type="Resource" id="End_ending_corrupt"]
 script = ExtResource("4_ending")
@@ -100,6 +103,7 @@ lines = Array[String](["Guardaste a Daigo, a Hana y a Kenzo. Su peso nunca te so
 style = "corrupt"
 music = "the_evil_one.ogg"
 summary_line = "No liberaste ninguna alma. La profecía se cumplió contigo."
+epilogues = Array[String](["Abuelo: Aun en la noche más honda queda una estrella despierta. Búscala, nieto.", "Abuelo: Fuiste fuerte, nieto, y la fuerza sola pesa. Todavía puedes volver a la luz.", "Abuelo: Sé cuánto cargaste. No estás solo en esta oscuridad: mi voz aún te espera."])
 
 [resource]
 script = ExtResource("1_texts")
