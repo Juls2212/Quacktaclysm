@@ -1,0 +1,96 @@
+[gd_resource type="Resource" script_class="TelegraphSet" load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://frontend/fx/telegraph_set.gd" id="1_set"]
+[ext_resource type="Script" path="res://frontend/fx/telegraph_style.gd" id="2_style"]
+
+[sub_resource type="Resource" id="Style_melee"]
+script = ExtResource("2_style")
+kind = &"melee"
+shape = 0
+color = Color(1, 0.62, 0.2, 0.88)
+size = 58.0
+width = 5.0
+arc_degrees = 80.0
+exclamation = true
+windup_sounds = [["ducks/quack_1.wav", 0.04, -2.0, 0.9], ["swing_1.wav", 0.03, -8.0, 0.7]]
+
+[sub_resource type="Resource" id="Style_melee_tough"]
+script = ExtResource("2_style")
+kind = &"melee_tough"
+shape = 0
+color = Color(1, 0.45, 0.42, 0.9)
+size = 72.0
+width = 6.0
+arc_degrees = 100.0
+exclamation = true
+windup_sounds = [["ducks/quack_2.wav", 0.03, 0.0, 0.7], ["hit_heavy.ogg", 0.0, -7.0, 0.6]]
+
+[sub_resource type="Resource" id="Style_fast"]
+script = ExtResource("2_style")
+kind = &"fast"
+shape = 1
+color = Color(1, 0.92, 0.15, 0.85)
+size = 105.0
+width = 22.0
+arc_degrees = 80.0
+exclamation = true
+windup_sounds = [["ducks/quack_3.wav", 0.05, -2.0, 1.5], ["dash.ogg", 0.04, -5.0, 1.7]]
+
+[sub_resource type="Resource" id="Style_ranged"]
+script = ExtResource("2_style")
+kind = &"ranged"
+shape = 2
+color = Color(1, 0.5, 0.9, 0.9)
+size = 260.0
+width = 3.0
+arc_degrees = 80.0
+exclamation = true
+windup_sounds = [["ducks/quack_1.wav", 0.04, -3.0, 1.25], ["wave_cast.wav", 0.03, -7.0, 1.5]]
+
+[sub_resource type="Resource" id="Style_boss_swipe"]
+script = ExtResource("2_style")
+kind = &"boss_swipe"
+shape = 0
+color = Color(1, 0.55, 0.28, 0.85)
+size = 120.0
+width = 8.0
+arc_degrees = 110.0
+exclamation = false
+windup_sounds = [["ducks/quack_boss.wav", 0.03, 0.0, 0.9], ["swing_3.wav", 0.03, -3.0, 0.65]]
+
+[sub_resource type="Resource" id="Style_boss_charge"]
+script = ExtResource("2_style")
+kind = &"boss_charge"
+shape = 1
+color = Color(1, 0.5, 0.5, 0.85)
+size = 330.0
+width = 46.0
+arc_degrees = 80.0
+exclamation = false
+windup_sounds = [["ducks/quack_boss.wav", 0.02, 2.0, 0.7], ["hit_heavy.ogg", 0.0, -4.0, 0.5]]
+
+[sub_resource type="Resource" id="Style_boss_volley"]
+script = ExtResource("2_style")
+kind = &"boss_volley"
+shape = 3
+color = Color(1, 0.62, 1, 0.88)
+size = 360.0
+width = 3.0
+arc_degrees = 80.0
+exclamation = false
+windup_sounds = [["ducks/quack_boss.wav", 0.03, 0.0, 1.2], ["wave_cast.wav", 0.03, -3.0, 0.8]]
+
+[sub_resource type="Resource" id="Style_boss_leap"]
+script = ExtResource("2_style")
+kind = &"boss_leap"
+shape = 4
+color = Color(1, 0.9, 0.25, 0.92)
+size = 62.0
+width = 4.0
+arc_degrees = 80.0
+exclamation = false
+windup_sounds = [["ducks/quack_boss.wav", 0.03, 0.0, 0.85], ["land.ogg", 0.0, -6.0, 0.6]]
+
+[resource]
+script = ExtResource("1_set")
+entries = [SubResource("Style_melee"), SubResource("Style_melee_tough"), SubResource("Style_fast"), SubResource("Style_ranged"), SubResource("Style_boss_swipe"), SubResource("Style_boss_charge"), SubResource("Style_boss_volley"), SubResource("Style_boss_leap")]
