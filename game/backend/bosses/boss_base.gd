@@ -137,6 +137,30 @@ func get_effective_gap_time() -> float:
 	return _gap_time()
 
 
+## Phase 16a (AI Director): multiplies the weight of the ROTATION patterns (no fallbacks) by the plan multipliers, always from the
+## weight the scene gave, so calling it twice never compounds. Only `weight` changes: never a telegraph, windup, cooldown, HP or
+## damage. An empty dictionary restores every weight.
+func apply_pattern_weights(multipliers: Dictionary, weight_min: float = 0.6, weight_max: float = 1.5) -> void:
+	for pattern in patterns:
+		if pattern.base_weight < 0.0:
+			pattern.base_weight = pattern.weight
+		pattern.weight = pattern.base_weight
+		if pattern.fallback_priority != 0 or pattern.base_weight <= 0.0:
+			continue
+		var key: String = String(pattern.pattern_id)
+		if multipliers.has(key):
+			pattern.weight = pattern.base_weight * clampf(float(multipliers[key]), weight_min, weight_max)
+
+
+## Ids of the rotation patterns (the ones a plan may weight).
+func rotation_pattern_ids() -> PackedStringArray:
+	var ids := PackedStringArray()
+	for pattern in patterns:
+		if pattern.fallback_priority == 0 and pattern.weight > 0.0:
+			ids.append(String(pattern.pattern_id))
+	return ids
+
+
 ## Re-reads the BossPattern children of `Patterns` (call after adding or removing patterns).
 func refresh_patterns() -> void:
 	for pattern in patterns:
