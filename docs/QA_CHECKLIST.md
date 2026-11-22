@@ -191,3 +191,33 @@ Para repetir con otras elecciones: Menú principal → «Nueva partida» (confir
 - [ ] Bajo la barra se ve el medidor de guardia (cajas de escudo) y «ATURDIDO: ¡GOLPEA!» al romperla.
 - [ ] La pista «Rompe la guardia con golpe pesado o tajo de dash» sale una vez por pelea (otra vez tras reintentar).
 - [ ] Con "Efectos de corrupción" desactivado la etiqueta y la pista siguen sin movimiento.
+
+## Director de IA local (Fase 16a)
+
+- [ ] Nivel 1: plan neutro (nada cambia respecto a antes).
+- [ ] Nivel 2 tras sufrir en el 1 (muchas muertes o daño): menos enemigos extra y el patrón que más dañó pesa menos.
+- [ ] Nivel 2 tras un nivel 1 cómodo y largo: un enemigo extra más como mucho y el patrón que más dañó pesa más.
+- [ ] Nunca hay más de 3 enemigos extra, ni uno a menos de 150 px de un borde de hueco.
+- [ ] Los pesos de los patrones del jefe no se salen de 0,6 a 1,5; los patrones de reserva no cambian.
+- [ ] Modo de plan fijo (`QUACKTACLYSM_DIRECTOR_NEUTRAL=1` o `QUACKTACLYSM_DIRECTOR_PLAN`) en depuración: cada carga usa ese plan y el log imprime `[Director]`.
+- [ ] Morir y reintentar el nivel reutiliza el mismo plan; continuar desde disco usa el plan neutro.
+
+## Director de IA remoto (Fase 16b)
+
+- [ ] «Adaptación con IA» existe en el menú principal y en el de pausa, activada por defecto; apagada, no sale ninguna petición (comprobar el log del servicio).
+- [ ] Servicio en modo `openai`: el plan del nivel 2 y 3 puede venir de la IA (log `[Director] level N plan (remote)`); nunca cambia el perfil, ni más de 3 extras, ni pesos fuera de 0,6 a 1,5.
+- [ ] Servicio apagado antes de decidir un fragmento (sin conexión): el siguiente nivel carga igual con el plan local y sin ningún error en pantalla.
+- [ ] Servicio parado a mitad de la partida (tras la petición): el nivel no espera y usa el plan local.
+- [ ] Servicio en modo mock: el juego se comporta como la Fase 16a.
+- [ ] Reintentar un nivel mantiene el mismo plan; continuar desde disco usa el plan neutro.
+
+## Línea del abuelo, reflejo y epílogos (Fase 16c)
+
+- [ ] Nivel 1: tras el título aparece un recuerdo («Recuerdas su voz…») con una silueta de estrellas borrosa en el cielo; se va sola y con Enter.
+- [ ] Nivel 2: otro recuerdo, con el tema del jugador; silueta borrosa.
+- [ ] Nivel 3: después de la escena del abuelo aparece su voz directa («Abuelo: …») y la silueta es nítida.
+- [ ] Sin conexión, con «Adaptación con IA» apagada o con el servicio en mock: la línea sale igual, del banco.
+- [ ] Con «Efectos de corrupción» apagado: el reflejo solo se desvanece (sin parpadeo).
+- [ ] La línea nunca aparece en una pelea, sobre la intro del jefe, sobre una tarjeta de habilidad ni al continuar en el checkpoint de la arena; se cierra si empieza el encuentro.
+- [ ] Al reintentar el nivel la línea no se repite.
+- [ ] Los 4 finales x 3 variantes: el final que suena es el mismo y la tarjeta cambia el cierre (probar con `QUACKTACLYSM_DIRECTOR_PLAN` y `epilogue_variant` 0, 1 y 2).
