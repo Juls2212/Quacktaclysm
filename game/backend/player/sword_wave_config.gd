@@ -57,6 +57,12 @@ func build_projectile_stats(tier_index: int) -> ProjectileStats:
 	stats.size_scale = tier.size_scale
 	stats.pierce_count = tier.pierce_count
 	stats.tint = tier.tint
+	stats.rim_color = tier.rim_color
+	stats.core_color = tier.core_color
+	stats.glow_color = tier.glow_color
+	stats.glow_strength = tier.glow_strength
+	stats.trail_length = tier.trail_length
+	stats.impact_scale = tier.impact_scale
 	stats.gravity_scale = 0.0
 	stats.destroy_on_hit = true
 	stats.destroy_on_world = true

@@ -80,7 +80,13 @@ func _show(fragment_id: String, tier: int) -> Variant:
 	var player := _level.get_node_or_null(^"Player") as Player
 	var cost: int = player.soul.heal_cost() if player != null and player.soul != null else SoulConfig.get_default().heal_cost(GameState.souls_kept)
 	var description: String = texts.wave_description_format % [tier, cost]
-	card = AbilityCard.present(self, "wave_%s" % fragment_id, texts.wave_name_format % tier, description, PackedStringArray(["wave", "heal"]))
+	var wave_caster := _level.get_node_or_null(^"Player/SwordWaveCaster") as SwordWaveCaster
+	if wave_caster != null and wave_caster.config != null:
+		description += "\n" + wave_damage_text(wave_caster.config, tier)
+	# The card shows the color of the wave the player just reached.
+	var caster := _level.get_node_or_null(^"Player/SwordWaveCaster") as SwordWaveCaster
+	var swatch: SwordWaveTier = caster.config.get_tier(tier) if caster != null and caster.config != null else null
+	card = AbilityCard.present(self, "wave_%s" % fragment_id, texts.wave_name_format % tier, description, PackedStringArray(["wave", "heal"]), swatch)
 	if card != null:
 		card_shown.emit(card)
 		return Signal(card, &"dismissed")
@@ -97,6 +103,15 @@ func _show_double_jump() -> Variant:
 		card_shown.emit(card)
 		return Signal(card, &"dismissed")
 	return Signal()
+
+
+## The damage line of a wave tier, computed from the resource: the multiplier over tier 0 and the damage per hit.
+static func wave_damage_text(config: SwordWaveConfig, tier: int) -> String:
+	var base: SwordWaveTier = config.get_tier(0)
+	var current: SwordWaveTier = config.get_tier(tier)
+	if base == null or current == null:
+		return ""
+	return AbilityTexts.get_default().wave_damage_format % [float(current.damage) / float(maxi(base.damage, 1)), base.damage, current.damage]
 
 
 func _find_exorcism() -> Node:

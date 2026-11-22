@@ -23,6 +23,10 @@ var is_open: bool = false
 var ability_name: String = ""
 var description: String = ""
 var key_text: String = ""
+## The color of the sword wave shown in the card of the wave upgrade (alpha 0 = no swatch): the glyph left of the title.
+var swatch_color: Color = Color(0.0, 0.0, 0.0, 0.0)
+
+var _swatch: SwordWaveTier = null
 
 var _texts: AbilityTexts = null
 var _actions: PackedStringArray = PackedStringArray()
@@ -46,12 +50,12 @@ static func was_shown(id: String) -> bool:
 
 
 ## Creates the card under `host` and shows it, unless `id` was already shown. Returns the card or null.
-static func present(host: Node, id: String, name_text: String, description_text: String, actions: PackedStringArray) -> AbilityCard:
+static func present(host: Node, id: String, name_text: String, description_text: String, actions: PackedStringArray, swatch: SwordWaveTier = null) -> AbilityCard:
 	if host == null or was_shown(id):
 		return null
 	var card := AbilityCard.new()
 	host.add_child(card)
-	card.show_card(id, name_text, description_text, actions)
+	card.show_card(id, name_text, description_text, actions, swatch)
 	return card
 
 
@@ -84,7 +88,9 @@ func _input(event: InputEvent) -> void:
 
 
 ## Shows the card. The key line is built NOW from the InputMap, so it follows any remap.
-func show_card(id: String, name_text: String, description_text: String, actions: PackedStringArray) -> void:
+func show_card(id: String, name_text: String, description_text: String, actions: PackedStringArray, swatch: SwordWaveTier = null) -> void:
+	_swatch = swatch
+	swatch_color = swatch.tint if swatch != null else Color(0.0, 0.0, 0.0, 0.0)
 	event_id = id
 	_shown[id] = true
 	ability_name = name_text
@@ -183,3 +189,22 @@ func _draw_panel() -> void:
 	# A soft glow behind the title that breathes.
 	var pulse: float = 0.5 + 0.5 * sin(_elapsed * 3.0)
 	_panel.draw_circle(Vector2(rect.size.x * 0.5, 60.0), 90.0 + 8.0 * pulse, Color(SOFT, 0.05 + 0.05 * pulse))
+	if _swatch != null:
+		_draw_swatch(Vector2(112.0, 118.0), pulse)
+
+
+## The sword wave of the upgrade, drawn at the size of the game's wave and a few times bigger: the glow, the trail, the body,
+## the dark core (violet tier) and the light rim, in the colors of the tier the player just reached.
+func _draw_swatch(at: Vector2, pulse: float) -> void:
+	var tier: SwordWaveTier = _swatch
+	var scale_up: float = 1.5
+	for i in 8:
+		var t: float = float(i) / 8.0
+		_panel.draw_circle(at + Vector2(-t * tier.trail_length * 1.1, 0.0), 22.0 * (1.0 - 0.7 * t), Color(tier.glow_color, tier.glow_strength * 0.7 * (1.0 - t)))
+	_panel.draw_circle(at, 34.0 + 3.0 * pulse, Color(tier.glow_color, tier.glow_strength * (0.45 + 0.2 * pulse)))
+	_panel.draw_set_transform(at, 0.0, Vector2(scale_up, scale_up))
+	_panel.draw_colored_polygon(PackedVector2Array([Vector2(-2, -22), Vector2(8, -14), Vector2(12, 0), Vector2(8, 14), Vector2(-2, 22), Vector2(2, 12), Vector2(5, 0), Vector2(2, -12)]), tier.tint)
+	if tier.core_color.a > 0.0:
+		_panel.draw_colored_polygon(PackedVector2Array([Vector2(2, -13), Vector2(7, -6), Vector2(9, 0), Vector2(7, 6), Vector2(2, 13), Vector2(4, 0)]), tier.core_color)
+	_panel.draw_polyline(PackedVector2Array([Vector2(-2, -22), Vector2(8, -14), Vector2(12, 0), Vector2(8, 14), Vector2(-2, 22), Vector2(2, 12), Vector2(5, 0), Vector2(2, -12), Vector2(-2, -22)]), tier.rim_color, 1.2, true)
+	_panel.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

@@ -14,6 +14,8 @@ const DEFAULT_PATH: String = "res://backend/player/default_ability_texts.tres"
 ## Phase 15c: the double jump, unlocked by boss 2's decision (released or kept).
 @export var double_jump_name: String = "Doble salto"
 @export_multiline var double_jump_description: String = "El pantano ya no te retiene: pulsa saltar otra vez en el aire y elévate un poco más. Es la misma tecla del salto."
+## The damage line of the wave upgrade card: the multiplier over tier 0 and the damage per hit (%.1f, then two %d).
+@export var wave_damage_format: String = "Daño ×%.1f (de %d a %d por golpe)"
 @export var keys_format: String = "Tecla: %s"
 @export var footer: String = "Puedes cambiarla en Opciones → Controles"
 @export var dismiss_hint: String = "Pulsa Enter para continuar"

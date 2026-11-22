@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://backend/combat/projectile.gd" id="1_projectile"]
 [ext_resource type="Script" path="res://backend/combat/hitbox.gd" id="2_hitbox"]
+[ext_resource type="Script" path="res://frontend/fx/wave_glow.gd" id="3_glow"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_world"]
 radius = 8.0
@@ -18,6 +19,7 @@ shape = SubResource("CircleShape2D_world")
 [node name="Hitbox" type="Area2D" parent="."]
 script = ExtResource("2_hitbox")
 team = 0
+attack_kind = &"wave"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox"]
 shape = SubResource("RectangleShape2D_hit")
@@ -25,3 +27,11 @@ shape = SubResource("RectangleShape2D_hit")
 [node name="Visual" type="Polygon2D" parent="."]
 color = Color(0.55, 0.8, 1, 1)
 polygon = PackedVector2Array(-2, -22, 8, -14, 12, 0, 8, 14, -2, 22, 2, 12, 5, 0, 2, -12)
+
+[node name="GlowBehind" type="Node2D" parent="."]
+script = ExtResource("3_glow")
+layer = 0
+
+[node name="RimFront" type="Node2D" parent="."]
+script = ExtResource("3_glow")
+layer = 1
