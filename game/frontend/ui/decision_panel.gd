@@ -23,14 +23,16 @@ var _choice_locked: bool = true
 @onready var keep_button: Button = $Root/Center/Panel/Margin/Box/Buttons/KeepButton
 @onready var gem: DecisionDecor = $Root/Center/Panel/Margin/Box/Gem
 @onready var center: Control = $Root/Center
+@onready var release_caption_label: Label = $Root/Center/Panel/Margin/Box/Captions/ReleaseCaption
+@onready var keep_caption_label: Label = $Root/Center/Panel/Margin/Box/Captions/KeepCaption
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	release_button.text = release_text
 	keep_button.text = keep_text
-	($Root/Center/Panel/Margin/Box/Captions/ReleaseCaption as Label).text = release_caption
-	($Root/Center/Panel/Margin/Box/Captions/KeepCaption as Label).text = keep_caption
+	release_caption_label.text = release_caption
+	keep_caption_label.text = keep_caption
 	release_button.pressed.connect(_on_choice_pressed.bind(GameState.CHOICE_RELEASED))
 	keep_button.pressed.connect(_on_choice_pressed.bind(GameState.CHOICE_KEPT))
 	root.visible = false
@@ -50,6 +52,15 @@ func is_open() -> bool:
 func open(data: SoulFragmentData) -> void:
 	name_label.text = data.display_name
 	description_label.text = data.description
+	release_caption_label.text = release_caption
+	keep_caption_label.text = keep_caption
+	# The soul's own story (its memory and what each choice does to it) replaces the generic texts.
+	var soul: SoulStory = (load(StoryTexts.DEFAULT_PATH) as StoryTexts).get_soul(data.fragment_id)
+	if soul != null:
+		name_label.text = soul.soul_name
+		description_label.text = soul.memory
+		release_caption_label.text = soul.released_line
+		keep_caption_label.text = soul.kept_line
 	release_button.text = release_text
 	keep_button.text = keep_text
 	release_button.disabled = false

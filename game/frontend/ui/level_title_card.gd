@@ -31,6 +31,10 @@ var _intro: Label = null
 var _time: float = 0.0
 var _phrase: String = ""
 var _phrase_alpha: float = 0.0
+## The level's second line (what the decisions so far did), read from IntroLayer/ConsequenceLabel.
+var _consequence: Label = null
+var _consequence_text: String = ""
+var _consequence_alpha: float = 0.0
 ## < 0 while not closing; else seconds since the close began.
 var _closing: float = -1.0
 ## Countdown to start closing after the choice (< 0 when not scheduled).
@@ -50,10 +54,13 @@ func _ready() -> void:
 	if _level == null:
 		return
 	_intro = _level.get_node_or_null(^"IntroLayer/IntroLabel") as Label
+	_consequence = _level.get_node_or_null(^"IntroLayer/ConsequenceLabel") as Label
 	var number: Variant = _level.get(&"level_number")
 	if _intro != null and number != null and int(number) > 0:
 		# Still there and still driven by the level (tests read it), just not drawn.
 		_intro.self_modulate.a = 0.0
+		if _consequence != null:
+			_consequence.self_modulate.a = 0.0
 	if _level.has_signal(&"level_completed"):
 		_level.connect(&"level_completed", _on_level_completed)
 	var flow: Node = _level.get_node_or_null(^"DecisionFlow")
@@ -78,6 +85,11 @@ func _process(delta: float) -> void:
 		_phrase_alpha = minf(_phrase_alpha + delta * 3.0, 1.0)
 	else:
 		_phrase_alpha = maxf(_phrase_alpha - delta * 2.0, 0.0)
+	if _consequence != null and _consequence.visible and not _consequence.text.is_empty():
+		_consequence_text = _consequence.text
+		_consequence_alpha = minf(_consequence_alpha + delta * 3.0, 1.0)
+	else:
+		_consequence_alpha = maxf(_consequence_alpha - delta * 2.0, 0.0)
 	if _close_in >= 0.0:
 		_close_in -= delta
 		if _close_in < 0.0:
@@ -151,6 +163,11 @@ func _draw_card() -> void:
 		_canvas.draw_set_transform_matrix(Transform2D(Vector2(1.0, 0.0), Vector2(-0.2, 1.0), Vector2(0.2 * y, 0.0)))
 		_text_centered(Vector2(s.x * 0.5, y), _phrase, 28, Color(CREAM, a), 6, Color(INK, 0.8 * a), GameFonts.BODY, s.x - 80.0)
 		_canvas.draw_set_transform_matrix(Transform2D.IDENTITY)
+	# What the decisions so far changed: plain (not slanted), a little smaller, under the intro line.
+	if _consequence_alpha > 0.01 and not _consequence_text.is_empty() and number != null and int(number) > 0:
+		var ca: float = _consequence_alpha * appear
+		var cy: float = lerpf(big_c.y + 146.0, small_c.y + 92.0, shrink)
+		_text_centered(Vector2(s.x * 0.5, cy), _consequence_text, 22, Color(CREAM.lerp(STAR, 0.35), ca), 5, Color(INK, 0.8 * ca), GameFonts.BODY, s.x - 120.0)
 	if black > 0.001 and _closing >= 0.0:
 		# Closing: the black covers everything.
 		_canvas.draw_rect(Rect2(Vector2.ZERO, s), Color(0, 0, 0, black))

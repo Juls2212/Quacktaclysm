@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="DecisionTexts" format=3]
+
+[ext_resource type="Script" path="res://backend/decisions/decision_texts.gd" id="1_texts"]
+
+[resource]
+script = ExtResource("1_texts")
+no_decisions_line = "Cada alma que liberes o conserves cambiará tu destino."
+health_bonus_one = "+1 corazón máximo por alma liberada"
+health_bonus_many = "+%d corazones máximos por almas liberadas"
+wave_line = "onda de espada nivel %d"
+profile_lines = {
+"compassionate": "tu piedad suaviza este nivel: jefe más lento y sin enemigos extra",
+"corrupt": "tu corrupción endurece este nivel: jefe más rápido y enemigos extra",
+"neutral": "este nivel no se inclina hacia ningún lado"
+}
+line_separator = " · "
+heal_cost_line = "curarse cuesta %d de alma"
+profile_names = {
+"compassionate": "Compasivo",
+"corrupt": "Corrupto",
+"neutral": "Neutral"
+}
