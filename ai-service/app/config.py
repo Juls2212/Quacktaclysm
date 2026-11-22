@@ -9,6 +9,9 @@ from pathlib import Path
 MODE_MOCK = "mock"
 MODE_OPENAI = "openai"
 _DEFAULT_TIMEOUT_SECONDS = 8.0
+# The Director plan has a client budget of 3 s: the model gets 2.5 s and no retry.
+_DEFAULT_DIRECTOR_TIMEOUT_SECONDS = 2.5
+_DEFAULT_RATE_LIMIT_PER_MINUTE = 30
 
 
 @dataclass(frozen=True)
@@ -17,6 +20,9 @@ class Settings:
     openai_api_key: str = ""
     openai_model: str = ""
     openai_timeout_seconds: float = _DEFAULT_TIMEOUT_SECONDS
+    director_timeout_seconds: float = _DEFAULT_DIRECTOR_TIMEOUT_SECONDS
+    # Requests per minute and per IP for /v1/director/plan; 0 or less disables the limit.
+    rate_limit_per_minute: int = _DEFAULT_RATE_LIMIT_PER_MINUTE
     host: str = "127.0.0.1"
     port: int = 8000
 
@@ -80,6 +86,8 @@ def load_settings() -> Settings:
         openai_api_key=os.environ.get("OPENAI_API_KEY", "").strip(),
         openai_model=os.environ.get("OPENAI_MODEL", "").strip(),
         openai_timeout_seconds=_float_env("OPENAI_TIMEOUT_SECONDS", _DEFAULT_TIMEOUT_SECONDS),
+        director_timeout_seconds=_float_env("OPENAI_DIRECTOR_TIMEOUT_SECONDS", _DEFAULT_DIRECTOR_TIMEOUT_SECONDS),
+        rate_limit_per_minute=_int_env("AI_SERVICE_RATE_LIMIT_PER_MINUTE", _DEFAULT_RATE_LIMIT_PER_MINUTE),
         host=os.environ.get("AI_SERVICE_HOST", "127.0.0.1").strip() or "127.0.0.1",
         port=_int_env("AI_SERVICE_PORT", 8000),
     )
