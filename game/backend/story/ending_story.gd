@@ -12,3 +12,6 @@ extends Resource
 @export var music: String = "title_screen.ogg"
 ## One sentence on the summary card.
 @export var summary_line: String = ""
+## Three closing texts (Phase 16c), shown on the summary card: 0 neutral, 1 for a player who played comfortably, 2 for one who
+## struggled. They only change the closing text, never which ending plays.
+@export var epilogues: Array[String] = []
