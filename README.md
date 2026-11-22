@@ -196,3 +196,15 @@ El jefe final es El Ojo de la Tormenta, en tres fases (ojo flotante, Kenzo con g
 ## Nivel 3 (Fase 15e-2)
 
 Los huecos del nivel 3 exigen salto + doble salto + dash (485, 460 y 525 px). Ver `docs/HANDOFF.md` sección 23 y `phase15e2_smoke_test`.
+
+## Director de IA local (Fase 16a)
+
+El juego observa cómo juegas (en memoria, sin guardarlo) y ajusta con topes los enemigos extra y el peso de los patrones del jefe al cargar cada nivel (desde el 2). Sin red por ahora. Ver `docs/DIRECTOR_PLAN.md` y `docs/HANDOFF.md` sección 25.
+
+## Director de IA remoto (Fase 16b)
+
+El servicio de IA tiene un endpoint nuevo, `POST /v1/director/plan`, que propone el plan del SIGUIENTE nivel dentro de topes; el planificador local sigue siendo el respaldo. La opción «Adaptación con IA» (activada por defecto, en `settings.cfg`) la desactiva: apagada, no sale ninguna petición. **Antes de alojar el servicio de forma pública hacen falta autenticación y HTTPS** (para uso local no): ahora solo hay un límite de peticiones por IP (30 por minuto, configurable con `AI_SERVICE_RATE_LIMIT_PER_MINUTE`) y un límite de tamaño de cuerpo. La clave de OpenAI nunca llega al juego. Ver `docs/DIRECTOR_PLAN.md` y `docs/HANDOFF.md` sección 26.
+
+## La voz del abuelo (Fase 16c)
+
+Al empezar cada nivel el abuelo dice una frase breve (un recuerdo en los niveles 1 y 2, su voz en el 3) con su reflejo de estrellas en el cielo, y cada final tiene tres variantes de epílogo según cómo se jugó. La frase sale del servicio de IA si hay conexión y es válida; si no, de un banco local. Ver `docs/STORY.md` (sección 6) y `docs/HANDOFF.md` sección 27.
