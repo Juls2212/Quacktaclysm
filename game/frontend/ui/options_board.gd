@@ -25,6 +25,7 @@ var music_slider: HSlider
 var sfx_slider: HSlider
 var shake_check: CheckButton
 var corruption_check: CheckButton
+var ai_check: CheckButton
 var back_button: Button
 var controls_button: Button
 ## The editable controls page; it takes the place of the settings while it is open.
@@ -60,6 +61,9 @@ func _ready() -> void:
 	corruption_check = CheckButton.new()
 	corruption_check.text = (load(PRESENTATION_PATH) as ProfilePresentation).toggle_text
 	box.add_child(corruption_check)
+	ai_check = CheckButton.new()
+	ai_check.text = (load(PRESENTATION_PATH) as ProfilePresentation).ai_toggle_text
+	box.add_child(ai_check)
 	controls_button = Button.new()
 	controls_button.text = (load(ControlsConfig.CATALOG_PATH) as ControlsCatalog).open_button_text
 	controls_button.custom_minimum_size = Vector2(240, 40)
@@ -86,12 +90,14 @@ func _ready() -> void:
 	sfx_slider.value = _settings["sfx_volume"]
 	shake_check.button_pressed = _settings["camera_shake"]
 	corruption_check.button_pressed = _settings["corruption_effects"]
+	ai_check.button_pressed = _settings["ai_adaptation"]
 	fullscreen_check.toggled.connect(_store.bind("fullscreen"))
 	volume_slider.value_changed.connect(_store.bind("volume"))
 	music_slider.value_changed.connect(_store.bind("music_volume"))
 	sfx_slider.value_changed.connect(_store.bind("sfx_volume"))
 	shake_check.toggled.connect(_store.bind("camera_shake"))
 	corruption_check.toggled.connect(_store.bind("corruption_effects"))
+	ai_check.toggled.connect(_store.bind("ai_adaptation"))
 	back_button.pressed.connect(close)
 	visible = false
 
