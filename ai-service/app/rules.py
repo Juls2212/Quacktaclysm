@@ -18,7 +18,7 @@ ALLOWED_VARIANTS: dict[str, tuple[str, ...]] = {
 ALL_VARIANTS = tuple(v for variants in ALLOWED_VARIANTS.values() for v in variants)
 
 # Mirrors AdaptiveConfig.decision_margin_threshold (mock mode only).
-MOCK_THRESHOLD = 2.0
+MOCK_THRESHOLD = 1.0
 
 
 def default_variant(profile: str) -> str:

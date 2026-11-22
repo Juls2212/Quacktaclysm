@@ -93,10 +93,19 @@ func _ok_response(index: int, data: Variant) -> void:
 	await _respond(index, HTTPRequest.RESULT_SUCCESS, 200, JSON.stringify(data).to_utf8_buffer())
 
 
+## The shipped config lets the remote service pick only the narrative variant (distance 0: it can never
+## override the local rule's profile). Most tests below exercise the mechanics of APPLYING a remote profile,
+## so they run with distance 1; _test_default_bounds covers the shipped config.
+func _loose_config() -> AdaptiveConfig:
+	var config := (load(GameState.DEFAULT_ADAPTIVE_CONFIG_PATH) as AdaptiveConfig).duplicate() as AdaptiveConfig
+	config.max_profile_distance = 1
+	return config
+
+
 func _fresh_state(pairs: Array = []) -> void:
 	SaveSystem.purge()
 	GameState.autosave_enabled = true
-	GameState.set_adaptive_config(null)
+	GameState.set_adaptive_config(_loose_config())
 	GameState.start_new_game()
 	for i in pairs.size():
 		GameState.record_decision("p10_f%d" % i, "boss_a", pairs[i][0], pairs[i][1])
@@ -124,6 +133,7 @@ func _run() -> void:
 	await _test_payload()
 	await _test_success()
 	await _test_failures()
+	await _test_default_bounds()
 	await _test_staleness()
 	await _test_variant()
 	await _test_flow()
@@ -318,7 +328,8 @@ func _same_keys(keys: Array, expected: Array[String]) -> bool:
 # --- Success path ---
 
 func _test_success() -> void:
-	_fresh_state([[1, REL]])
+	# One released + one kept = score 0 -> local neutral, so a remote compassionate is a real change.
+	_fresh_state([[1, REL], [2, KEP]])
 	var refiner := _make_refiner()
 	var started: bool = refiner.request_refinement()
 	_check("non-blocking: returns at once with the request in flight", started and refiner.in_flight and sent.size() == 1
@@ -380,6 +391,23 @@ func _test_failures() -> void:
 		await _frames(1)
 
 
+# --- The shipped config: the remote never overrides the rule ---
+
+func _test_default_bounds() -> void:
+	_fresh_state([[1, REL], [2, KEP]])
+	GameState.set_adaptive_config(null)
+	var refiner := _make_refiner()
+	refiner.request_refinement()
+	await _ok_response(0, {"profile": COMP, "narrative_variant": "mercy"})
+	_check("default bounds: a remote profile different from the local one is rejected", GameState.adaptive_profile == NEUT
+		and applied_count == 0 and refiner.last_status == "rejected")
+	refiner.request_refinement()
+	await _ok_response(1, {"profile": NEUT, "narrative_variant": "balanced"})
+	_check("default bounds: the same profile is accepted", applied_count == 1 and GameState.adaptive_profile == NEUT)
+	refiner.free()
+	GameState.set_adaptive_config(null)
+
+
 # --- Staleness ---
 
 func _test_staleness() -> void:
@@ -395,10 +423,10 @@ func _test_staleness() -> void:
 	refiner.free()
 
 	# Decision count changed while in flight.
-	_fresh_state([[1, REL]])
+	_fresh_state([[1, REL], [2, KEP]])
 	refiner = _make_refiner()
 	refiner.request_refinement()
-	GameState.record_decision("p10_late", "boss_a", 2, REL)
+	GameState.record_decision("p10_late", "boss_a", 3, REL)
 	await _ok_response(0, {"profile": COMP})
 	_check("stale: response discarded when decisions changed", GameState.adaptive_profile == NEUT and applied_count == 0
 		and refiner.last_status == "stale" and not refiner.in_flight and skipped == ["stale"])
@@ -494,7 +522,7 @@ func _test_flow() -> void:
 	step.call(flow, DATA_1, true)
 	_check("flow: accepted decision triggers exactly one request", sent.size() == 1 and refiner.in_flight)
 	_check("flow: request carries the decision and local profile", JSON.parse_string(sent[0]["body"])["decisions"].size() == 1
-		and JSON.parse_string(sent[0]["body"])["local_profile"] == NEUT)
+		and JSON.parse_string(sent[0]["body"])["local_profile"] == COMP)
 	step.call(flow, DATA_1, false)
 	_check("flow: rejected decision triggers no request", sent.size() == 1 and GameState.decisions.size() == 1)
 	_check("flow: panel closed and unpaused", not panel.is_open() and not get_tree().paused)
@@ -514,7 +542,7 @@ func _test_flow() -> void:
 	sent.clear()
 	step.call(plain, DATA_1, true)
 	_check("flow: without a refiner nothing is requested and local behavior is intact", sent.is_empty() and GameState.has_decision(DATA_1.fragment_id)
-		and GameState.adaptive_profile == NEUT and _saved().get("adaptive_profile") == NEUT)
+		and GameState.adaptive_profile == COMP and _saved().get("adaptive_profile") == COMP)
 
 	await _frames(2)
 	for fragment in fragments:

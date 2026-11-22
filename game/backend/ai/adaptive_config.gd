@@ -6,10 +6,12 @@ extends Resource
 const DEFAULT_LEVEL_WEIGHT: float = 1.0
 
 ## |weighted score| needed to leave the neutral profile.
-@export_range(0.5, 10.0, 0.1) var decision_margin_threshold: float = 2.0
+@export_range(0.5, 10.0, 0.1) var decision_margin_threshold: float = 1.0
 ## Indexed by level - 1; a missing index counts as 1.0.
 @export var level_weights: PackedFloat32Array = PackedFloat32Array([1.0, 1.0, 1.0])
 ## Largest allowed distance between a remote profile and the local one (compassionate=0, neutral=1, corrupt=2).
+## The shipped config uses 0: the remote service may only pick the narrative variant, never override the
+## profile the local rule produced.
 @export_range(0, 2) var max_profile_distance: int = 1
 @export var params_compassionate: AdaptiveProfileParams
 @export var params_neutral: AdaptiveProfileParams

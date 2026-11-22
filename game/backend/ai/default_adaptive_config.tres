@@ -32,9 +32,9 @@ boss_aggression = 1.15
 
 [resource]
 script = ExtResource("1_config")
-decision_margin_threshold = 2.0
+decision_margin_threshold = 1.0
 level_weights = PackedFloat32Array(1, 1, 1)
-max_profile_distance = 1
+max_profile_distance = 0
 params_compassionate = SubResource("Resource_compassionate")
 params_neutral = SubResource("Resource_neutral")
 params_corrupt = SubResource("Resource_corrupt")

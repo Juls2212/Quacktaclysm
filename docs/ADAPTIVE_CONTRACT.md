@@ -16,7 +16,7 @@ Escala ordenada: `compassionate` = 0, `neutral` = 1, `corrupt` = 2. Los ids vive
 - `score <= −umbral` → `corrupt`
 - en otro caso (o sin decisiones) → `neutral`
 
-Valores por defecto (`default_adaptive_config.tres`, marcadores de posición): umbral 2.0, pesos `[1, 1, 1]` (un índice ausente cuenta 1.0), `max_profile_distance` 1.
+Valores por defecto (`default_adaptive_config.tres`, marcadores de posición): umbral **1.0** (Fase 14b: cada decisión se nota en el nivel siguiente; con tres decisiones el score nunca es 0), pesos `[1, 1, 1]` (un índice ausente cuenta 1.0), `max_profile_distance` **0** (el remoto solo puede elegir la variante narrativa del perfil local; nunca cambia el perfil). El mock de `ai-service/app/rules.py` usa el mismo umbral.
 
 ## Valores de salida (controlados)
 
@@ -49,7 +49,7 @@ El resultado aceptado tiene `source = "remote"`. Nunca lanza errores por entrada
 
 ## El remoto nunca fija parámetros numéricos
 
-Solo puede elegir un perfil (a distancia limitada del local) y una variante narrativa de la lista permitida. Variante de encuentro, final y `boss_aggression` salen SIEMPRE de la tabla del perfil validado; un `boss_aggression`, `encounter_variant` o texto extra enviado por el remoto no tiene efecto.
+Solo puede elegir un perfil (a distancia limitada del local; con la configuración actual, ninguna: el perfil debe ser el de la regla local) y una variante narrativa de la lista permitida. Variante de encuentro, final y `boss_aggression` salen SIEMPRE de la tabla del perfil validado; un `boss_aggression`, `encounter_variant` o texto extra enviado por el remoto no tiene efecto.
 
 ## Cómo se consumen los parámetros en el juego
 
@@ -121,3 +121,5 @@ Los mensajes de error son genéricos: no incluyen claves, prompts ni texto de ex
 - Juego → servicio: `request_timeout_seconds` (10 s por defecto) y `max_response_bytes` (4096).
 - Se usa la Responses API de OpenAI con salida estructurada (JSON Schema estricto con enums para `profile` y `narrative_variant`). La salida se trata como no confiable y se valida otra vez en Python y de nuevo en Godot (`AdaptiveResponseValidator`, incluida la distancia máxima respecto al perfil local).
 - En Godot, el resultado remoto solo cambia el perfil y la variante narrativa (en memoria, no se guarda). `AdaptiveRefiner` descarta respuestas obsoletas (otra petición posterior o decisiones nuevas) y solo guarda la partida si el perfil cambió.
+
+> **Fase 14d:** la escena del final ya no usa `ending_variant`: el final se elige solo por las almas liberadas (`EndingSelector`). El campo se conserva en el contrato por compatibilidad, pero ni el perfil local ni la IA deciden el final.

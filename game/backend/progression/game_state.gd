@@ -148,6 +148,12 @@ func refresh_adaptive_profile(point: String = AdaptiveInput.POINT_AFTER_DECISION
 	return result
 
 
+## Weighted released/kept score the local rule uses (released +1, kept -1, times the level weight).
+func get_adaptive_score() -> float:
+	var input: AdaptiveInput = AdaptiveInput.from_state_dict(to_dict(), AdaptiveInput.POINT_AFTER_DECISION)
+	return LocalProfileClassifier.score(input, get_adaptive_config())
+
+
 ## Stored as is; get_adaptive_result() only honors it if the current profile allows it.
 func set_adaptive_narrative_variant(variant: String) -> void:
 	adaptive_narrative_variant = variant

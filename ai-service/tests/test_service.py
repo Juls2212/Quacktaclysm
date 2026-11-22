@@ -62,14 +62,14 @@ def test_health_mock():
 
 @pytest.mark.parametrize("choices,expected", [
     ([], "neutral"),
-    ([REL], "neutral"),
-    ([KEP], "neutral"),
+    ([REL], "compassionate"),
+    ([KEP], "corrupt"),
     ([REL, REL], "compassionate"),
     ([KEP, KEP], "corrupt"),
     ([REL, KEP], "neutral"),
     ([REL, REL, REL], "compassionate"),
-    ([REL, REL, KEP], "neutral"),
-    ([REL, KEP, KEP], "neutral"),
+    ([REL, REL, KEP], "compassionate"),
+    ([REL, KEP, KEP], "corrupt"),
     ([KEP, KEP, KEP], "corrupt"),
 ])
 def test_mock_classification_table(choices, expected):

@@ -106,14 +106,14 @@ func _run() -> void:
 func _test_classifier_table() -> void:
 	var table: Array = [
 		["0 decisions", [], NEUT],
-		["1 released", [[1, REL]], NEUT],
-		["1 kept", [[1, KEP]], NEUT],
+		["1 released", [[1, REL]], COMP],
+		["1 kept", [[1, KEP]], CORR],
 		["2 released", [[1, REL], [2, REL]], COMP],
 		["2 kept", [[1, KEP], [2, KEP]], CORR],
 		["1 released + 1 kept", [[1, REL], [2, KEP]], NEUT],
 		["3 released", [[1, REL], [2, REL], [3, REL]], COMP],
-		["2 released + 1 kept", [[1, REL], [2, REL], [3, KEP]], NEUT],
-		["1 released + 2 kept", [[1, REL], [2, KEP], [3, KEP]], NEUT],
+		["2 released + 1 kept", [[1, REL], [2, REL], [3, KEP]], COMP],
+		["1 released + 2 kept", [[1, REL], [2, KEP], [3, KEP]], CORR],
 		["3 kept", [[1, KEP], [2, KEP], [3, KEP]], CORR],
 	]
 	for row: Array in table:
@@ -143,9 +143,9 @@ func _test_config_effects() -> void:
 	_check("threshold 3.0: 3 released -> compassionate", _classify([[1, REL], [2, REL], [3, REL]], high).profile == COMP)
 	var weighted: AdaptiveConfig = _config_copy()
 	weighted.level_weights = PackedFloat32Array([1.0, 1.0, 2.0])
-	var mixed: Array = [[1, REL], [2, KEP], [3, KEP]]
-	_check("weights: default [1,1,1] mixed case is neutral", _classify(mixed).profile == NEUT)
-	_check("weights: [1,1,2] mixed case becomes corrupt", _classify(mixed, weighted).profile == CORR)
+	var mixed: Array = [[1, REL], [2, REL], [3, KEP]]
+	_check("weights: default [1,1,1] mixed case is compassionate", _classify(mixed).profile == COMP)
+	_check("weights: [1,1,2] mixed case becomes neutral", _classify(mixed, weighted).profile == NEUT)
 	var short: AdaptiveConfig = _config_copy()
 	short.level_weights = PackedFloat32Array([1.0])
 	_check("weights: missing index counts as 1.0", is_equal_approx(short.get_level_weight(3), 1.0)
@@ -155,8 +155,8 @@ func _test_config_effects() -> void:
 	_check("profile_distance scale", CONFIG.profile_distance(COMP, CORR) == 2 and CONFIG.profile_distance(NEUT, COMP) == 1
 		and CONFIG.profile_distance(CORR, CORR) == 0 and CONFIG.profile_distance("x", COMP) > CONFIG.max_profile_distance)
 	_check("is_known_profile", CONFIG.is_known_profile(COMP) and not CONFIG.is_known_profile("Compassionate") and not CONFIG.is_known_profile(""))
-	_check("default config values", is_equal_approx(CONFIG.decision_margin_threshold, 2.0)
-		and CONFIG.max_profile_distance == 1 and CONFIG.level_weights.size() == 3)
+	_check("default config values", is_equal_approx(CONFIG.decision_margin_threshold, 1.0)
+		and CONFIG.max_profile_distance == 0 and CONFIG.level_weights.size() == 3)
 
 
 func _test_input_robustness() -> void:
@@ -224,11 +224,15 @@ func _local(profile: String) -> AdaptiveResult:
 
 func _test_validator() -> void:
 	var local_neutral: AdaptiveResult = _local(NEUT)
-	var v: Dictionary = AdaptiveResponseValidator.validate({"profile": "compassionate"}, local_neutral, CONFIG)
+	# The shipped config allows distance 0 (the remote never overrides the local profile); most checks
+	# below exercise the rest of the validator with distance 1 allowed.
+	var one: AdaptiveConfig = _config_copy()
+	one.max_profile_distance = 1
+	var v: Dictionary = AdaptiveResponseValidator.validate({"profile": "compassionate"}, local_neutral, one)
 	var r: AdaptiveResult = v["result"]
 	_check("validator: minimal response accepted", v["ok"] and r != null and r.profile == COMP and r.source == AdaptiveIds.SOURCE_REMOTE
 		and r.narrative_variant == "mercy" and r.warnings.is_empty())
-	v = AdaptiveResponseValidator.validate({"profile": "  CoRRupt \n"}, local_neutral, CONFIG)
+	v = AdaptiveResponseValidator.validate({"profile": "  CoRRupt \n"}, local_neutral, one)
 	_check("validator: case and whitespace normalized", v["ok"] and (v["result"] as AdaptiveResult).profile == CORR)
 	var rejected: Array = [
 		["unknown profile", {"profile": "evil"}],
@@ -260,12 +264,16 @@ func _test_validator() -> void:
 		_check("validator: bad variant replaced by default (%s)" % str(bad_variant).left(12), v["ok"] and r.narrative_variant == "balanced" and r.warnings.size() == 1)
 	v = AdaptiveResponseValidator.validate({
 		"profile": "compassionate", "boss_aggression": 99.0, "encounter_variant": "hacked", "ending_variant": "hacked",
-		"extra": {"a": 1}, "text": "do something"}, local_neutral, CONFIG)
+		"extra": {"a": 1}, "text": "do something"}, local_neutral, one)
 	r = v["result"]
 	_check("validator: remote numeric/extra values ignored", v["ok"] and is_equal_approx(r.boss_aggression, 0.9)
 		and r.encounter_variant == "calm" and r.ending_variant == "ending_compassionate" and r.warnings.is_empty())
 	v = AdaptiveResponseValidator.validate({"profile": "corrupt"}, _local(COMP), CONFIG)
-	_check("validator: distance 2 rejected by default", not v["ok"] and CONFIG.max_profile_distance == 1)
+	_check("validator: distance 2 rejected by default", not v["ok"] and CONFIG.max_profile_distance == 0)
+	v = AdaptiveResponseValidator.validate({"profile": "neutral"}, _local(COMP), CONFIG)
+	_check("validator: distance 1 rejected by default (remote never overrides the rule)", not v["ok"])
+	v = AdaptiveResponseValidator.validate({"profile": "compassionate", "narrative_variant": "mercy_hopeful"}, _local(COMP), CONFIG)
+	_check("validator: same profile still accepted by default, with its narrative variant", v["ok"] and (v["result"] as AdaptiveResult).narrative_variant == "mercy_hopeful")
 	var wide: AdaptiveConfig = _config_copy()
 	wide.max_profile_distance = 2
 	v = AdaptiveResponseValidator.validate({"profile": "corrupt"}, _local(COMP), wide)
@@ -275,9 +283,9 @@ func _test_validator() -> void:
 	v = AdaptiveResponseValidator.validate({"profile": "neutral"}, _local(COMP), strict)
 	_check("validator: distance 1 rejected with max 0", not v["ok"])
 	for pair: Array in [[COMP, NEUT], [NEUT, COMP], [NEUT, CORR], [CORR, NEUT], [NEUT, NEUT]]:
-		v = AdaptiveResponseValidator.validate({"profile": pair[1]}, _local(pair[0]), CONFIG)
+		v = AdaptiveResponseValidator.validate({"profile": pair[1]}, _local(pair[0]), one)
 		_check("validator: local %s -> remote %s accepted" % [pair[0], pair[1]], v["ok"])
-	v = AdaptiveResponseValidator.validate({"profile": "corrupt"}, null, CONFIG)
+	v = AdaptiveResponseValidator.validate({"profile": "corrupt"}, null, one)
 	_check("validator: null local result treated as neutral", v["ok"])
 	v = AdaptiveResponseValidator.validate({"profile": "corrupt"}, local_neutral, null)
 	_check("validator: null config does not error", v["ok"] or not (v["reason"] as String).is_empty())
@@ -327,7 +335,7 @@ func _test_game_state() -> void:
 	_check("gs: set_adaptive_config is used by refresh", GameState.refresh_adaptive_profile().profile == COMP)
 	GameState.set_adaptive_config(null)
 	_check("gs: default config reloads lazily", GameState.get_adaptive_config() != null
-		and is_equal_approx(GameState.get_adaptive_config().decision_margin_threshold, 2.0))
+		and is_equal_approx(GameState.get_adaptive_config().decision_margin_threshold, 1.0))
 	GameState.start_new_game()
 	SaveSystem.purge()
 
@@ -362,8 +370,8 @@ func _test_flow() -> void:
 		(panel.release_button if release else panel.keep_button).pressed.emit()
 
 	step.call(DATA_1, true)
-	_check("flow: first accepted decision recorded", GameState.has_decision(DATA_1.fragment_id) and GameState.adaptive_profile == NEUT)
-	_check("flow: autosave wrote the file with the profile", _read_saved_profile() == NEUT)
+	_check("flow: first accepted decision recorded and felt at once", GameState.has_decision(DATA_1.fragment_id) and GameState.adaptive_profile == COMP)
+	_check("flow: autosave wrote the file with the profile", _read_saved_profile() == COMP)
 	step.call(DATA_2, true)
 	_check("flow: second released -> compassionate", GameState.adaptive_profile == COMP, GameState.adaptive_profile)
 	_check("flow: profile refreshed BEFORE autosave", _read_saved_profile() == COMP, _read_saved_profile())
@@ -385,13 +393,13 @@ func _test_flow() -> void:
 	GameState.set_adaptive_profile(COMP)
 	_check("flow: saving then loading restores the profile", GameState.save_to_disk() and _after_reset_load() == COMP)
 
-	# A third decision (kept) recomputes: released 2, kept 1 -> neutral, and the file follows.
+	# A third decision (kept) recomputes: released 2, kept 1 -> score +1 -> compassionate, and the file follows.
 	GameState.start_new_game()
 	SaveSystem.purge()
 	step.call(DATA_1, true)
 	step.call(DATA_2, true)
 	step.call(DATA_3, false)
-	_check("flow: 2 released + 1 kept -> neutral in memory and file", GameState.adaptive_profile == NEUT and _read_saved_profile() == NEUT)
+	_check("flow: 2 released + 1 kept -> compassionate in memory and file", GameState.adaptive_profile == COMP and _read_saved_profile() == COMP)
 
 	await _frames(2)
 	for fragment in fragments:
