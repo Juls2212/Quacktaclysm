@@ -9,14 +9,15 @@ import logging
 import time
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from . import rules
+from . import director, rules
 from .config import MODE_MOCK, Settings, prepare_settings
 from .openai_client import OpenAIProfileClient, ProfileModelClient, UpstreamError, UpstreamTimeout
-from .schemas import ProfileRequest, ProfileResponse
+from .ratelimit import RateLimiter
+from .schemas import DirectorRequest, DirectorResponse, ProfileRequest, ProfileResponse
 
 logger = logging.getLogger("ai_service")
 
@@ -108,6 +109,7 @@ def create_app(settings: Settings | None = None, model_client: ProfileModelClien
     app.add_middleware(BodyLimitMiddleware, max_bytes=MAX_BODY_BYTES)
     app.add_middleware(AccessLogMiddleware)
     state: dict[str, ProfileModelClient | None] = {"client": model_client}
+    limiter = RateLimiter(settings.rate_limit_per_minute)
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request(_request: Request, exc: RequestValidationError) -> JSONResponse:
@@ -120,7 +122,7 @@ def create_app(settings: Settings | None = None, model_client: ProfileModelClien
             if not settings.openai_configured:
                 raise HTTPException(503, "AI service not configured")
             state["client"] = OpenAIProfileClient(settings.openai_api_key, settings.openai_model,
-                                                  settings.openai_timeout_seconds)
+                                                  settings.openai_timeout_seconds, settings.director_timeout_seconds)
         return state["client"]
 
     @app.get("/health")
@@ -147,6 +149,31 @@ def create_app(settings: Settings | None = None, model_client: ProfileModelClien
         except rules.UnusableModelOutput:
             raise HTTPException(502, "AI provider returned an unusable answer") from None
         return ProfileResponse(profile=profile, narrative_variant=variant, source="openai")
+
+    def rate_limit(http: Request) -> None:
+        host = http.client.host if http.client else "unknown"
+        if not limiter.allow(host):
+            raise HTTPException(429, "rate limit exceeded")
+
+    @app.post("/v1/director/plan", response_model=DirectorResponse, dependencies=[Depends(rate_limit)])
+    def director_plan(request: DirectorRequest) -> DirectorResponse:
+        """A bounded plan for the next level. Any failure answers 200 with the baseline plan and source "fallback"."""
+        data = request.model_dump()
+        if settings.mode == MODE_MOCK:
+            return DirectorResponse(**director.baseline_plan(data), source="mock")
+        fallback = DirectorResponse(**director.baseline_plan(data), source="fallback")
+        try:
+            client = get_client()
+            text = client.plan(data)  # type: ignore[union-attr]
+            plan = director.parse_model_output(text, data)
+        except HTTPException:
+            return fallback
+        except (UpstreamTimeout, UpstreamError, director.UnusableModelOutput, AttributeError):
+            return fallback
+        except Exception as exc:  # noqa: BLE001 - never leak SDK/exception text
+            logger.warning("unexpected director failure (%s)", type(exc).__name__)
+            return fallback
+        return DirectorResponse(**plan, source="openai")
 
     return app
 
