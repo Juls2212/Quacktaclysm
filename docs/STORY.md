@@ -143,3 +143,80 @@ La **primera vez** que el pato entra en la arena de un jefe pasa esto, en este o
 4. Pato: Podría soltarla y volver a la cueva. Pero las estrellas siguen cayendo.
 5. Pato: Si me detengo ahora, todo lo que perdí habrá sido en vano.
 6. Pato: Abuelo llegó tarde una vez. Yo no puedo volver atrás. Tampoco puedo llegar tarde.
+
+## 6. La voz del abuelo en el cielo y los epílogos (Fase 16c)
+
+Copia legible de `game/backend/ai/director/default_grandfather_lines.tres` (la fuente de verdad) y de los epílogos de `default_story_texts.tres`.
+
+Reglas de una línea: 8 a 18 palabras y como mucho 110 caracteres, una sola línea, sin cifras, enlaces, marcas ni emojis, sin reproche (moriste, fallaste, errores...) y sin nombrar mecánicas. En los niveles 1 y 2 se presenta como un recuerdo («Recuerdas su voz… «…»»); en el nivel 3 como su voz directa («Abuelo: «…»»), después de su escena de entrada.
+
+### Nivel 1 (recuerdos)
+- El filo no es rabia, nieto. Es respeto por aquello que cortas.
+- Cien cortes al amanecer, nieto, y ninguno con prisa. Así se aprende.
+- Quien mira el cielo con respeto no teme a la noche, nieto.
+- Antes de empuñar la hoja, nieto, aprende a escuchar el silencio.
+
+### Tema: calma
+- Respira, nieto. La cabeza fría esquiva lo que la prisa no ve.
+- El agua turbia se aclara cuando dejas de agitarla. Quédate quieto un instante, nieto.
+- Un filo tranquilo corta más limpio que uno temblando. Suelta los hombros, nieto.
+- La calma no es lentitud, nieto. Es saber dónde poner el siguiente paso.
+
+### Tema: paciencia
+- El bambú no corre hacia el cielo, nieto. Crece un nudo cada vez.
+- Quien espera el momento justo no pierde el paso. Aguanta un poco más.
+- La piedra del río se pulió con paciencia, nieto, no con prisa.
+- Todo lo bueno madura despacio. Dale tiempo al camino, nieto.
+
+### Tema: distancia
+- Lo que muerde de cerca, calla de lejos. Mide el espacio, nieto.
+- Un buen guerrero elige dónde pisar antes de elegir dónde cortar.
+- La distancia también es un escudo, nieto. Úsala con inteligencia.
+- Cuando algo te acecha desde lejos, acércate a tu manera y a tu tiempo.
+
+### Tema: ritmo
+- Todo golpe tiene su respiración, nieto. Escucha el silencio antes del trueno.
+- La hoja llega cuando el viento se detiene. Aprende a esperar ese instante.
+- Hay una música en cada embestida, nieto. Aprende su compás y baila fuera.
+- Antes de cada tormenta se oye un compás. Escúchalo y deja pasar el trueno.
+
+### Tema: recursos
+- Una brasa bien guardada calienta toda la noche. Cuida tus fuerzas, nieto.
+- El sabio no gasta todo su aliento en la primera colina.
+- Quien reparte bien sus fuerzas llega lejos, nieto. Descansa cuando el camino lo permita.
+- Guarda un poco de luz para el tramo más oscuro, nieto.
+
+### Tema: valor
+- El miedo también camina contigo, nieto. Que vaya detrás, no delante.
+- Dar un paso temblando sigue siendo dar un paso. Avanza, nieto.
+- El valor no grita, nieto. A veces solo se levanta una vez más.
+- Acércate a lo que temes con el corazón abierto y la hoja serena.
+
+### Tema: equilibrio
+- Soltar y cargar pesan distinto, nieto. Elige con el corazón despierto.
+- La luz no se gasta al compartirla. Recuérdalo cuando dudes, nieto.
+- Entre la fuerza y la ternura hay un camino estrecho. Camínalo con calma.
+- Cada elección deja huella, nieto, pero ninguna huella es el final del camino.
+
+### Epílogos (variante 0 neutra, 1 jugó con comodidad, 2 lo pasó mal)
+Solo cambian el cierre de la tarjeta final; el final (3, 2, 1 o 0 almas liberadas) no cambia nunca.
+
+**EL CIELO SE ABRE (`ending_full`)**
+0. Abuelo: Mira el cielo entero, nieto. Cada estrella volvió a casa gracias a tus manos.
+1. Abuelo: Caminaste ligero y el cielo lo notó. Descansa, nieto: la noche ya es tuya.
+2. Abuelo: El camino pesó y aun así llegaste. Esa constancia también ilumina, nieto.
+
+**LA CICATRIZ DEL CIELO (`ending_scar`)**
+0. Abuelo: Toda cicatriz recuerda que hubo amor. Llévala con la cabeza alta, nieto.
+1. Abuelo: Fuiste firme y sereno hasta el final. La cicatriz será solo un recuerdo tibio.
+2. Abuelo: Fue un camino duro y lo recorriste entero. Tu cicatriz es la de quien no se rindió.
+
+**EL FILO Y LA DUDA (`ending_doubt`)**
+0. Abuelo: Dudar no es perder el rumbo, nieto: es escuchar al corazón. Aún estás a tiempo.
+1. Abuelo: Tu filo fue seguro y limpio. Ahora déjalo aprender a soltar, nieto.
+2. Abuelo: Cada tropiezo te enseñó a pesar la hoja. Sigue aprendiendo; yo camino contigo.
+
+**LA NUEVA ESTRELLA CAÍDA (`ending_corrupt`)**
+0. Abuelo: Aun en la noche más honda queda una estrella despierta. Búscala, nieto.
+1. Abuelo: Fuiste fuerte, nieto, y la fuerza sola pesa. Todavía puedes volver a la luz.
+2. Abuelo: Sé cuánto cargaste. No estás solo en esta oscuridad: mi voz aún te espera.
