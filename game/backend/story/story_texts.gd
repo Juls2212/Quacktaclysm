@@ -66,6 +66,14 @@ func get_ending(ending_id: String) -> EndingStory:
 	return null
 
 
+## The closing text of an ending for an epilogue variant (0 to 2, clamped; "" when the ending has none).
+func epilogue_text(ending_id: String, variant: int) -> String:
+	var story: EndingStory = get_ending(ending_id)
+	if story == null or story.epilogues.is_empty():
+		return ""
+	return story.epilogues[clampi(variant, 0, story.epilogues.size() - 1)]
+
+
 ## The grandfather's whole scene for a player who has released `released` souls so far.
 func elder_script(released: int) -> Array[String]:
 	var result: Array[String] = []
