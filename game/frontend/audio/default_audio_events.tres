@@ -1,0 +1,314 @@
+[gd_resource type="Resource" script_class="AudioEvents" load_steps=30 format=3]
+
+[ext_resource type="Script" path="res://frontend/audio/audio_events.gd" id="1_events"]
+[ext_resource type="Script" path="res://frontend/audio/audio_event.gd" id="2_event"]
+
+[sub_resource type="Resource" id="Event_footstep"]
+script = ExtResource("2_event")
+id = &"footstep"
+files = Array[String](["land.ogg"])
+volume_db = -16.0
+pitch_min = 1.5
+pitch_max = 1.8
+cooldown = 0.16
+max_voices = 2
+note = "Un paso al correr por el suelo (el ritmo lo marca PlayerVisual por distancia)."
+
+[sub_resource type="Resource" id="Event_exorcism"]
+script = ExtResource("2_event")
+id = &"exorcism"
+files = Array[String](["soul_fragment.wav"])
+volume_db = -7.0
+pitch_min = 0.55
+pitch_max = 0.6
+cooldown = 1.0
+max_voices = 1
+note = "Empieza el exorcismo (el poder absorbido)."
+
+[sub_resource type="Resource" id="Event_boss_vs_sting"]
+script = ExtResource("2_event")
+id = &"boss_vs_sting"
+files = Array[String](["boss_start.wav"])
+volume_db = -8.0
+pitch_min = 0.5
+pitch_max = 0.55
+cooldown = 2.0
+max_voices = 1
+note = "Acorde de la presentacion VS del jefe."
+
+[sub_resource type="Resource" id="Event_title_card"]
+script = ExtResource("2_event")
+id = &"title_card"
+files = Array[String](["checkpoint.ogg"])
+volume_db = -10.0
+pitch_min = 0.75
+pitch_max = 0.8
+cooldown = 2.0
+max_voices = 1
+note = "Aparece el titulo del nivel."
+
+[sub_resource type="Resource" id="Event_transition"]
+script = ExtResource("2_event")
+id = &"transition"
+files = Array[String](["dash.ogg"])
+volume_db = -9.0
+pitch_min = 0.55
+pitch_max = 0.6
+cooldown = 0.6
+max_voices = 1
+note = "Cambio de escena o de nivel."
+
+[sub_resource type="Resource" id="Event_portal_lit"]
+script = ExtResource("2_event")
+id = &"portal_lit"
+files = Array[String](["checkpoint.ogg"])
+volume_db = -8.0
+pitch_min = 0.6
+pitch_max = 0.65
+cooldown = 2.0
+max_voices = 1
+note = "El portal del tutorial se enciende."
+
+[sub_resource type="Resource" id="Event_portal_enter"]
+script = ExtResource("2_event")
+id = &"portal_enter"
+files = Array[String](["wave_cast.wav"])
+volume_db = -8.0
+pitch_min = 0.7
+pitch_max = 0.75
+cooldown = 1.5
+max_voices = 1
+note = "Alguien entra en el portal."
+
+[sub_resource type="Resource" id="Event_projectile_impact_world"]
+script = ExtResource("2_event")
+id = &"projectile_impact_world"
+files = Array[String](["hit_1.ogg"])
+volume_db = -12.0
+pitch_min = 1.5
+pitch_max = 1.7
+cooldown = 0.05
+max_voices = 3
+note = "Un proyectil enemigo choca con el escenario."
+
+[sub_resource type="Resource" id="Event_projectile_impact_player"]
+script = ExtResource("2_event")
+id = &"projectile_impact_player"
+files = Array[String](["hit_2.ogg"])
+volume_db = -9.0
+pitch_min = 0.85
+pitch_max = 0.95
+cooldown = 0.1
+max_voices = 2
+note = "Un proyectil enemigo alcanza al pato (suena junto al grito de dolor)."
+
+[sub_resource type="Resource" id="Event_projectile_impact_enemy"]
+script = ExtResource("2_event")
+id = &"projectile_impact_enemy"
+files = Array[String](["hit_1.ogg"])
+volume_db = -10.0
+pitch_min = 1.1
+pitch_max = 1.2
+cooldown = 0.05
+max_voices = 3
+note = "Un proyectil alcanza a un enemigo."
+
+[sub_resource type="Resource" id="Event_wave_impact"]
+script = ExtResource("2_event")
+id = &"wave_impact"
+files = Array[String](["swords/clash_3.ogg"])
+volume_db = -9.0
+pitch_min = 0.75
+pitch_max = 0.85
+cooldown = 0.05
+max_voices = 3
+note = "La onda de espada alcanza a un enemigo."
+
+[sub_resource type="Resource" id="Event_wave_impact_world"]
+script = ExtResource("2_event")
+id = &"wave_impact_world"
+files = Array[String](["swords/clash_7.ogg"])
+volume_db = -12.0
+pitch_min = 1.2
+pitch_max = 1.4
+cooldown = 0.05
+max_voices = 2
+note = "La onda de espada choca con el escenario."
+
+[sub_resource type="Resource" id="Event_game_over"]
+script = ExtResource("2_event")
+id = &"game_over"
+files = Array[String](["player_die.ogg"])
+volume_db = -8.0
+pitch_min = 0.55
+pitch_max = 0.6
+cooldown = 2.0
+max_voices = 1
+note = "Se abre la pantalla de Game Over."
+
+[sub_resource type="Resource" id="Event_soul_gain"]
+script = ExtResource("2_event")
+id = &"soul_gain"
+files = Array[String](["ui_hover.ogg"])
+volume_db = -18.0
+pitch_min = 1.8
+pitch_max = 2.0
+cooldown = 0.12
+max_voices = 2
+note = "Entra alma en el medidor (un tic suave; el cooldown evita el ruido al golpear rapido)."
+
+[sub_resource type="Resource" id="Event_focus_start"]
+script = ExtResource("2_event")
+id = &"focus_start"
+files = Array[String](["wave_cast.wav"])
+volume_db = -12.0
+pitch_min = 0.55
+pitch_max = 0.6
+cooldown = 0.3
+max_voices = 1
+note = "Empieza el enfoque para curarse."
+
+[sub_resource type="Resource" id="Event_heal_done"]
+script = ExtResource("2_event")
+id = &"heal_done"
+files = Array[String](["health_orb.wav"])
+volume_db = -8.0
+pitch_min = 1.1
+pitch_max = 1.2
+cooldown = 0.5
+max_voices = 1
+note = "El enfoque termina y se recupera un corazon."
+
+[sub_resource type="Resource" id="Event_heal_denied"]
+script = ExtResource("2_event")
+id = &"heal_denied"
+files = Array[String](["ui_click.ogg"])
+volume_db = -12.0
+pitch_min = 0.5
+pitch_max = 0.55
+cooldown = 0.4
+max_voices = 1
+note = "No se puede curar: vida llena o alma insuficiente."
+
+[sub_resource type="Resource" id="Event_soul_full"]
+script = ExtResource("2_event")
+id = &"soul_full"
+files = Array[String](["soul_fragment.wav"])
+volume_db = -10.0
+pitch_min = 1.3
+pitch_max = 1.4
+cooldown = 1.0
+max_voices = 1
+note = "El medidor de alma llega al maximo."
+
+[sub_resource type="Resource" id="Event_pad_bounce"]
+script = ExtResource("2_event")
+id = &"pad_bounce"
+files = Array[String](["jump.ogg"])
+volume_db = -10.0
+pitch_min = 1.5
+pitch_max = 1.6
+cooldown = 0.2
+max_voices = 2
+note = "Un nenufar trampolin lanza al pato (se reutiliza el sonido de salto, mas agudo)."
+
+[sub_resource type="Resource" id="Event_double_jump"]
+script = ExtResource("2_event")
+id = &"double_jump"
+files = Array[String](["jump.ogg"])
+volume_db = -8.0
+pitch_min = 1.35
+pitch_max = 1.45
+cooldown = 0.1
+max_voices = 2
+note = "El pato hace el doble salto en el aire (el sonido de salto con mas tono)."
+
+[sub_resource type="Resource" id="Event_spike_warning"]
+script = ExtResource("2_event")
+id = &"spike_warning"
+files = Array[String](["wave_cast.wav"])
+volume_db = -10.0
+pitch_min = 0.5
+pitch_max = 0.55
+cooldown = 0.5
+max_voices = 1
+note = "El suelo empieza a brillar: los pinchos van a salir."
+
+[sub_resource type="Resource" id="Event_spike_rise"]
+script = ExtResource("2_event")
+id = &"spike_rise"
+files = Array[String](["hit_heavy.ogg"])
+volume_db = -10.0
+pitch_min = 1.3
+pitch_max = 1.4
+cooldown = 0.5
+max_voices = 1
+note = "Los pinchos salen del suelo."
+
+[sub_resource type="Resource" id="Event_boss_leap"]
+script = ExtResource("2_event")
+id = &"boss_leap"
+files = Array[String](["dash.ogg"])
+volume_db = -8.0
+pitch_min = 0.6
+pitch_max = 0.65
+cooldown = 0.4
+max_voices = 1
+note = "El jefe del pantano salta."
+
+[sub_resource type="Resource" id="Event_leap_land"]
+script = ExtResource("2_event")
+id = &"leap_land"
+files = Array[String](["hit_heavy.ogg"])
+volume_db = -8.0
+pitch_min = 0.55
+pitch_max = 0.6
+cooldown = 0.3
+max_voices = 1
+note = "El jefe del pantano aterriza."
+
+[sub_resource type="Resource" id="Event_possession_start"]
+script = ExtResource("2_event")
+id = &"possession_start"
+files = Array[String](["boss_start.wav"])
+volume_db = -7.0
+pitch_min = 0.5
+pitch_max = 0.55
+cooldown = 2.0
+max_voices = 1
+note = "Empieza la posesion del jefe al cambiar de fase (el acorde de presentacion, muy grave)."
+
+[sub_resource type="Resource" id="Event_possession_roar"]
+script = ExtResource("2_event")
+id = &"possession_roar"
+files = Array[String](["ducks/quack_boss.wav"])
+volume_db = -8.0
+pitch_min = 0.6
+pitch_max = 0.65
+cooldown = 2.0
+max_voices = 1
+note = "El jefe poseido ruge mientras se eleva."
+
+[sub_resource type="Resource" id="Event_possession_slam"]
+script = ExtResource("2_event")
+id = &"possession_slam"
+files = Array[String](["hit_heavy.ogg"])
+volume_db = -8.0
+pitch_min = 0.5
+pitch_max = 0.55
+cooldown = 2.0
+max_voices = 1
+note = "El jefe poseido vuelve a bajar: el golpe que cierra la posesion."
+
+[resource]
+script = ExtResource("1_events")
+events = [SubResource("Event_footstep"), SubResource("Event_exorcism"), SubResource("Event_boss_vs_sting"), SubResource("Event_title_card"), SubResource("Event_transition"), SubResource("Event_portal_lit"), SubResource("Event_portal_enter"), SubResource("Event_projectile_impact_world"), SubResource("Event_projectile_impact_player"), SubResource("Event_projectile_impact_enemy"), SubResource("Event_wave_impact"), SubResource("Event_wave_impact_world"), SubResource("Event_game_over"), SubResource("Event_soul_gain"), SubResource("Event_focus_start"), SubResource("Event_heal_done"), SubResource("Event_heal_denied"), SubResource("Event_soul_full"), SubResource("Event_pad_bounce"), SubResource("Event_double_jump"), SubResource("Event_spike_warning"), SubResource("Event_spike_rise"), SubResource("Event_boss_leap"), SubResource("Event_leap_land"), SubResource("Event_possession_start"), SubResource("Event_possession_roar"), SubResource("Event_possession_slam")]
+boss_music = {
+1: ["the_evil_one.ogg", 1.0],
+2: ["treacherous_path.ogg", 0.92],
+3: ["the_evil_one.ogg", 1.12]
+}
+duck_dialogue_db = -6.0
+duck_story_db = -8.0
+duck_presentation_db = -8.0
+duck_fade = 0.3
