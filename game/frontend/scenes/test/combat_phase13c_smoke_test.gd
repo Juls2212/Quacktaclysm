@@ -241,10 +241,12 @@ func _test_balance() -> void:
 		light, heavy, heavy / light, dash_slash, dash_slash / light, " | ".join(rows)])
 	_check("balance: heavy slash between 1.0x and 1.5x the light sword", heavy >= light and heavy <= light * 1.5, "%.2fx" % (heavy / light))
 	_check("balance: dash slash at most 1.5x the light sword", dash_slash <= light * 1.5, "%.2fx" % (dash_slash / light))
-	var below: bool = true
+	# Phase 15d-ter: tier 0 stays below the light sword; the stronger tiers are the reward for keeping fragments and may
+	# match or pass it, but never beat the heavy slash or the dash slash by more than 15%.
+	var below: bool = waves[0] < light
 	for value in waves:
-		below = below and value < light
-	_check("balance: every sword wave tier stays below the light sword", below)
+		below = below and value <= 1.15 * minf(heavy, dash_slash)
+	_check("balance: sword wave tier 0 stays below the light sword and no tier beats the heavy slash or the dash slash by more than 15%", below)
 	_check("stats: the new moves have their own defaults", s.heavy_damage == 3 and s.heavy_knockback == Vector2(420.0, -180.0) and s.heavy_width_multiplier == 1.6
 		and s.dash_slash_damage == 2 and s.dash_slash_knockback == Vector2(360.0, -140.0) and s.dash_slash_width_multiplier == 1.3 and s.dash_slash_extra_recovery_time == 0.12)
 

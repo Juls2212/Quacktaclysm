@@ -187,7 +187,7 @@ func _test_guards() -> void:
 	var bounce := BounceConfig.get_default()
 	var hazard := FloorHazardConfig.get_default()
 	var stats := PlayerStats.new()
-	_check("numbers: pad launch -1030 px/s, cooldown 0.35 s", is_equal_approx(bounce.launch_velocity, -1030.0) and is_equal_approx(bounce.cooldown, 0.35))
+	_check("numbers: pad launch -930 px/s from a pad raised 56 px (Phase 15d-bis), cooldown 0.35 s", is_equal_approx(bounce.launch_velocity, -930.0) and is_equal_approx(bounce.pad_height, 56.0) and is_equal_approx(bounce.cooldown, 0.35))
 	_check("numbers: spikes warning 1.2 s, active 3.0 s, rest 4.0 s, 1 heart", is_equal_approx(hazard.warning_time, 1.2) and is_equal_approx(hazard.active_time, 3.0)
 		and is_equal_approx(hazard.rest_time, 4.0) and hazard.damage == 1)
 	_check("numbers: the extra jump is 85% of the first (-527 vs -620), one per airtime, unlocked with 2 decisions",
@@ -196,7 +196,8 @@ func _test_guards() -> void:
 	_check("numbers: the first jump, gravity and dash did not change", is_equal_approx(stats.jump_velocity, -620.0) and is_equal_approx(stats.gravity, 1800.0)
 		and is_equal_approx(stats.dash_speed, 700.0) and is_equal_approx(stats.dash_duration, 0.18))
 	var rise: float = bounce.launch_velocity * bounce.launch_velocity / (2.0 * stats.gravity)
-	_check("numbers: the pad rise is about 300 px (%.0f px) and clears the high tier (250 px)" % rise, rise >= 280.0 and rise <= 320.0)
+	var peak_over_floor: float = rise + bounce.pad_height + bounce.top_margin
+	_check("numbers: the pad rise is %.0f px from its top, so the feet peak %.0f px over the floor and clear the high tier (250 px) by 30 px or more" % [rise, peak_over_floor], peak_over_floor >= 280.0 and peak_over_floor <= 360.0)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -207,7 +208,7 @@ func _test_pads() -> void:
 	_clean_state()
 	var world: Node2D = _arena()
 	var pad := PAD_SCENE.instantiate() as BouncePad
-	pad.position = Vector2(0.0, FLOOR_Y - 22.0)
+	pad.position = Vector2(0.0, FLOOR_Y - 42.0)
 	world.add_child(pad)
 	var launches: Array[int] = [0]
 	pad.launched.connect(func(_player: Player) -> void: launches[0] += 1)
@@ -253,17 +254,17 @@ func _test_pads() -> void:
 	# Cooldown: a second contact right away does nothing, after the cooldown it launches again.
 	launches[0] = 0
 	pad.cooldown_left = 0.0
-	player.global_position = Vector2(0.0, FLOOR_Y - 40.0)
+	player.global_position = Vector2(0.0, FLOOR_Y - 72.0)
 	player.velocity = Vector2(0.0, 200.0)
 	await _physics(4)
 	var first_cooldown: float = pad.cooldown_left
 	_check("pad: a launch starts the cooldown (%.2f s left a few frames later)" % first_cooldown, launches[0] == 1 and first_cooldown > 0.2)
-	player.global_position = Vector2(0.0, FLOOR_Y - 40.0)
+	player.global_position = Vector2(0.0, FLOOR_Y - 72.0)
 	player.velocity = Vector2(0.0, 200.0)
 	await _physics(3)
 	_check("pad: it does not launch again during the cooldown", launches[0] == 1)
 	await get_tree().create_timer(0.5).timeout
-	player.global_position = Vector2(0.0, FLOOR_Y - 40.0)
+	player.global_position = Vector2(0.0, FLOOR_Y - 72.0)
 	player.velocity = Vector2(0.0, 200.0)
 	await _physics(5)
 	_check("pad: after the cooldown it launches again", launches[0] == 2)
@@ -282,7 +283,7 @@ func _test_pads() -> void:
 	# Rising through it (from below) does not trigger it.
 	launches[0] = 0
 	pad.cooldown_left = 0.0
-	player.global_position = Vector2(0.0, FLOOR_Y + 5.0)
+	player.global_position = Vector2(0.0, FLOOR_Y - 30.0)
 	player.velocity = Vector2(0.0, -300.0)
 	await _physics(2)
 	_check("pad: a player rising through it is not launched", launches[0] == 0)
@@ -296,7 +297,7 @@ func _test_pads() -> void:
 	# Enemies and the boss ignore it.
 	var enemy_world: Node2D = _arena()
 	var enemy_pad := PAD_SCENE.instantiate() as BouncePad
-	enemy_pad.position = Vector2(0.0, FLOOR_Y - 22.0)
+	enemy_pad.position = Vector2(0.0, FLOOR_Y - 42.0)
 	enemy_world.add_child(enemy_pad)
 	var enemy_launches: Array[int] = [0]
 	enemy_pad.launched.connect(func(_player: Player) -> void: enemy_launches[0] += 1)
@@ -629,7 +630,7 @@ func _test_level_two_geometry() -> void:
 	_check("platforms: the double jump alone from the floor does not reach the high tier (y %.0f)" % y_double_floor, y_double_floor > hb.position.y + 60.0)
 	# Pads: 2-3 of them, on the floor; no KillZone in the arena; the floor stays continuous (as in Phase 15b).
 	var pads: Array[Node] = level_two.find_children("ArenaPad*", "Area2D", true, false)
-	_check("platforms: 3 lily pads sit on the arena floor", pads.size() == 3 and pads.all(func(n: Node) -> bool: return absf((n as Node2D).global_position.y + 22.0 - floor_top) < 1.0))
+	_check("platforms: 3 lily pads sit on the arena floor", pads.size() == 3 and pads.all(func(n: Node) -> bool: return absf((n as Node2D).global_position.y + 42.0 - floor_top) < 1.0))
 	var floor_rects: Array[Rect2] = []
 	var kill_in_arena: bool = false
 	var gate_x: float = (level_two.find_children("ArenaGate", "", true, false)[0] as Node2D).global_position.x
@@ -727,18 +728,13 @@ func _test_hazard() -> void:
 		absi(warning_frames - 72) <= 3 and absi(active_frames - 180) <= 3 and absi(rest_frames - 240) <= 3)
 	hazard.stop()
 	_check("spikes: stop() ends everything at once", hazard.state == FloorHazard.State.IDLE and not hazard.running)
-	# The pads are cut out of the dangerous band.
+	# The raised pads are above the dangerous band (Phase 15d-bis): the pad is always safe, the floor under it is not.
 	var pad := PAD_SCENE.instantiate() as BouncePad
-	pad.position = Vector2(150.0, FLOOR_Y - 22.0)
+	pad.position = Vector2(150.0, FLOOR_Y - 42.0)
 	world.add_child(pad)
 	hazard.start()
-	var pad_range: Vector2 = pad.global_x_range()
-	var overlaps_pad: bool = false
-	for rect in hazard.segments:
-		var global_left: float = hazard.global_position.x + rect.position.x
-		if global_left < pad_range.y and global_left + rect.size.x > pad_range.x:
-			overlaps_pad = true
-	_check("spikes: lily pads are always safe (cut out of the dangerous floor)", not overlaps_pad and hazard.segments.size() == 2, str(hazard.segments.size()))
+	_check("spikes: a raised lily pad is always safe (its top is above the dangerous band) and the floor under it is not cut out",
+		pad.top_y() < hazard.global_position.y - hazard.config.band_height and hazard.segments.size() == 1, str(hazard.segments.size()))
 	hazard.stop()
 	pad.free()
 	# Damage goes through the normal path, with the hurt invulnerability of the player.
@@ -953,7 +949,8 @@ func _interpolate(samples: Array[Vector2], distance: float) -> float:
 func _leap_patterns(boss: BossBase) -> Array[LeapPattern]:
 	var result: Array[LeapPattern] = []
 	for pattern in boss.patterns:
-		if pattern is LeapPattern:
+		# The fallback leaps (Phase 15d-bis) are not part of the rotation these tests talk about.
+		if pattern is LeapPattern and pattern.fallback_priority == 0:
 			result.append(pattern as LeapPattern)
 	return result
 
@@ -1145,8 +1142,8 @@ func _test_old_patterns() -> void:
 		and is_equal_approx(volley.recovery_time, 0.9) and volley.projectile_count == 3 and is_equal_approx(volley.spread_angle_degrees, 24.0)
 		and is_equal_approx(volley.shot_interval, 0.18) and not volley.allow_steep_aim)
 	var stats: BossStats = boss.stats
-	_check("boss stats unchanged (60 HP, phase 2 at 55%, 1.5 s transition, x1.35 speed, x0.55 gaps, gap 1.1 s, contact damage 1)",
-		stats.max_health == 60 and is_equal_approx(stats.phase_2_health_ratio, 0.55) and is_equal_approx(stats.phase_transition_time, 1.5) and is_equal_approx(stats.phase_2_speed_multiplier, 1.35)
+	_check("boss stats unchanged except the health (50 HP since Phase 15d-bis; phase 2 at 55%, 1.5 s transition, x1.35 speed, x0.55 gaps, gap 1.1 s, contact damage 1)",
+		stats.max_health == 50 and is_equal_approx(stats.phase_2_health_ratio, 0.55) and is_equal_approx(stats.phase_transition_time, 1.5) and is_equal_approx(stats.phase_2_speed_multiplier, 1.35)
 		and is_equal_approx(stats.phase_2_pattern_gap_multiplier, 0.55) and is_equal_approx(stats.pattern_gap_time, 1.1) and stats.contact_damage == 1)
 	boss.free()
 
@@ -1237,7 +1234,7 @@ func _test_texture_override() -> void:
 	_clean_state()
 	var world: Node2D = _arena()
 	var pad := PAD_SCENE.instantiate() as BouncePad
-	pad.position = Vector2(0.0, FLOOR_Y - 22.0)
+	pad.position = Vector2(0.0, FLOOR_Y - 42.0)
 	world.add_child(pad)
 	var hazard: FloorHazard = _hazard_in(world)
 	await _frames(3)

@@ -390,8 +390,8 @@ func _test_extra_bosses() -> void:
 	var two: BossBase = BOSS_TWO.instantiate() as BossBase
 	var three: BossBase = BOSS_THREE.instantiate() as BossBase
 	var signatures: Array[Dictionary] = [_pattern_signature(one), _pattern_signature(two), _pattern_signature(three)]
-	_check("boss 2: stats", two.stats.boss_id == &"boss_two" and two.stats.max_health == 60 and not two.stats.display_name.is_empty())
-	_check("boss 3: stats", three.stats.boss_id == &"boss_three" and three.stats.max_health == 80 and not three.stats.display_name.is_empty())
+	_check("boss 2: stats", two.stats.boss_id == &"boss_two" and two.stats.max_health == 50 and not two.stats.display_name.is_empty())
+	_check("boss 3: stats", three.stats.boss_id == &"boss_three" and three.stats.max_health == 70 and not three.stats.display_name.is_empty())
 	_check("bosses: more health than the previous one", one.stats.max_health < two.stats.max_health and two.stats.max_health < three.stats.max_health)
 	_check("bosses: different phase-2 configuration", two.stats.phase_2_health_ratio != one.stats.phase_2_health_ratio
 		and three.stats.phase_2_speed_multiplier != two.stats.phase_2_speed_multiplier and three.stats.phase_2_pattern_gap_multiplier != two.stats.phase_2_pattern_gap_multiplier)
@@ -402,19 +402,16 @@ func _test_extra_bosses() -> void:
 		and _swipe_width(two) > _swipe_width(one) and charge_two.weight > (two.get_node("Patterns/Swipe") as SwipePattern).weight)
 	var has_swipe: bool = false
 	var has_charge: bool = false
-	var volleys: Array[ProjectileVolleyPattern] = []
+	var beams: int = 0
+	var columns: int = 0
 	for child in three.get_node("Patterns").get_children():
 		has_swipe = has_swipe or child is SwipePattern
 		has_charge = has_charge or child is ChargePattern
-		if child is ProjectileVolleyPattern:
-			volleys.append(child as ProjectileVolleyPattern)
-	var light: ProjectileVolleyPattern = three.get_node("Patterns/VolleyLight")
-	var heavy: ProjectileVolleyPattern = three.get_node("Patterns/VolleyHeavy")
-	var volley_one: ProjectileVolleyPattern = one.get_node("Patterns/Volley")
-	_check("boss 3: combines the three pattern types", has_swipe and has_charge and volleys.size() == 2)
-	_check("boss 3: heavier phase-2 volley (more projectiles, wider spread, own projectile stats)", heavy.min_phase == 2 and heavy.projectile_count > volley_one.projectile_count
-		and heavy.projectile_count > light.projectile_count and heavy.spread_angle_degrees > volley_one.spread_angle_degrees
-		and heavy.projectile_stats != volley_one.projectile_stats and heavy.projectile_stats.speed > volley_one.projectile_stats.speed and heavy.projectile_stats.damage <= 1)
+		beams += 1 if child is BeamSweepPattern else 0
+		columns += 1 if child is LightningColumnsPattern else 0
+	# Phase 15e-1: boss 3 was redesigned (the two volleys are gone): Kenzo's swipe and charge, the eye's beam and columns.
+	_check("boss 3: combines the swipe, the charge, the sweeping beam and the lightning columns", has_swipe and has_charge and beams >= 1 and columns >= 1)
+	_check("boss 3: three phases (two thresholds) and a floating eye", three.stats.get_phase_thresholds().size() == 2 and three.hover != null)
 	_check("boss 3: shorter gaps than boss 1 and boss 2", three.stats.pattern_gap_time < two.stats.pattern_gap_time and two.stats.pattern_gap_time < one.stats.pattern_gap_time)
 	one.free()
 	two.free()

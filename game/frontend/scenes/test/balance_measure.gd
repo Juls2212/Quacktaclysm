@@ -40,6 +40,8 @@ var rng := RandomNumberGenerator.new()
 var held: Dictionary = {}
 ## Frames until the walking bot dashes (after jumping a wide gap); -1 = none.
 var dash_in: int = -1
+## Frames since the jump at a gap edge (Phase 15e-2): the gaps of level 3 need jump, double jump (~0.6 s) and dash (~1.15 s). -1 = none.
+var cross_frames: int = -1
 
 
 func _ready() -> void:
@@ -549,12 +551,19 @@ func _walk_step(player: Player, enemies: Array[Node]) -> void:
 		_hold(&"jump", 22)
 	elif player.is_on_floor() and space.intersect_ray(gap).is_empty():
 		# A gap: jump at the very edge and dash in the air (the wide gaps need both).
-		_hold(&"jump", 24)
-		dash_in = 14
+		_hold(&"jump", 26)
+		cross_frames = 0
+		dash_in = -1
+	if cross_frames >= 0:
+		cross_frames += 1
+		if cross_frames == 36 and player.has_double_jump():
+			_hold(&"jump", 20)
+		elif cross_frames == 69 or (cross_frames == 14 and not player.has_double_jump()):
+			_hold(&"dash", 2)
+		if cross_frames > 120:
+			cross_frames = -1
 	if dash_in >= 0:
 		dash_in -= 1
-		if dash_in == 0:
-			_hold(&"dash", 2)
 	for node in enemies:
 		if not is_instance_valid(node):
 			continue

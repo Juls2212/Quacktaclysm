@@ -31,7 +31,7 @@ const ENEMY_SCENES: Dictionary = {
 }
 const BOSS_TIMES: Dictionary = {
 	"res://backend/bosses/boss_two.tscn": {"swipe": [0.7, 0.25, 0.7], "charge": [0.7, 0.8, 0.8], "volley": [0.8, 0.36, 0.9]},
-	"res://backend/bosses/boss_three.tscn": {"swipe": [0.5, 0.2, 0.5], "charge": [0.7, 0.7, 0.8], "volley_light": [0.7, 0.3, 0.8], "volley_heavy": [0.7, 0.6, 0.8]},
+	"res://backend/bosses/boss_three.tscn": {"swipe": [0.5, 0.2, 0.5], "charge": [0.7, 0.7, 0.8]},
 }
 
 var failures: int = 0
@@ -600,7 +600,7 @@ func _test_gameplay_unchanged() -> void:
 		# Phase 15c added the leap patterns of boss two on purpose: the recorded patterns are the other ones.
 		var recorded: Array[BossPattern] = []
 		for candidate in boss.patterns:
-			if not (candidate is LeapPattern) and String(candidate.pattern_id) != "volley_leap":
+			if candidate.fallback_priority == 0 and not (candidate is LeapPattern or candidate is BeamSweepPattern or candidate is LightningColumnsPattern or candidate is StompPattern) and String(candidate.pattern_id) != "volley_leap":
 				recorded.append(candidate)
 		var ok: bool = recorded.size() == table.size()
 		for pattern in recorded:

@@ -48,13 +48,13 @@ const ENEMY_KNOCKBACK: Dictionary = {
 const BOSS_TIMES: Dictionary = {
 	"placeholder": {"swipe": [0.6, 0.2, 0.6], "charge": [0.8, 0.7, 0.9], "volley": [0.7, 0.48, 0.8]},
 	"two": {"swipe": [0.7, 0.25, 0.7], "charge": [0.7, 0.8, 0.8], "volley": [0.8, 0.36, 0.9]},
-	"three": {"swipe": [0.5, 0.2, 0.5], "charge": [0.7, 0.7, 0.8], "volley_light": [0.7, 0.3, 0.8], "volley_heavy": [0.7, 0.6, 0.8]},
+	"three": {"swipe": [0.5, 0.2, 0.5], "charge": [0.7, 0.7, 0.8]},
 }
 ## [max_health, phase_2_health_ratio, phase_transition_time, phase_2_speed_multiplier, phase_2_pattern_gap_multiplier, pattern_gap_time]
 const BOSS_STATS: Dictionary = {
 	"placeholder": [40, 0.5, 1.5, 1.3, 0.6, 1.2],
-	"two": [60, 0.55, 1.5, 1.35, 0.55, 1.1],
-	"three": [80, 0.5, 1.2, 1.45, 0.5, 0.9],
+	"two": [50, 0.55, 1.5, 1.35, 0.55, 1.1],
+	"three": [70, 0.667, 1.2, 1.0, 0.7, 0.9],
 }
 ## The shape each kind must have (they differ so the player learns them).
 const SHAPES: Dictionary = {
@@ -66,6 +66,8 @@ const SHAPES: Dictionary = {
 	"boss_charge": TelegraphStyle.Shape.LANE,
 	"boss_volley": TelegraphStyle.Shape.AIM_FAN,
 	"boss_leap": TelegraphStyle.Shape.MARKER,
+	"boss_beam": TelegraphStyle.Shape.BEAM,
+	"boss_columns": TelegraphStyle.Shape.COLUMNS,
 }
 
 var failures: int = 0
@@ -178,7 +180,7 @@ func _test_guards() -> void:
 # ---------------------------------------------------------------------------------------------
 
 func _test_resource() -> void:
-	_check("telegraphs: an entry for every enemy type and boss pattern", set_resource.has_all_kinds() and set_resource.entries.size() == 8)
+	_check("telegraphs: an entry for every enemy type and boss pattern", set_resource.has_all_kinds() and set_resource.entries.size() == 10)
 	var shapes_ok: bool = true
 	var sounds_ok: bool = true
 	var signatures: Dictionary = {}
@@ -195,7 +197,7 @@ func _test_resource() -> void:
 		signatures[signature] = true
 		colors.append(style.color)
 	_check("telegraphs: shapes match the design (melee arc, fast lane, ranged line, boss arc / lane / fan)", shapes_ok)
-	_check("telegraphs: every windup sound file exists and every kind has its own sound set", sounds_ok and signatures.size() == 8)
+	_check("telegraphs: every windup sound file exists and every kind has its own sound set", sounds_ok and signatures.size() == 10)
 	var distinct: bool = true
 	for i in colors.size():
 		for j in range(i + 1, colors.size()):
@@ -339,7 +341,7 @@ func _test_recorded_times() -> void:
 		# Phase 15c added the leap patterns of boss two on purpose: the recorded patterns are the other ones.
 		var recorded: Array[BossPattern] = []
 		for candidate in boss.patterns:
-			if not (candidate is LeapPattern) and String(candidate.pattern_id) != "volley_leap":
+			if candidate.fallback_priority == 0 and not (candidate is LeapPattern or candidate is BeamSweepPattern or candidate is LightningColumnsPattern or candidate is StompPattern) and String(candidate.pattern_id) != "volley_leap":
 				recorded.append(candidate)
 		var patterns_ok: bool = recorded.size() == table.size()
 		for pattern in recorded:

@@ -646,7 +646,7 @@ func _test_boss_two_tuning() -> void:
 	_check("tuning: the spikes (1.2 s warning, 3.0 s active, 4.0 s rest) and the pad launch are unchanged", is_equal_approx(hazard.warning_time, 1.2) and is_equal_approx(hazard.active_time, 3.0)
 		and is_equal_approx(hazard.rest_time, 4.0) and is_equal_approx(BounceConfig.get_default().launch_velocity, -1030.0))
 	var stats: BossStats = boss.stats
-	_check("tuning: boss 2 HP, threshold and armor timings are unchanged (60, 55%, 1.5 s, x1.35, x0.55, 1.1 s)", stats.max_health == 60 and is_equal_approx(stats.phase_2_health_ratio, 0.55)
+	_check("tuning: boss 2 HP is 50 (Phase 15d-bis, was 60); threshold and armor timings are unchanged (55%, 1.5 s, x1.35, x0.55, 1.1 s)", stats.max_health == 50 and is_equal_approx(stats.phase_2_health_ratio, 0.55)
 		and is_equal_approx(stats.phase_transition_time, 1.5) and is_equal_approx(stats.phase_2_speed_multiplier, 1.35) and is_equal_approx(stats.phase_2_pattern_gap_multiplier, 0.55)
 		and is_equal_approx(stats.pattern_gap_time, 1.1))
 	var swipe := boss.get_node("Patterns/Swipe") as BossPattern
@@ -656,7 +656,9 @@ func _test_boss_two_tuning() -> void:
 		and is_equal_approx(charge.cooldown, 2.2) and is_equal_approx(charge.charge_speed, 560.0) and is_equal_approx(volley.weight, 0.7) and is_equal_approx(volley.cooldown, 5.0))
 	for path in ["res://backend/bosses/placeholder_boss.tscn", "res://backend/bosses/boss_three.tscn"]:
 		var other := (load(path) as PackedScene).instantiate() as BossBase
-		var expected_health: int = 40 if path.contains("placeholder") else 80
-		_check("tuning: %s keeps its health and threshold" % path.get_file(), other.stats.max_health == expected_health and is_equal_approx(other.stats.phase_2_health_ratio, 0.5))
+		# Boss 3 was redesigned in Phase 15e-1: 70 HP and its first line at 66.7%.
+		var expected_health: int = 40 if path.contains("placeholder") else 70
+		var expected_ratio: float = 0.5 if path.contains("placeholder") else 0.667
+		_check("tuning: %s keeps its health and threshold" % path.get_file(), other.stats.max_health == expected_health and is_equal_approx(other.stats.phase_2_health_ratio, expected_ratio))
 		other.free()
 	boss.free()
