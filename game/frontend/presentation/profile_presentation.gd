@@ -11,6 +11,8 @@ extends Resource
 @export_range(0.0, 5.0, 0.05, "suffix:s") var fade_time: float = 1.4
 @export_group("Texts")
 @export var toggle_text: String = "Efectos de corrupción"
+## The option that switches the remote AI Director off (Phase 16b).
+@export var ai_toggle_text: String = "Adaptación con IA"
 
 
 ## The look of `profile`; an unknown id gives the neutral look.
