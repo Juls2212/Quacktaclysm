@@ -82,6 +82,7 @@ extends Control
 @onready var shake_check: CheckButton = $OptionsPanel/Margin/Box/ShakeCheck
 ## "Efectos de corrupción" toggle; built in code next to the camera shake one.
 var corruption_check: CheckButton
+var ai_check: CheckButton
 @onready var controls_button: Button = $OptionsPanel/Margin/Box/ControlsButton
 @onready var options_box: VBoxContainer = $OptionsPanel/Margin/Box
 ## The editable controls page; it takes the place of the options while it is open.
@@ -135,6 +136,10 @@ func _ready() -> void:
 	corruption_check.text = (load(OptionsBoard.PRESENTATION_PATH) as ProfilePresentation).toggle_text
 	shake_check.get_parent().add_child(corruption_check)
 	shake_check.get_parent().move_child(corruption_check, shake_check.get_index() + 1)
+	ai_check = CheckButton.new()
+	ai_check.text = (load(OptionsBoard.PRESENTATION_PATH) as ProfilePresentation).ai_toggle_text
+	corruption_check.get_parent().add_child(ai_check)
+	corruption_check.get_parent().move_child(ai_check, corruption_check.get_index() + 1)
 	controls_button.text = (load(ControlsConfig.CATALOG_PATH) as ControlsCatalog).open_button_text
 	controls_editor = ControlsEditor.new()
 	$OptionsPanel/Margin.add_child(controls_editor)
@@ -160,12 +165,14 @@ func _ready() -> void:
 	sfx_slider.value = _settings["sfx_volume"]
 	shake_check.button_pressed = _settings["camera_shake"]
 	corruption_check.button_pressed = _settings["corruption_effects"]
+	ai_check.button_pressed = _settings["ai_adaptation"]
 	fullscreen_check.toggled.connect(_on_fullscreen_toggled)
 	volume_slider.value_changed.connect(_on_volume_changed)
 	music_slider.value_changed.connect(_on_setting_changed.bind("music_volume"))
 	sfx_slider.value_changed.connect(_on_setting_changed.bind("sfx_volume"))
 	shake_check.toggled.connect(_on_setting_changed.bind("camera_shake"))
 	corruption_check.toggled.connect(_on_setting_changed.bind("corruption_effects"))
+	ai_check.toggled.connect(_on_setting_changed.bind("ai_adaptation"))
 	GameSettings.apply(_settings)
 	_show_main_buttons()
 	message_label.text = ""
