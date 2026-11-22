@@ -2,7 +2,7 @@
 
 Videojuego 2D de acción en vista lateral con combate con espada (cuerpo a cuerpo y una onda a distancia), enemigos y jefes, hecho con Godot 4 y GDScript para escritorio (prioridad Windows, compatible con macOS). El nombre oficial es Quacktaclysm (`config/name` en Project Settings). El jugador recorre un tutorial y tres niveles; tras cada jefe decide **Liberar** o **Conservar** un fragmento de alma, y esas decisiones cambian la dificultad de los jefes, los enemigos extra, la potencia de la onda y el final. Un servicio de IA opcional puede refinar ese perfil.
 
-> **Estado:** todo el contenido jugable existe con arte provisional (rectángulos de colores). Nadie lo ha jugado con ventana todavía: ver `docs/KNOWN_ISSUES.md`.
+> **Estado:** todo el contenido jugable existe. Héroe, enemigos y jefes son patos dibujados y animados por código (`DuckRig`) que caen como ragdoll al morir; los niveles tienen cielo, parallax y pisos orgánicos por bioma, y el menú principal es una escena animada con letra propia ("Pato Tinta"). Los proyectiles y las puertas siguen con arte provisional (los proyectiles enemigos llevan un contorno de peligro dibujado); el HUD, la pausa, el Game Over y los menús ya tienen su aspecto definitivo de piedra. Nadie lo ha jugado con ventana todavía: ver `docs/KNOWN_ISSUES.md`.
 
 ## Requisitos
 
@@ -32,16 +32,27 @@ builds/           Salida de la exportación (ignorada por Git)
 
 ## Controles
 
-| Acción | Teclas |
+| Acción | Teclas por defecto (se pueden cambiar) |
 | --- | --- |
 | Mover | A / D o flechas izquierda / derecha |
 | Saltar | Espacio o flecha arriba |
 | Dash | Shift o K |
-| Ataque de espada | J, X o clic izquierdo |
-| Onda de espada (a distancia) | **clic derecho o U** |
+| Ataque de espada | J o clic izquierdo |
+| Onda de espada (a distancia) | **U o clic derecho** |
 | Golpe pesado | **I o clic central** |
+| Curarse (mantener) | **E o Q** |
 | Tajo de dash | pulsar **ataque durante el dash** (sin tecla propia) |
 | Pausa | Esc o P |
+
+**Cambiar los controles:** en **Opciones → Controles…** (desde el menú principal o desde la pausa). Cada acción tiene una asignación **principal** y una **alternativa**, de teclado o de ratón (clic izquierdo, derecho, central y botones laterales). Haz clic en una casilla, pulsa la tecla o el botón nuevo y ya está; la "×" quita la alternativa (la principal no se puede quitar). Si la tecla ya la usa otra acción, el juego pregunta si **intercambiar** o cancelar. **Esc cancela** la captura y está **reservada**: siempre pausa y no se puede asignar a otra acción. "Restaurar valores por defecto" lo deja todo como en la tabla. Los cambios se aplican al instante y se guardan en `user://controls.cfg` (en Windows, `%APPDATA%\Godot\app_userdata\Quacktaclysm\controls.cfg`), un archivo aparte de la partida; **para restaurar a mano, borra ese archivo con el juego cerrado**. Los textos del tutorial muestran siempre las asignaciones actuales. El mando (gamepad) no está soportado.
+
+**Corrupción visible y audible (Fase 14c):** el perfil adaptativo (compasivo / neutral / corrupto) se nota en el mundo. Con el perfil **corrupto** el fondo se vuelve violeta frío y desaturado, aparece una viñeta oscura en los bordes, los enemigos y jefes brillan (ojo y aro de la cabeza), el pato tiene un aura tenue y la música suena más grave y apagada. Con el **compasivo** todo es más cálido y dorado y la música no se apaga. Con el **neutral** el aspecto es el de siempre. Al tomar una decisión que **cambia** el perfil, la placa de la corrupción y la pantalla dan un destello breve y los colores y la música cambian de forma gradual. Es solo presentación: ningún valor de juego cambia. En **Opciones** hay un interruptor **"Efectos de corrupción"** (activado por defecto): apagado, desaparecen los tintes, la viñeta, los destellos, el brillo y los efectos de música, pero la placa del HUD y la línea de consecuencias se quedan. Se guarda en `user://settings.cfg` junto al resto de opciones (nunca en la partida).
+
+**Historia y cuatro finales (Fase 14d):** cada alma tiene nombre, un recuerdo (se ve en el panel de decisión) y una frase para liberarla y otra para conservarla; los tres guardianes hablan al empezar el combate (Enter salta las líneas) y una al caer; el abuelo vuelve al llegar al nivel 3 (escena corta de unos 20 s, Enter la salta) y revela el sentido de la profecía. El final depende **solo de cuántas almas liberaste**: 3 = *El cielo se abre*, 2 = *La cicatriz del cielo* (nombra el alma guardada), 1 = *El filo y la duda* (nombra la única liberada), 0 = *La nueva estrella caída*. Cada final es una secuencia de subtítulos de ~35-60 s sobre el sistema de planos del prólogo (**mantén Enter para saltarla**) y termina en una tarjeta de resumen con los contadores y los **nombres** de las almas liberadas y guardadas. Todo el guion está en `game/backend/story/default_story_texts.tres` y, para leerlo y revisarlo, en `docs/STORY.md`.
+
+**Ataques legibles (Fase 14e):** cada ataque enemigo avisa con una forma dibujada en el suelo que **se llena durante la preparación**: el golpe cuerpo a cuerpo, un arco corto delante (naranja; rojo claro y más ancho en el enemigo robusto); el enemigo rápido, un carril estrecho que marca la embestida (amarillo); el que dispara, una línea fina hacia ti (rosa); y los jefes, un arco ancho (golpe), un carril largo (embestida) o varias líneas en abanico (descarga). Además hay un signo de exclamación sobre la cabeza de los enemigos, un sonido distinto por tipo, un destello blanco y un pequeño rebote al recibir un golpe (algo más fuerte en los jefes), un tinte apagado mientras se recuperan (la ventana para castigarlos) y una pequeña alma que sale al morir. **No cambia ningún tiempo ni valor del juego**, y los avisos se ven siempre, también con "Efectos de corrupción" desactivado. Todo se retoca en `game/frontend/fx/default_telegraphs.tres`.
+
+**Más sonido y proyectiles legibles (Fase 14f):** pasos al correr (marcados por la distancia recorrida), impactos de los proyectiles (contra el escenario, el pato o un enemigo) y de la onda de espada, exorcismo, acorde de la presentación del jefe, título del nivel, portal, cambio de escena y Game Over. Cada jefe tiene su propia música (el jefe 1 y el 3 usan la misma pista a distinto tono) y la música baja un poco mientras alguien habla o dura la presentación. Los proyectiles enemigos llevan un **contorno de peligro** rojo-anaranjado con un halo que late, distinto de la onda de espada del pato (azul, cian o violeta). Todos los sonidos nuevos están en **una tabla editable**, `game/frontend/audio/default_audio_events.tres`, junto con la música de cada jefe. No hay audio ni arte nuevos (se reutilizan archivos con otro tono y volumen) y no cambia ningún valor de juego.
 
 La pausa no se abre si otro sistema ya tiene el juego pausado (panel de decisión, Game Over), durante una transición o con el jugador muerto. "Menú principal" **no guarda**: se pierde el progreso posterior al último guardado automático. En un build de depuración además: `K` mata al jefe (¡coincide con el dash!, ver `docs/KNOWN_ISSUES.md`), `H` le quita el 10 %, `F2` te lleva al checkpoint de la arena y `F3` muestra datos de depuración; las escenas de pruebas (`boss_test`, etc.) tienen sus propias teclas.
 
@@ -53,12 +64,23 @@ En cada nivel: recorrer, llegar al checkpoint de la arena, derrotar al jefe (las
 
 - **Nueva partida:** reinicia el estado y abre el tutorial. Si ya hay partida guardada pide confirmación; el archivo no se borra, se reemplaza en el próximo guardado automático.
 - **Continuar:** carga el archivo y abre el nivel guardado; si la partida está **completada** (`checkpoint = "ending"`) reabre el final. Si el archivo está dañado o es de una versión más nueva, muestra un mensaje y no cambia nada (la copia `.bak` se usa automáticamente si existe).
+- **Opciones:** pantalla completa y volumen general; se guardan al instante en `user://settings.cfg` (aparte de la partida). **Créditos:** quién hizo el juego, recursos externos y agradecimientos. Esc cierra el panel abierto.
 - **Game Over:** "Has caído" con Reintentar (reaparece en el último checkpoint) y Menú principal; el tutorial reaparece solo.
 
-**Vida y daño por contacto:** el jugador tiene **8 corazones** (`max_health` en `PlayerStats`). Tocar a un enemigo vivo o a un jefe en combate hace daño (1 por defecto, con empuje y un intervalo de repetición); el dash, la invulnerabilidad tras un golpe y la de reaparecer protegen igual que contra un ataque. Un enemigo en estado de daño, muerto, un jefe sin activar, en la transición de fase o derrotado no hacen daño. Los valores están en `EnemyStats` / `BossStats` (grupo "Contact damage").
+**Vida y daño por contacto:** el jugador tiene **8 corazones** (`max_health` en `PlayerStats`), más **1 por cada fragmento de alma liberado** (hasta 11; `health_per_released_soul` y `released_souls_cap`). Tocar a un enemigo vivo o a un jefe en combate hace daño (1 por defecto, con empuje y un intervalo de repetición); el dash, la invulnerabilidad tras un golpe y la de reaparecer protegen igual que contra un ataque. Un enemigo en estado de daño, muerto, un jefe sin activar, en la transición de fase o derrotado no hacen daño. Los valores están en `EnemyStats` / `BossStats` (grupo "Contact damage").
+
+**Decisiones con consecuencias (Fase 14b):** liberar un fragmento da +1 corazón máximo; conservarlo mantiene la onda de espada más fuerte (fragmentos de los niveles 1 y 2). Cada decisión cambia el perfil del nivel siguiente (umbral 1,0): compasivo suaviza el nivel (jefe más lento, sin enemigos extra) y corrupto lo endurece (jefe más rápido, enemigos extra). El HUD muestra el perfil y su puntuación, y cada nivel empieza con una línea que explica las consecuencias. Teclas de depuración (solo builds de depuración): `F4` mata al jefe, `H` le quita el 10 %, `F2` salta a la arena y `F3` muestra datos.
+
+**Medidor de alma y curación (Fase 15a, sustituye a los orbes de salud):** golpear a enemigos y jefes llena un **medidor de alma** (máx. 99): espada 11, golpe pesado 22, tajo de dash 16, onda de espada 8; al morir un enemigo suelta una alma pequeña que el pato absorbe (+11) y un jefe una grande (+33). **Mantén E (o Q) 0,9 s** para enfocar: el pato queda quieto y, al terminar, recupera **1 corazón** y gasta el coste; si te hieren, sueltas la tecla, esquivas o te caes, se interrumpe sin gastar nada. No hace nada con la vida llena ni con alma insuficiente. **Conservar fragmentos encarece curarse:** el coste es 33 + 5 × fragmentos conservados (33, 38, 43, 48). El HUD tiene una barra de alma con una marca en el coste (brilla cuando alcanza) y cada nivel lo dice en su línea de consecuencias. El medidor empieza en 0 en cada nivel y se vacía al reaparecer tras morir. Una tarjeta «Nueva habilidad» enseña la tecla (leída de tus controles) en el tutorial y al conservar un fragmento que mejora la onda. Todos los números están en `game/backend/player/default_soul_config.tres`.
 
 **Movimientos de espada nuevos** (disponibles desde el inicio, sin desbloqueo ni guardado):
 - **Golpe pesado** (I / clic central): preparación visible (el cuerpo se tiñe y se aplasta), golpe ancho de 3 de daño, recuperación larga en la que el jugador es vulnerable y recarga. No se puede cancelar con otras acciones (solo el daño o la muerte lo interrumpen; si te golpean en la preparación no hay golpe ni recarga).
+**Posesión al cambiar de fase (Fase 15d):** cuando un jefe cruza la línea de su barra de vida empieza una secuencia de unos 3 s (configurable entre 2,5 y 4 s): el jefe, inactivo e invulnerable, se eleva y se endereza temblando con los ojos y el contorno rojos, el fondo y el cielo se tiñen de rojo con una viñeta que late, hay un temblor ligero de cámara y dos destellos rojos suaves. El pato queda quieto e invulnerable, los proyectiles enemigos en el aire desaparecen y los peligros del jefe se detienen. Después empieza la fase 2 como siempre (los pinchos del jefe 2 salen solo entonces) y el jefe conserva un brillo rojo y el fondo un tinte rojo sutil hasta que muere o se cancela el combate. La línea de la barra del jefe late al cruzarla y la barra queda teñida de rojo. Con «Efectos de corrupción» desactivado no hay tinte, destello, temblor ni viñeta: queda una pausa corta (1 s) con el cambio de pose del jefe y el sonido. Todos los números están en `game/frontend/presentation/default_possession_config.tres`. Además, el salto del jefe 2 es algo menos frecuente (peso 1,2 en la fase 2; recarga de 7 s y 8 s).
+
+**Jefe 2 rediseñado y doble salto (Fase 15c):** la arena del pantano tiene dos pisos de plataformas (bajo, a ~90 px, alcanzable saltando; alto, a ~250 px, solo con un **nenúfar trampolín** o con el doble salto desde el piso bajo) y tres nenúfares que lanzan al pato ~300 px hacia arriba si cae sobre ellos (no si camina). La Cosa del Pantano **salta** entre plataformas (marcador de aterrizaje en el suelo, descarga hacia abajo desde arriba, aterrizaje con daño) y, en la fase 2, el **suelo se llena de pinchos** en ciclos de aviso 1,2 s / activos 3 s / descanso 4 s (daño normal de 1 corazón; el dash los esquiva; plataformas y nenúfares son seguros). Al decidir sobre el alma del jefe 2 (liberar o conservar) se desbloquea el **doble salto** (la misma tecla de salto, una vez por salto; se deduce de las decisiones guardadas, sin dato nuevo) y sale una tarjeta «Nueva habilidad». Todo se dibuja por código con textura opcional (`texture` del nenúfar, `spike_texture` de los pinchos). Números en `default_bounce_config.tres`, `default_floor_hazard_config.tres`, `PlayerStats` (grupo «Double jump») y los nodos `Leap` / `LeapLight` de `boss_two.tscn`.
+
+**Esquive invulnerable y jefes (Fase 15b):** el dash es **invulnerable de principio a fin** (no protege de las zonas de muerte: caer fuera del mundo mata igual); la velocidad, duración y recarga no cambian. La **primera vez** que entras en la arena de un jefe se reproduce una introducción: presentación «VS», saludo del guardián y la historia del pato (6 líneas por jefe), con el jefe quieto y el pato bloqueado e invulnerable; Enter la salta y no se repite al reintentar ni al continuar desde el checkpoint de la arena. La tarjeta «Nueva habilidad» de conservar un fragmento espera ahora a que termine la animación de corrupción (cola de presentación, `PresentationQueue`). El suelo de las tres arenas es continuo hasta el muro derecho.
+
 - **Tajo de dash**: pulsa atacar durante el dash. El dash sigue y lleva un golpe delantero de 2 de daño; una vez por dash, con la recarga del dash y una recuperación extra de 0,12 s en la que no se puede atacar.
 - Todo se ajusta en los grupos "Heavy attack" y "Dash slash" de `PlayerStats` (`default_player_stats.tres`). Por diseño su daño sostenido por segundo está entre 1,0× y 1,5× el de la espada (la onda sigue por debajo).
 
@@ -142,10 +164,10 @@ El preset "Windows Desktop" está en `game/export_presets.cfg` (un solo `.exe` c
 2. *Proyecto* → *Exportar…* → "Windows Desktop" → *Exportar proyecto*, o por terminal desde la raíz del repositorio:
 
 ```
-godot --headless --path game --export-release "Windows Desktop" ../builds/Quacktaclysm.exe
+godot --headless --path game --export-release "Windows Desktop"
 ```
 
-La salida queda en `builds/` (ignorada por Git; créala si no existe). Una build de lanzamiento no incluye las ayudas de depuración (`OS.is_debug_build()` es falso). Para apuntar el juego exportado a otro servicio de IA, define `QUACKTACLYSM_AI_URL` antes de ejecutarlo; sin servicio usa el clasificador local.
+La salida queda en `game/builds/Quacktaclysm.exe` (la ruta del preset; `builds/` está ignorada por Git). La Fase 14g exportó y ejecutó así una build (≈ 120 MB). Una build de lanzamiento no incluye las ayudas de depuración (`OS.is_debug_build()` es falso). Para apuntar el juego exportado a otro servicio de IA, define `QUACKTACLYSM_AI_URL` antes de ejecutarlo; sin servicio usa el clasificador local.
 
 ## Convenciones de Git
 
@@ -156,7 +178,10 @@ La salida queda en `builds/` (ignorada por Git; créala si no existe). Una build
 
 ## Documentación
 
-- `docs/HANDOFF.md` — guía para quien sustituya los marcadores de posición por arte y contenido.
+- `docs/HANDOFF.md` — **punto de entrada**: estado actual, cómo ejecutar, dónde está cada recurso editable, reglas (y la guía para sustituir arte y contenido).
+- `docs/QA_CHECKLIST.md` — lista de pruebas manuales en ventana real, en orden de juego.
+- `docs/BALANCE_REPORT.md` — medición de balance con bots y propuestas de ajuste (sin aplicar).
+- `docs/STORY.md` — guion de la historia, las almas, los guardianes, el abuelo y los cuatro finales.
 - `docs/ADAPTIVE_CONTRACT.md` — contrato del perfil adaptativo y del servicio de IA.
 - `docs/CHANGES_FROM_DESIGN.md` — diferencias entre el diseño original y la implementación.
 - `docs/KNOWN_ISSUES.md` — límites conocidos y todo lo que falta por verificar jugando.
