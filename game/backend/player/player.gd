@@ -14,8 +14,17 @@ signal dash_slash_started
 signal wave_cast(tier: int)
 signal died
 signal respawned
+## The heal action started a focus (held); it was cancelled (released, hit, dash, left the floor...);
+## it finished and `healed` hearts came back (0 in the tutorial practice at full health).
+## An extra jump in the air was made (Phase 15c).
+signal double_jumped
+## A bounce pad launched the player (Phase 15c).
+signal launched
+signal focus_started
+signal focus_cancelled
+signal focus_completed(healed: int)
 
-enum State { IDLE, RUN, JUMP, FALL, DASH, HURT, ATTACK, DEAD, WAVE, HEAVY }
+enum State { IDLE, RUN, JUMP, FALL, DASH, HURT, ATTACK, DEAD, WAVE, HEAVY, FOCUS }
 enum AttackPhase { STARTUP, ACTIVE, RECOVERY }
 enum WavePhase { STARTUP, RECOVERY }
 enum HeavyPhase { STARTUP, ACTIVE, RECOVERY }
@@ -37,15 +46,24 @@ var state: State = State.IDLE
 var current_sword_kind: SwordKind = SwordKind.LIGHT
 var air_dashes_left: int = 0
 var is_dead: bool = false
+## The tutorial lets the focus finish at full health (it spends the soul and heals nothing).
+var focus_practice: bool = false
+## Extra jumps left in this airtime (see PlayerStats.max_air_jumps).
+var air_jumps_left: int = 0
+## Set by the boss intro while the guardian and the duck talk: nothing can hurt the player (KillZones still can).
+var story_invulnerable: bool = false
 
-## True only during the first `dash_invulnerability_time` seconds of a dash.
+## True from the first to the last frame of the dash (the window ends exactly when the dash state ends, so it is
+## `dash_duration` long), plus the optional `dash_invulnerability_grace`. KillZones ignore it (they kill through
+## HealthComponent.kill).
 var is_dash_invulnerable: bool:
 	get:
-		return state == State.DASH and _dash_elapsed < stats.dash_invulnerability_time
+		return state == State.DASH or _dash_grace_left > 0.0
 
 var _coyote_left: float = 0.0
 var _jump_buffer_left: float = 0.0
 var _dash_cooldown_left: float = 0.0
+var _dash_grace_left: float = 0.0
 var _dash_elapsed: float = 0.0
 var _dash_direction: int = 1
 var _hurt_left: float = 0.0
@@ -72,6 +90,8 @@ var _sword_shape_node: CollisionShape2D
 var _sword_base_size: Vector2 = Vector2.ZERO
 var _sword_base_position: Vector2 = Vector2.ZERO
 var _input_locked: bool = false
+var _focus_left: float = 0.0
+var _launched: bool = false
 var _auto_respawn_override: bool = false
 
 @onready var visual: Node2D = $Visual
@@ -82,10 +102,14 @@ var _auto_respawn_override: bool = false
 @onready var attack_hitbox: Hitbox = $AttackPivot/Hitbox
 ## Optional: without a SwordWaveCaster child the player simply has no wave.
 @onready var wave_caster: SwordWaveCaster = get_node_or_null("SwordWaveCaster") as SwordWaveCaster
+## The Soul meter (optional: without it the player cannot heal).
+@onready var soul: SoulComponent = get_node_or_null("Soul") as SoulComponent
 
 
 func _ready() -> void:
+	add_to_group(&"player")
 	air_dashes_left = stats.max_air_dashes
+	air_jumps_left = stats.max_air_jumps
 	camera.enabled = true
 	camera.position_smoothing_enabled = true
 	camera.position_smoothing_speed = stats.camera_smoothing_speed
@@ -100,7 +124,7 @@ func _ready() -> void:
 	_sword_base_position = _sword_shape_node.position
 	_set_sword_profile(SwordKind.LIGHT)
 
-	health.max_health = stats.max_health
+	health.max_health = get_max_health_for_souls(GameState.souls_released)
 	health.invulnerability_time = stats.hurt_invulnerability_time
 	health.reset()
 	health.damaged.connect(_on_damaged)
@@ -128,9 +152,31 @@ func is_input_locked() -> bool:
 	return _input_locked
 
 
-## Used by the Hurtbox: dash and post-hit invulnerability both ignore hits.
+## The double jump is unlocked by boss 2's decision: GameState.decisions has 2 or more entries. Derived from the
+## decisions (which the save already holds), so no save key and it survives "Continuar".
+func has_double_jump() -> bool:
+	return GameState.decisions.size() >= stats.double_jump_unlock_decisions
+
+
+## A bounce pad launches the player straight up (velocity.y = `launch_velocity`, negative is up). The jump cut does
+## not apply to it, the extra jump is available again and a focus in progress is cancelled. Returns false (and
+## does nothing) when the player cannot be launched now (dead, or in the middle of a dash).
+func launch_up(launch_velocity: float) -> bool:
+	if is_dead or state == State.DASH:
+		return false
+	_cancel_focus()
+	velocity.y = launch_velocity
+	_launched = true
+	_coyote_left = 0.0
+	_jump_buffer_left = 0.0
+	air_jumps_left = stats.max_air_jumps
+	launched.emit()
+	return true
+
+
+## Used by the Hurtbox: dash, post-hit and story (boss intro) invulnerability all ignore hits.
 func is_invulnerable() -> bool:
-	return is_dash_invulnerable or health.is_invulnerable()
+	return is_dash_invulnerable or story_invulnerable or health.is_invulnerable()
 
 
 ## Runtime override of `stats.auto_respawn` (e.g. a Game Over controller). Never mutates the
@@ -157,10 +203,17 @@ func revive() -> void:
 	_restore()
 
 
+## Base maximum health plus the reward for the souls released so far (see PlayerStats).
+func get_max_health_for_souls(released: int) -> int:
+	var counted: int = clampi(released, 0, stats.released_souls_cap)
+	return stats.max_health + counted * stats.health_per_released_soul
+
+
 ## Restores health and control at the respawn point, with brief invulnerability.
 func respawn() -> void:
 	global_position = _respawn_point
 	velocity = Vector2.ZERO
+	health.max_health = get_max_health_for_souls(GameState.souls_released)
 	_restore()
 	health.grant_invulnerability(stats.respawn_invulnerability_time)
 	respawned.emit()
@@ -171,6 +224,7 @@ func _restore() -> void:
 	_respawn_left = 0.0
 	_hurt_left = 0.0
 	_dash_cooldown_left = 0.0
+	_dash_grace_left = 0.0
 	_jump_buffer_left = 0.0
 	_attack_cooldown_left = 0.0
 	_attack_buffer_left = 0.0
@@ -181,8 +235,11 @@ func _restore() -> void:
 	_slash_lock_left = 0.0
 	_cancel_attack()
 	_cancel_wave()
+	_cancel_focus()
 	if wave_caster != null:
 		wave_caster.reset()
+	if soul != null:
+		soul.reset()
 	health.reset()
 	hurtbox.set_enabled(true)
 	_set_state(_locomotion_state())
@@ -190,6 +247,9 @@ func _restore() -> void:
 
 func _physics_process(delta: float) -> void:
 	_update_timers(delta)
+	# Focusing needs a free player on the floor: a lock (cutscene), a fall or a hit ends it.
+	if state == State.FOCUS and (not can_act() or not is_on_floor()):
+		_cancel_focus()
 
 	if state == State.HURT:
 		_hurt_left -= delta
@@ -201,7 +261,9 @@ func _physics_process(delta: float) -> void:
 			respawn()
 
 	var input_dir: float = 0.0
-	if can_act():
+	if state == State.FOCUS:
+		_update_focus(delta)
+	elif can_act():
 		input_dir = Input.get_axis("move_left", "move_right")
 		if Input.is_action_just_pressed("jump"):
 			_jump_buffer_left = stats.jump_buffer_time
@@ -230,6 +292,9 @@ func _physics_process(delta: float) -> void:
 			_start_wave()
 		if _heavy_buffer_left > 0.0 and _can_heavy():
 			_start_heavy()
+		# Last, so any other action pressed this frame wins and the focus never starts on top of it.
+		if Input.is_action_just_pressed("heal"):
+			_try_start_focus()
 
 	if state == State.DASH and _dash_elapsed >= stats.dash_duration:
 		_end_dash()
@@ -247,7 +312,7 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
-	if state != State.DASH and state != State.HURT and state != State.ATTACK and state != State.DEAD and state != State.WAVE and state != State.HEAVY:
+	if state != State.DASH and state != State.HURT and state != State.ATTACK and state != State.DEAD and state != State.WAVE and state != State.HEAVY and state != State.FOCUS:
 		_set_state(_locomotion_state())
 
 
@@ -255,10 +320,15 @@ func _update_timers(delta: float) -> void:
 	if is_on_floor():
 		_coyote_left = stats.coyote_time
 		air_dashes_left = stats.max_air_dashes
+		air_jumps_left = stats.max_air_jumps
 	else:
 		_coyote_left -= delta
+	# A bounce launch protects its upward speed from the jump cut until the player starts to fall.
+	if velocity.y >= 0.0:
+		_launched = false
 	_jump_buffer_left -= delta
 	_dash_cooldown_left -= delta
+	_dash_grace_left = maxf(_dash_grace_left - delta, 0.0)
 	_attack_cooldown_left -= delta
 	_attack_buffer_left -= delta
 	_wave_buffer_left -= delta
@@ -301,8 +371,15 @@ func _move_step(input_dir: float, delta: float) -> void:
 		velocity.y = stats.jump_velocity
 		_jump_buffer_left = 0.0
 		_coyote_left = 0.0
+	elif _jump_buffer_left > 0.0 and not on_floor and air_jumps_left > 0 and has_double_jump() and can_act() and not attacking and not heavy:
+		# The extra jump (Phase 15c): once per airtime, never spent by a dash.
+		velocity.y = stats.double_jump_velocity
+		air_jumps_left -= 1
+		_jump_buffer_left = 0.0
+		_launched = false
+		double_jumped.emit()
 
-	if can_act() and Input.is_action_just_released("jump") and velocity.y < 0.0:
+	if can_act() and Input.is_action_just_released("jump") and velocity.y < 0.0 and not _launched:
 		velocity.y *= stats.jump_cut_multiplier
 
 
@@ -344,6 +421,7 @@ func _end_dash() -> void:
 		if _dash_slash_extra_left <= 0.0:
 			_finish_dash_slash_hitbox()
 	_dash_cooldown_left = stats.dash_cooldown
+	_dash_grace_left = stats.dash_invulnerability_grace
 	velocity.x = clampf(velocity.x, -stats.max_speed, stats.max_speed)
 	_set_state(_locomotion_state())
 	dash_finished.emit()
@@ -447,6 +525,7 @@ func _cancel_wave() -> void:
 func _on_damaged(info: DamageInfo) -> void:
 	if state == State.DASH:
 		_end_dash()
+	_cancel_focus()
 	_cancel_attack()
 	_cancel_wave()
 	_jump_buffer_left = 0.0
@@ -458,6 +537,7 @@ func _on_damaged(info: DamageInfo) -> void:
 
 func _on_died() -> void:
 	is_dead = true
+	_cancel_focus()
 	_cancel_attack()
 	_cancel_wave()
 	hurtbox.set_enabled(false)
@@ -590,3 +670,67 @@ func _cancel_dash_slash() -> void:
 ## True during the heavy attack's startup (the readable windup the Visual tints and squashes).
 func is_heavy_windup() -> bool:
 	return state == State.HEAVY and _heavy_phase == HeavyPhase.STARTUP
+
+
+# --- Focus heal ---------------------------------------------------------------------------------
+
+## 0..1 through the focus (0 when not focusing); the Visual draws the effect from it.
+func get_focus_progress() -> float:
+	if state != State.FOCUS or soul == null:
+		return 0.0
+	return clampf(1.0 - _focus_left / maxf(soul.config.focus_time, 0.01), 0.0, 1.0)
+
+
+## Pressing the heal action: starts the focus when everything allows it; otherwise it only tells the
+## Soul meter why not (full health or not enough soul), spending nothing.
+func _try_start_focus() -> void:
+	if soul == null or is_dead or not is_on_floor():
+		return
+	if state != State.IDLE and state != State.RUN:
+		return
+	if health.current_health >= health.max_health and not focus_practice:
+		soul.deny(&"full_health")
+		return
+	if not soul.can_afford():
+		soul.deny(&"not_enough_soul")
+		return
+	_jump_buffer_left = 0.0
+	_focus_left = soul.config.focus_time
+	_set_state(State.FOCUS)
+	focus_started.emit()
+
+
+## While focusing: releasing the action ends it, a dash cancels it (and dashes), time completes it.
+func _update_focus(delta: float) -> void:
+	if not Input.is_action_pressed("heal"):
+		_cancel_focus()
+		return
+	if Input.is_action_just_pressed("dash"):
+		_cancel_focus()
+		if _can_dash():
+			_start_dash(Input.get_axis("move_left", "move_right"))
+		return
+	_focus_left -= delta
+	if _focus_left <= 0.0:
+		_complete_focus()
+
+
+func _complete_focus() -> void:
+	_focus_left = 0.0
+	if soul == null or not soul.spend(soul.heal_cost()):
+		_cancel_focus()
+		return
+	var before: int = health.current_health
+	health.heal(soul.config.heal_hearts)
+	var healed: int = health.current_health - before
+	_set_state(_locomotion_state())
+	focus_completed.emit(healed)
+
+
+## Ends a focus without healing and without spending anything.
+func _cancel_focus() -> void:
+	if state != State.FOCUS:
+		return
+	_focus_left = 0.0
+	_set_state(_locomotion_state())
+	focus_cancelled.emit()

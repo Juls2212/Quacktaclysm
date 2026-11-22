@@ -96,6 +96,23 @@ const TOOTH := Color(0.93, 0.9, 0.76)
 		_refresh_level_style()
 
 # --- Pose inputs (written by the controller each frame) ---
+## Adaptive-profile presentation, set by the level's ProfilePresenter. The alpha is the intensity
+## (0 = off, the default), so a rig nobody dresses draws exactly as before.
+var aura_color: Color = Color(1, 1, 1, 0)
+## Focus heal progress 0..1 while the hero focuses, -1 otherwise (set by PlayerVisual).
+var focus_t: float = -1.0
+## True while the hero is invulnerable in a dash (Phase 15b): a pale halo for the whole window.
+var dash_shield: bool = false
+## 0..1 through the ring of the extra jump under the feet, or -1 when none (Phase 15c).
+var double_jump_t: float = -1.0
+## 0..1: how possessed the guardian looks (Phase 15d): a red aura, a glowing outline and red eyes that pulse.
+var possession: float = 0.0
+var possession_color: Color = Color(0.95, 0.12, 0.08)
+var possession_hz: float = 1.5
+## 0..1: how far the body has straightened up into the possessed pose (upright, limbs hanging, no shudder).
+var possession_pose: float = 0.0
+var eye_tint: Color = Color(1, 1, 1, 0)
+var glow_color: Color = Color(1, 1, 1, 0)
 var ground_speed: float = 0.0
 var grounded: bool = true
 var vertical_speed: float = 0.0
@@ -334,6 +351,10 @@ func _advance_body(delta: float) -> void:
 		target_lean = -0.28
 		if is_boss():
 			target_lean = -0.12 + sin(_time * 40.0) * 0.04
+	if possession_pose > 0.0:
+		# Possessed: the body straightens up and stretches a little instead of shuddering or leaning.
+		target_lean = lerpf(target_lean, 0.0, possession_pose)
+		target_squash = target_squash.lerp(Vector2(0.96, 1.06), possession_pose)
 	target_lean += _action_lean()
 	target_squash *= _action_squash()
 	if dead:
@@ -593,6 +614,13 @@ func _draw() -> void:
 	if look != Look.HERO and look != Look.GRANDFATHER:
 		_draw_strands()
 	draw_set_transform_matrix(_root)
+	var dressed: bool = part == Part.ALL and not ragdoll and not dead
+	if dressed:
+		_draw_profile_aura()
+		_draw_focus_effect()
+		_draw_dash_shield()
+		_draw_double_jump_ring()
+		_draw_possession_aura()
 	match look:
 		Look.HERO:
 			_draw_hero()
@@ -606,7 +634,113 @@ func _draw() -> void:
 			_draw_boss()
 		Look.GRANDFATHER:
 			_draw_grandfather()
+	if dressed:
+		draw_set_transform_matrix(_root)
+		_draw_profile_glow()
+		_draw_possession_eyes()
 	draw_set_transform_matrix(Transform2D.IDENTITY)
+
+
+## The focus heal of the hero: rings of pale light that close in on the body while it charges, motes that
+## rise, and a bright halo that grows with the progress. Nothing is drawn when `focus_t` is negative.
+func _draw_focus_effect() -> void:
+	if look != Look.HERO or focus_t < 0.0:
+		return
+	var c := Vector2(-1, -18)
+	var k: float = clampf(focus_t, 0.0, 1.0)
+	var soft := Color(0.72, 0.9, 1.0)
+	draw_circle(c, 14.0 + 16.0 * k, Color(soft, 0.12 + 0.2 * k))
+	for i in 3:
+		var phase: float = fposmod(_time * 1.6 + float(i) / 3.0, 1.0)
+		draw_arc(c, 44.0 - 30.0 * phase, 0.0, TAU, 28, Color(soft, 0.65 * (1.0 - phase)), 2.0, true)
+	for i in 6:
+		var rise: float = fposmod(_time * 0.9 + float(i) * 0.17, 1.0)
+		var x: float = sin(float(i) * 2.3 + _time * 3.0) * 12.0
+		draw_circle(c + Vector2(x, 18.0 - 46.0 * rise), 1.6 + 1.2 * k, Color(1.0, 1.0, 1.0, 0.8 * (1.0 - rise)))
+
+
+## The red aura of a possessed guardian: soft discs behind the body and a pulsing glowing outline. Visual only.
+func _draw_possession_aura() -> void:
+	if possession <= 0.001:
+		return
+	var pulse: float = 0.5 + 0.5 * sin(_time * TAU * possession_hz)
+	var strength: float = clampf(possession, 0.0, 1.0)
+	var center := Vector2(-1.0, -16.0)
+	var scale_factor: float = _look_scale()
+	for i in 4:
+		var radius: float = (46.0 - 7.0 * float(i)) * scale_factor * (1.0 + 0.05 * pulse)
+		draw_circle(center, radius, Color(possession_color, strength * (0.07 + 0.04 * float(i)) * (0.7 + 0.3 * pulse)))
+	draw_arc(center, 34.0 * scale_factor, 0.0, TAU, 40, Color(possession_color, strength * (0.35 + 0.35 * pulse)), 3.0, true)
+
+
+## Red eyes that glow: a bright core with a halo, on every guardian that is possessed. Visual only.
+func _draw_possession_eyes() -> void:
+	if possession <= 0.001:
+		return
+	var pulse: float = 0.5 + 0.5 * sin(_time * TAU * possession_hz)
+	var strength: float = clampf(possession, 0.0, 1.0)
+	var head: Vector2 = _head_center()
+	var eye: Vector2 = head + Vector2(5.0, -3.0)
+	draw_circle(eye, 7.0, Color(possession_color, strength * 0.28 * (0.6 + 0.4 * pulse)))
+	draw_circle(eye, 4.0, Color(possession_color, strength * 0.7))
+	draw_circle(eye, 2.0, Color(1.0, 0.82, 0.7, strength * (0.7 + 0.3 * pulse)))
+
+
+## A ring that spreads from the feet when the extra jump is made. Visual only.
+func _draw_double_jump_ring() -> void:
+	if look != Look.HERO or double_jump_t < 0.0:
+		return
+	var k: float = clampf(double_jump_t, 0.0, 1.0)
+	var feet := Vector2(-1.0, foot_y)
+	var alpha: float = 1.0 - k
+	for i in 2:
+		var spread: float = clampf(k * 1.3 - float(i) * 0.22, 0.0, 1.0)
+		if spread <= 0.0:
+			continue
+		draw_set_transform(feet, 0.0, Vector2(1.0, 0.3))
+		draw_arc(Vector2.ZERO, 8.0 + 30.0 * spread, 0.0, TAU, 28, Color(0.85, 0.97, 1.0, alpha * (1.0 - 0.4 * float(i))), 2.5, true)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## A pale halo round the hero for the whole invulnerable window of the dash. Visual only.
+func _draw_dash_shield() -> void:
+	if look != Look.HERO or not dash_shield:
+		return
+	var c := Vector2(-1, -18)
+	var pulse: float = 0.5 + 0.5 * sin(_time * 40.0)
+	draw_circle(c, 30.0, Color(0.7, 0.92, 1.0, 0.14 + 0.06 * pulse))
+	draw_arc(c, 31.0, 0.0, TAU, 32, Color(0.85, 0.97, 1.0, 0.55 + 0.2 * pulse), 2.0, true)
+
+
+## Soft light behind the hero, from the adaptive profile (aura_color; nothing when its alpha is 0).
+func _draw_profile_aura() -> void:
+	if look != Look.HERO or aura_color.a <= 0.001:
+		return
+	var breath: float = 1.0 + 0.07 * sin(_time * 2.2)
+	for i in 4:
+		var radius: float = (31.0 - 5.0 * float(i)) * breath
+		draw_circle(Vector2(-1, -18), radius, Color(aura_color, aura_color.a * 0.2))
+
+
+## Eye tint on the hero, or a glowing eye and a ring round the head of an enemy or boss, from the
+## adaptive profile (nothing when the alpha is 0). Visual only: no hitbox or stat reads this.
+func _draw_profile_glow() -> void:
+	if look == Look.GRANDFATHER:
+		return
+	var head: Vector2 = _head_center()
+	if look == Look.HERO:
+		if eye_tint.a > 0.001:
+			var eye: Vector2 = head + Vector2(4.5, -3.0)
+			draw_circle(eye, 4.0, Color(eye_tint, eye_tint.a * 0.22))
+			draw_circle(eye, 2.2, Color(eye_tint, eye_tint.a * 0.7))
+		return
+	if glow_color.a <= 0.001:
+		return
+	var throb: float = 0.75 + 0.25 * sin(_time * 3.0)
+	draw_arc(head, _head_radius() + 2.5, 0.0, TAU, 28, Color(glow_color, glow_color.a * 0.45 * throb), 2.0, true)
+	var eye_at: Vector2 = head + Vector2(5.0, -3.0)
+	draw_circle(eye_at, 5.5, Color(glow_color, glow_color.a * 0.25 * throb))
+	draw_circle(eye_at, 2.6, Color(glow_color, glow_color.a * 0.9))
 
 
 func _draw_shadow() -> void:

@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://backend/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://backend/combat/health_component.gd" id="2_health"]
@@ -7,6 +7,8 @@
 [ext_resource type="Script" path="res://backend/combat/hitbox.gd" id="5_hitbox"]
 [ext_resource type="Script" path="res://backend/player/sword_wave_caster.gd" id="6_caster"]
 [ext_resource type="Script" path="res://frontend/animations/duck_rig.gd" id="7_rig"]
+[ext_resource type="Script" path="res://backend/player/soul_component.gd" id="8_soul"]
+[ext_resource type="Resource" path="res://backend/player/default_soul_config.tres" id="9_soulconfig"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
 size = Vector2(28, 52)
@@ -60,3 +62,7 @@ script = ExtResource("7_rig")
 
 [node name="SwordWaveCaster" type="Node" parent="."]
 script = ExtResource("6_caster")
+
+[node name="Soul" type="Node" parent="."]
+script = ExtResource("8_soul")
+config = ExtResource("9_soulconfig")

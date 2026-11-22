@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="SoulConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://backend/player/soul_config.gd" id="1_soul"]
+
+[resource]
+script = ExtResource("1_soul")
+max_soul = 99
+gain_light = 11
+gain_heavy = 22
+gain_dash_slash = 16
+gain_wave = 8
+wisp_enemy = 11
+wisp_boss = 33
+wisp_absorb_time = 0.8
+focus_time = 0.9
+heal_hearts = 1
+heal_cost_base = 33
+heal_cost_per_kept = 5

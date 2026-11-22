@@ -4,12 +4,12 @@
 
 [resource]
 script = ExtResource("1_stats")
-; Second guardian (placeholder name). Reasoning: 60 HP is 1.5x the first boss (40) so the fight
+; Second guardian (name shown by BossNames). Reasoning: 60 HP is 1.5x the first boss (40) so the fight
 ; lasts longer than level 1 while damage per hit stays the same; phase 2 starts a little earlier
 ; (55%) and speeds the patterns by 1.35x with shorter gaps, which makes the charge (the signature
 ; pattern of this boss) come back quickly.
 boss_id = &"boss_two"
-display_name = "Guardian del Pantano (placeholder)"
+display_name = "La Cosa del Pantano"
 max_health = 60
 phase_2_health_ratio = 0.55
 phase_transition_time = 1.5

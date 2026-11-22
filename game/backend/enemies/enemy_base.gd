@@ -369,7 +369,7 @@ func _on_health_died() -> void:
 	contact_hitbox.set_contact_active(false)
 	hurtbox.set_enabled(false)
 	detection_area.set_deferred("monitoring", false)
-	_drop_health_orbs.call_deferred(stats.health_orb_count)
+	_release_soul.call_deferred()
 	velocity.x = 0.0
 	_state_time_left = stats.death_fade_time
 	target = null
@@ -409,5 +409,7 @@ func _update_contact_active() -> void:
 
 ## Deferred from the death / phase change: those arrive inside physics callbacks, where new
 ## bodies can't be added. Bound to this node, so it is skipped if the node is gone by then.
-func _drop_health_orbs(count: int) -> void:
-	HealthOrbDrop.burst(get_parent(), global_position, count)
+## The soul of what died leaves as a wisp the player absorbs (deferred: the death arrives in a physics callback).
+func _release_soul() -> void:
+	if is_inside_tree():
+		SoulPickup.spawn(get_parent(), global_position + Vector2(0.0, -18.0), SoulConfig.get_default().wisp_enemy)

@@ -18,6 +18,7 @@ const KIND_HIT_DUMMY: String = "hit_dummy"
 const KIND_WAVE: String = "wave"
 const KIND_HEAVY: String = "heavy"
 const KIND_DASH_SLASH: String = "dash_slash"
+const KIND_HEAL: String = "heal"
 
 @export var player: Player
 @export var dummy: TrainingDummy
@@ -26,6 +27,14 @@ const KIND_DASH_SLASH: String = "dash_slash"
 @export var grandfather_label: Label
 @export var steps: Array[Dictionary] = []
 @export var move_distance_threshold: float = 150.0
+## Seconds between checks of the key names shown in the prompt.
+const HINT_CHECK_INTERVAL: float = 0.25
+
+var _hint_check_left: float = HINT_CHECK_INTERVAL
+
+## The "Nueva habilidad" card shown when the heal step begins (skipped in headless runs).
+@export var show_ability_card: bool = true
+@export var show_card_when_headless: bool = false
 @export var feedback_text: String = "¡Bien!"
 @export var feedback_time: float = 0.8
 @export var final_text: String = "Muy bien. Sigue a la derecha para salir."
@@ -43,6 +52,7 @@ var _last_x: float = 0.0
 var _feedback_left: float = 0.0
 var _exiting: bool = false
 var _previous_autosave: bool = true
+var _card_shown: bool = false
 
 
 func _ready() -> void:
@@ -59,6 +69,9 @@ func _ready() -> void:
 	player.wave_cast.connect(func(_tier: int) -> void: _on_action(KIND_WAVE))
 	player.heavy_attack_started.connect(_on_action.bind(KIND_HEAVY))
 	player.dash_slash_started.connect(_on_action.bind(KIND_DASH_SLASH))
+	player.focus_completed.connect(func(_healed: int) -> void: _on_action(KIND_HEAL))
+	# In the tutorial the focus may finish at full health: it spends the soul and heals nothing.
+	player.focus_practice = true
 	if dummy != null:
 		dummy.health.damaged.connect(_on_dummy_damaged)
 	if exit_area != null:
@@ -68,11 +81,17 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	GameState.autosave_enabled = _previous_autosave
+	if player != null and is_instance_valid(player):
+		player.focus_practice = false
 
 
 func _physics_process(delta: float) -> void:
 	if player == null:
 		return
+	_hint_check_left -= delta
+	if _hint_check_left <= 0.0:
+		_hint_check_left = HINT_CHECK_INTERVAL
+		_refresh_hints()
 	var x: float = player.global_position.x
 	if not is_completed and _current_kind() == KIND_MOVE:
 		_moved += absf(x - _last_x)
@@ -83,6 +102,15 @@ func _physics_process(delta: float) -> void:
 		_feedback_left -= delta
 		if _feedback_left <= 0.0:
 			_show_current_prompt()
+
+
+## Re-reads the key names of the step on screen, so a remap made in the pause menu shows up.
+func _refresh_hints() -> void:
+	if is_completed or _feedback_left > 0.0 or current_index >= steps.size() or prompt_label == null:
+		return
+	var fresh: String = build_text(String(steps[current_index].get("text", "")))
+	if fresh != prompt_label.text and prompt_label.visible:
+		_set_prompt(fresh)
 
 
 func get_current_step_id() -> String:
@@ -99,13 +127,9 @@ func build_text(template: String) -> String:
 	return result
 
 
+## What the player reads for an action right now ("J o Clic izquierdo"); follows remaps.
 func _key_hint(action: StringName) -> String:
-	for event in InputMap.action_get_events(action):
-		var key_event := event as InputEventKey
-		if key_event != null:
-			var keycode: Key = key_event.physical_keycode if key_event.physical_keycode != KEY_NONE else key_event.keycode
-			return OS.get_keycode_string(keycode)
-	return String(action)
+	return ControlsConfig.input_map_hint(action)
 
 
 func _current_kind() -> String:
@@ -145,6 +169,28 @@ func _show_current_prompt() -> void:
 		_set_prompt(final_text)
 	elif current_index < steps.size():
 		_set_prompt(build_text(String(steps[current_index].get("text", ""))))
+		_maybe_show_heal_card()
+
+
+## When the heal step comes up, a full-screen card announces the new ability with its current key(s).
+func _maybe_show_heal_card() -> void:
+	if _card_shown or not show_ability_card or _current_kind() != KIND_HEAL:
+		return
+	if DisplayServer.get_name() == "headless" and not show_card_when_headless:
+		return
+	_card_shown = true
+	var queue := get_parent().get_node_or_null(^"PresentationQueue") as PresentationQueue if get_parent() != null else null
+	if queue != null:
+		queue.enqueue("card_heal_tutorial", _present_heal_card)
+	else:
+		_present_heal_card()
+
+
+## One card per tutorial run (the id carries this node's id; nothing is saved). Returns the `dismissed` signal.
+func _present_heal_card() -> Variant:
+	var texts := AbilityTexts.get_default()
+	var card: AbilityCard = AbilityCard.present(self, "heal_tutorial_%d" % get_instance_id(), texts.heal_name, texts.heal_description, PackedStringArray(["heal"]))
+	return Signal(card, &"dismissed") if card != null else Signal()
 
 
 func _set_prompt(text: String) -> void:

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="AbilityTexts" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://backend/player/ability_texts.gd" id="1_texts"]
+
+[resource]
+script = ExtResource("1_texts")
+card_title = "Nueva habilidad"
+heal_name = "Curarse"
+heal_description = "Reúne alma golpeando a tus enemigos. Mantén la tecla para enfocar y recuperar un corazón. Si te hieren, se interrumpe."
+double_jump_name = "Doble salto"
+double_jump_description = "El pantano ya no te retiene: pulsa saltar otra vez en el aire y elévate un poco más. Es la misma tecla del salto."
+wave_name_format = "Onda de espada: nivel %d"
+wave_description_format = "Conservar el fragmento fortalece tu onda de espada (nivel %d), pero ahora curarte cuesta %d de alma."
+keys_format = "Tecla: %s"
+footer = "Puedes cambiarla en Opciones → Controles"
+dismiss_hint = "Pulsa Enter para continuar"

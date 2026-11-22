@@ -1,8 +1,8 @@
 class_name LevelDebug
 extends Node
 ## Debug helpers for levels (debug builds only; frees itself otherwise). Keys are handled in code,
-## not in the input map: K kills the boss, H hurts it 10%, F2 teleports to the arena checkpoint,
-## F3 toggles the info label.
+## not in the input map: F4 kills the boss, H hurts it 10%, F2 teleports to the arena checkpoint,
+## F3 toggles the info label. (K is a dash key, so it is NOT a debug key.)
 
 const HURT_FRACTION: int = 10
 
@@ -34,7 +34,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if key_event == null or not key_event.pressed or key_event.echo or _level == null:
 		return
 	match key_event.keycode:
-		KEY_K:
+		KEY_F4:
 			_hurt_boss(_level.boss.health.max_health if _level.boss != null else 0)
 		KEY_H:
 			if _level.boss != null:
@@ -58,6 +58,7 @@ func _process(_delta: float) -> void:
 	if player.wave_caster != null:
 		lines.append("wave tier %d" % player.wave_caster.get_effective_tier())
 	lines.append("pause holders: %d" % PauseLock.holder_count())
+	lines.append("[F4] kill boss  [H] hurt boss 10%  [F2] arena checkpoint  [F3] hide this")
 	_label.text = "\n".join(lines)
 
 

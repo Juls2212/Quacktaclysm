@@ -37,6 +37,8 @@ signal level_completed(level_number: int)
 ## Narrative variant (String) -> short line shown for `intro_duration` seconds at level start.
 @export var intro_lines: Dictionary = {}
 @export var intro_duration: float = 4.0
+## Wording of the second line shown at level start: what the decisions so far changed.
+@export var decision_texts: DecisionTexts = preload("res://backend/decisions/default_decision_texts.tres")
 @export_group("Adaptive variants")
 ## Encounter variant id (String) -> Array of NodePath (relative to this node) of optional nodes that
 ## only exist in that variant. Groups that do not match the adaptive result are removed at load.
@@ -50,6 +52,8 @@ var _advance_elapsed: float = 0.0
 var _completion_started: bool = false
 var _applied_result: AdaptiveResult = null
 var _intro_left: float = 0.0
+## The consequence line shown with the intro ("" in the tutorial); built once at load.
+var consequence_line: String = ""
 var _autosave_suspended: bool = false
 
 @onready var player: Player = $Player
@@ -61,6 +65,7 @@ var _autosave_suspended: bool = false
 @onready var game_over_controller: GameOverController = $GameOverController
 @onready var background: ColorRect = $BackgroundLayer/Background
 @onready var intro_label: Label = $IntroLayer/IntroLabel
+@onready var consequence_label: Label = $IntroLayer/ConsequenceLabel
 
 
 func _ready() -> void:
@@ -102,6 +107,7 @@ func _process(delta: float) -> void:
 		_intro_left -= delta
 		if _intro_left <= 0.0:
 			intro_label.visible = false
+			consequence_label.visible = false
 	# Safety net: a failed or missed transition must never leave the player locked.
 	if _locked_by_level and not SceneManager.is_transitioning():
 		_set_level_lock(false)
@@ -153,8 +159,31 @@ func _apply_background() -> void:
 	background.visible = background_color.a > 0.0
 
 
+## What the decisions so far did, in one short line (empty outside the numbered levels).
+func build_consequence_line() -> String:
+	if level_number < 1 or decision_texts == null:
+		return ""
+	var tier: int = 0
+	var bonus: int = 0
+	var heal_cost: int = SoulConfig.get_default().heal_cost(GameState.souls_kept)
+	if player != null:
+		if player.soul != null:
+			heal_cost = player.soul.heal_cost()
+		bonus = player.get_max_health_for_souls(GameState.souls_released) - player.stats.max_health
+		if player.wave_caster != null:
+			tier = player.wave_caster.get_effective_tier()
+	return decision_texts.build_level_line(GameState.souls_released, GameState.souls_kept, bonus, tier,
+			GameState.adaptive_profile, heal_cost)
+
+
 func _show_intro() -> void:
 	intro_label.visible = false
+	consequence_label.visible = false
+	consequence_line = build_consequence_line()
+	if intro_duration > 0.0 and not consequence_line.is_empty():
+		consequence_label.text = consequence_line
+		consequence_label.visible = true
+		_intro_left = intro_duration
 	var variant: String = _applied_result.narrative_variant
 	if intro_duration <= 0.0 or not intro_lines.has(variant):
 		return

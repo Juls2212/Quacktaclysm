@@ -143,15 +143,19 @@ steps = Array[Dictionary]([{
 }, {
 "id": "wave",
 "kind": "wave",
-"text": "Lanza la onda de espada con clic derecho o {wave}"
+"text": "Lanza la onda de espada con {wave}"
 }, {
 "id": "heavy",
 "kind": "heavy",
-"text": "Golpe pesado con clic central o {heavy_attack}"
+"text": "Golpe pesado con {heavy_attack}"
 }, {
 "id": "dash_slash",
 "kind": "dash_slash",
 "text": "Pulsa atacar ({attack}) durante el dash ({dash}) para el tajo de dash"
+}, {
+"id": "heal",
+"kind": "heal",
+"text": "Golpea al muñeco para reunir alma y mantén {heal} para curarte"
 }])
 
 [node name="PrologueCutscene" parent="." instance=ExtResource("93_prologue")]
