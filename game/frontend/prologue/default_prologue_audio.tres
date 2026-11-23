@@ -1,0 +1,71 @@
+[gd_resource type="Resource" script_class="PrologueAudio" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://frontend/prologue/prologue_audio.gd" id="1_audio"]
+
+[resource]
+script = ExtResource("1_audio")
+music_file = "the_evil_one.ogg"
+music_pitch = 0.8
+music_cutoff_hz = 2200.0
+music_duck_db = -7.0
+effects = Array[Dictionary]([{
+"at": 0.4,
+"db": -4.0,
+"event": &"transition",
+"pitch": 0.6,
+"shot": 1
+}, {
+"at": 1.2,
+"db": -2.0,
+"event": &"focus_start",
+"pitch": 0.5,
+"shot": 2
+}, {
+"at": 3.4,
+"db": -2.0,
+"event": &"focus_start",
+"pitch": 0.5,
+"shot": 2
+}, {
+"at": 0.6,
+"db": -3.0,
+"event": &"boss_leap",
+"pitch": 0.55,
+"shot": 3
+}, {
+"at": 3.2,
+"db": -2.0,
+"event": &"leap_land",
+"pitch": 0.5,
+"shot": 3
+}, {
+"at": 5.5,
+"db": -2.0,
+"event": &"leap_land",
+"pitch": 0.42,
+"shot": 3
+}, {
+"at": 8.5,
+"db": 0.0,
+"event": &"possession_slam",
+"pitch": 0.6,
+"shot": 3
+}, {
+"at": 0.3,
+"db": -5.0,
+"event": &"transition",
+"pitch": 0.7,
+"shot": 4
+}, {
+"at": 3.0,
+"db": -6.0,
+"event": &"grandfather_voice",
+"pitch": 0.8,
+"shot": 5
+}, {
+"at": 0.5,
+"db": -3.0,
+"event": &"possession_start",
+"pitch": 0.7,
+"shot": 6
+}])
