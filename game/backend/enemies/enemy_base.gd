@@ -33,6 +33,7 @@ enum AttackPhase { STARTUP, ACTIVE, RECOVERY }
 
 var state: State = State.IDLE
 var target: Node2D = null
+var _had_target: bool = false
 ## Horizontal facing, 1 (right) or -1 (left). Flips Visual, attack pivot and ledge/wall rays.
 var facing_direction: int = 1:
 	set(value):
@@ -46,6 +47,7 @@ var _attack_cooldown_left: float = 0.0
 ## True while a dead target is inside the detection area: stand still instead of patrolling.
 var _hold_still: bool = false
 var _ledge_origin: Vector2 = Vector2.ZERO
+var _base_ledge_x: float = 0.0
 var _wall_target: Vector2 = Vector2.ZERO
 
 @onready var health: HealthComponent = $Health
@@ -80,6 +82,7 @@ func _ready() -> void:
 	detection_shape.shape = detection_circle
 
 	_ledge_origin = ledge_check.position
+	_base_ledge_x = absf(_ledge_origin.x)
 	_wall_target = wall_check.target_position
 	_apply_facing()
 	_state_time_left = stats.patrol_wait_time
@@ -248,6 +251,13 @@ func _decelerate(delta: float) -> void:
 	velocity.x = move_toward(velocity.x, 0.0, stats.acceleration * delta)
 
 
+## Keeps this enemy `px` farther from a missing floor than its own ledge probe sees (Phase 15h-bis): the probe looks that much further
+## ahead, so the enemy stops before the edge instead of standing on it. 0 restores the default.
+func set_edge_keepout(px: float) -> void:
+	_ledge_origin.x = _base_ledge_x + maxf(px, 0.0)
+	_apply_facing()
+
+
 ## True if a wall or (when on the floor) a missing floor lies ahead, per the stats flags.
 func _is_blocked_ahead() -> bool:
 	if stats.turn_on_wall and wall_check.is_colliding():
@@ -308,9 +318,13 @@ func _cancel_attack() -> void:
 # --- Target tracking ---
 
 func _update_target() -> void:
+	# Phase 15q: a target that was FREED (the player removed with its level, a scene change) is dropped before anything reads its position; the
+	# `_had_target` flag keeps that from depending on how a freed object compares with null.
+	if _had_target and not is_instance_valid(target):
+		_lose_target()
+		return
 	if target != null:
-		if not is_instance_valid(target) or _is_target_dead(target) \
-				or global_position.distance_to(target.global_position) > maxf(stats.lose_target_range, stats.detection_range):
+		if _is_target_dead(target) or global_position.distance_to(target.global_position) > maxf(stats.lose_target_range, stats.detection_range):
 			_lose_target()
 		return
 	_hold_still = false
@@ -325,6 +339,7 @@ func _update_target() -> void:
 
 func _acquire_target(new_target: Node2D) -> void:
 	target = new_target
+	_had_target = true
 	target_acquired.emit(new_target)
 	_on_target_acquired(new_target)
 	if state == State.IDLE or state == State.PATROL:
@@ -333,6 +348,7 @@ func _acquire_target(new_target: Node2D) -> void:
 
 func _lose_target() -> void:
 	target = null
+	_had_target = false
 	target_lost.emit()
 	_on_target_lost()
 	if state == State.CHASE:
@@ -373,6 +389,7 @@ func _on_health_died() -> void:
 	velocity.x = 0.0
 	_state_time_left = stats.death_fade_time
 	target = null
+	_had_target = false
 	_set_state(State.DEAD)
 	died.emit(self)
 
@@ -412,4 +429,4 @@ func _update_contact_active() -> void:
 ## The soul of what died leaves as a wisp the player absorbs (deferred: the death arrives in a physics callback).
 func _release_soul() -> void:
 	if is_inside_tree():
-		SoulPickup.spawn(get_parent(), global_position + Vector2(0.0, -18.0), SoulConfig.get_default().wisp_enemy)
+		SoulPickup.spawn(get_parent(), global_position + Vector2(0.0, -18.0), SoulConfig.get_default().wisp_enemy, SoulPickup.Style.FRAGMENT)
