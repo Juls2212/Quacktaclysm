@@ -1,19 +1,13 @@
 class_name EndingSelector
 extends RefCounted
-## Picks the ending from the number of souls released (deterministic; the adaptive profile and the
-## AI have no say). 3 = full compassion, 2 = compassion with a scar, 1 = power with doubt, 0 = the
-## duck becomes the new corruption. Reads the decisions GameState already saves; adds no data.
+## Picks the ending (Phase 15h): EXACTLY TWO, by the majority of the three fragment decisions. More souls KEPT than released ->
+## ENDING KEPT («Estrellas que suben»); otherwise (released >= kept, which includes the edge case of no decision) -> ENDING RELEASED
+## («El acantilado»). Deterministic: the adaptive profile, the AI and the epilogue variant have no say. Reads the decisions GameState
+## already saves; adds no data.
 
 
-static func ending_id_for(released: int) -> String:
-	if released >= 3:
-		return StoryTexts.ENDING_FULL
-	match released:
-		2:
-			return StoryTexts.ENDING_SCAR
-		1:
-			return StoryTexts.ENDING_DOUBT
-	return StoryTexts.ENDING_CORRUPT
+static func ending_id_for(released: int, kept: int) -> String:
+	return StoryTexts.ENDING_KEPT if kept > released else StoryTexts.ENDING_RELEASED
 
 
 ## Names of the souls decided with `choice`, in the order they were decided (the full name, or the
