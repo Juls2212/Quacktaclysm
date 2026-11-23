@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="CorruptionSpriteSet" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://frontend/fx/corruption_sprite_set.gd" id="1_set"]
+
+[resource]
+script = ExtResource("1_set")
+texture_scale = 1.0
+feet_anchor = Vector2(0.5, 1)
