@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3]
+[gd_scene load_steps=29 format=3]
 
 [ext_resource type="PackedScene" path="res://frontend/levels/level_base.tscn" id="1_base"]
 [ext_resource type="PackedScene" path="res://frontend/levels/blocks/placeholder_platform.tscn" id="2_platform"]
@@ -20,6 +20,16 @@
 [ext_resource type="Script" path="res://frontend/levels/blocks/enemy_level_style.gd" id="95_enemy_style"]
 [ext_resource type="Script" path="res://frontend/levels/backdrop/storm_weather.gd" id="96_storm"]
 [ext_resource type="Script" path="res://frontend/story/elder_scene.gd" id="97_elder"]
+
+[ext_resource type="PackedScene" path="res://backend/arena/electric_plate.tscn" id="98_plate"]
+[ext_resource type="Script" path="res://frontend/arena/storm_decor.gd" id="99_decor"]
+[ext_resource type="Resource" path="res://frontend/arena/default_storm_decor_config.tres" id="100_decor_cfg"]
+[ext_resource type="Script" path="res://backend/bosses/stage/boss_stage.gd" id="104_stage"]
+[ext_resource type="Resource" path="res://backend/bosses/stage/default_stage_config.tres" id="105_stage_cfg"]
+[ext_resource type="PackedScene" path="res://backend/enemies/duckling.tscn" id="106_duckling"]
+[ext_resource type="Script" path="res://frontend/fx/boss_stage_fx.gd" id="107_stagefx"]
+[ext_resource type="Script" path="res://backend/progression/gap_guard.gd" id="102_guard"]
+[ext_resource type="Resource" path="res://backend/progression/default_gap_safety_config.tres" id="103_guard_cfg"]
 
 [node name="Level3" instance=ExtResource("1_base") node_paths=PackedStringArray("boss", "encounter", "fragment_drop", "arena_gates")]
 biome = ExtResource("90_biome")
@@ -127,16 +137,16 @@ position = Vector2(2201, 416)
 position = Vector2(2381, 576)
 
 [node name="Fast1" parent="Content" index="18" instance=ExtResource("8_fast")]
-position = Vector2(2601, 576)
+position = Vector2(2481, 576)
 
 [node name="Fast2" parent="Content" index="19" instance=ExtResource("8_fast")]
-position = Vector2(3376, 576)
+position = Vector2(3476, 576)
 
 [node name="Ranged3" parent="Content" index="20" instance=ExtResource("9_ranged")]
 position = Vector2(3876, 336)
 
 [node name="Melee2" parent="Content" index="21" instance=ExtResource("7_melee")]
-position = Vector2(4076, 576)
+position = Vector2(3951, 576)
 
 [node name="Melee3" parent="Content" index="22" instance=ExtResource("7_melee")]
 position = Vector2(5025, 576)
@@ -240,3 +250,35 @@ style = 3
 
 [node name="StormWeather" type="Node2D" parent="."]
 script = ExtResource("96_storm")
+
+[node name="PlateA" parent="Content" instance=ExtResource("98_plate")]
+position = Vector2(550, 600)
+length = 220.0
+
+[node name="BossStage" type="Node" parent="Content" node_paths=PackedStringArray("boss", "floor_node", "gate", "wall", "ceiling")]
+script = ExtResource("104_stage")
+config = ExtResource("105_stage_cfg")
+boss = NodePath("../Boss")
+floor_node = NodePath("../FloorD")
+gate = NodePath("../ArenaGate")
+wall = NodePath("../WallRight")
+ceiling = NodePath("../ArenaCeiling")
+platform_scene = ExtResource("2_platform")
+duckling_scene = ExtResource("106_duckling")
+
+[node name="StageFx" type="Node2D" parent="Content/BossStage"]
+script = ExtResource("107_stagefx")
+
+[node name="GapGuard" type="Node" parent="."]
+script = ExtResource("102_guard")
+config = ExtResource("103_guard_cfg")
+floor_names = PackedStringArray("FloorA", "FloorB", "FloorC", "FloorD")
+platform_scene = ExtResource("2_platform")
+
+[node name="Decor" type="Node2D" parent="."]
+script = ExtResource("99_decor")
+config = ExtResource("100_decor_cfg")
+puddles = PackedFloat32Array(300, 1120, 1790, 2480, 3300, 3950, 4900, 5560)
+lamps = PackedFloat32Array(480, 1160, 2300, 3500, 4100, 5100)
+chains = PackedFloat32Array(700, 1900, 2650, 3700, 4900)
+towers = PackedVector2Array(150, 260, 950, 320, 1750, 240, 2400, 300, 3300, 280, 4000, 330, 4900, 260, 5500, 300, 6200, 340, 6600, 280)
