@@ -412,16 +412,11 @@ func _test_monologues() -> void:
 			longest = maxi(longest, line.length())
 			seconds += BossDialogue.intro_line_seconds(line)
 			accents += 1 if accent_re.search(line) != null else 0
-		_check("monologue %d: 5 to 7 lines (%d)" % [level, lines.size()], lines.size() >= 5 and lines.size() <= 7)
-		_check("monologue %d: no line is longer than 110 characters (longest %d)" % [level, longest], longest <= 110)
-		_check("monologue %d: it lasts at most about 25 s (%.1f s)" % [level, seconds], seconds <= 25.0)
-		_check("monologue %d: Spanish with accents in %d lines" % [level, accents], accents >= 3)
+		_check("monologue %d: ONE short duck line of at most 80 characters (Phase 15n; %d line, longest %d)" % [level, lines.size(), longest], lines.size() == 1 and longest <= 80)
 	var one: String = " ".join(texts.get_boss(1).duck_lines).to_lower()
 	var two: String = " ".join(texts.get_boss(2).duck_lines).to_lower()
 	var three: String = " ".join(texts.get_boss(3).duck_lines).to_lower()
-	_check("monologue 1: training with the grandfather and the night the first star fell", one.contains("abuelo") and one.contains("katana") and one.contains("primera estrella"))
-	_check("monologue 2: what the blade does and the grandfather's silence (the erased prophecy)", two.contains("alma") and two.contains("silencio") and two.contains("el resto está borrado"))
-	_check("monologue 3: Kenzo, the doubt and why he cannot go back", three.contains("kenzo") and three.contains("dud") and three.contains("volver atrás"))
+	_check("monologue: the grandfather is not named by the duck before level 3", not one.contains("abuelo") and not two.contains("abuelo"))
 	var everything: String = (one + two + three)
 	_check("monologues quote nothing against the story (no ending or soul contradicted: no mention of releasing or keeping a named soul)",
 		not everything.contains("daigo") and not everything.contains("hana") and not everything.contains("liberé a"))
@@ -477,8 +472,15 @@ func _test_boss_intro() -> void:
 	_check("intro: the player cannot be hurt and the boss cannot be hurt", not duck_hit and not boss_hit and player.health.current_health == hp_start and boss.health.current_health == boss_hp)
 	var saw_duck: bool = false
 	var frames: int = 0
+	var press := InputEventAction.new()
+	press.action = "ui_accept"
+	press.pressed = true
 	while intro.active and frames < 3000:
 		frames += 1
+		# Phase 15f: every intro line waits for the confirm action (a press completes the line, the next one moves on).
+		if dialogue.is_speaking():
+			dialogue._grace_left = 0.0
+			dialogue._input(press)
 		if dialogue.is_speaking() and dialogue.current_text().begins_with("Pato:"):
 			saw_duck = true
 		await get_tree().physics_frame
@@ -521,8 +523,10 @@ func _test_boss_intro() -> void:
 	_check("skip: a press right at the start is ignored (leftover presses)", skip_intro.active)
 	skip_dialogue._grace_left = 0.0
 	skip_dialogue._input(accept)
+	_check("skip: a single press only completes the line (Phase 15f: it no longer skips the whole intro)", skip_intro.active)
+	skip_dialogue.skip()
 	await _physics(8)
-	_check("skip: confirm skips the whole sequence and the fight begins", not skip_intro.active and skip_intro.skipped and skip_level.boss.state != BossBase.State.INACTIVE
+	_check("skip: holding confirm (the skip) ends the whole sequence and the fight begins", not skip_intro.active and skip_intro.skipped and skip_level.boss.state != BossBase.State.INACTIVE
 		and not skip_level.player.is_input_locked() and not skip_level.player.story_invulnerable)
 	skip_level.free()
 	await _frames(2)
@@ -545,7 +549,7 @@ func _test_boss_intro() -> void:
 	await _physics(10)
 	_check("vs: when the presentation ends the guardian speaks", vs_dialogue.is_speaking())
 	vs_dialogue._grace_left = 0.0
-	vs_dialogue._input(accept)
+	vs_dialogue.skip()
 	await _physics(8)
 	_check("vs: then the fight starts after the lines", not vs_intro.active and vs_level.boss.state != BossBase.State.INACTIVE)
 	vs_level.free()
@@ -610,7 +614,7 @@ func _world_rects(level: LevelBase) -> Array[Dictionary]:
 
 
 func _test_arena_floors() -> void:
-	var expected_gaps: Dictionary = {1: [285.0], 2: [170.0, 285.0, 285.0], 3: [285.0, 175.0, 285.0]}
+	var expected_gaps: Dictionary = {1: [285.0], 2: [170.0, 285.0, 285.0], 3: [336.0, 450.0, 484.0]}
 	for number in [1, 2, 3]:
 		_clean_state()
 		var level: LevelBase = _level(number)
@@ -658,21 +662,27 @@ func _test_arena_floors() -> void:
 			if gap > 1.0 and floors[i + 1].position.x < gate_x:
 				gaps.append(snappedf(gap, 0.5))
 		_check("level %d: the intentional gaps before the arena are unchanged %s" % [number, str(gaps)], gaps == expected_gaps[number])
+		# Reach table (Phase 15h-bis, measured by phase15h2 with the real player): level 1 and 2 gaps are plain jumps or jump + dash (<= 328 px); in level 3
+		# the player has the double jump and the dash: jump + double jump reaches 440 px and jump + dash 433 px (gap 1, 336 px, needs two actions) and
+		# the three-action chain (jump + double jump + dash) crosses the 450 and 484 px gaps.
 		var crossable: bool = true
+		var two_actions: int = 0
+		var three_actions: int = 0
 		for gap in gaps:
-			crossable = crossable and gap <= 328.0
-			if gap > 220.0:
+			if number < 3:
 				crossable = crossable and gap <= 328.0
-		_check("level %d: every gap is crossable with the measured reach (jump 220 px, jump + dash 328 px)" % number, crossable)
-		var needs_dash: int = 0
-		var plain_jump: int = 0
-		for gap in gaps:
-			if gap > 220.0:
-				needs_dash += 1
 			else:
-				plain_jump += 1
-		_check("level %d: the 285 px gaps still need the dash and the 170-175 px gaps only a jump" % number, needs_dash == expected_gaps[number].filter(func(g: float) -> bool: return g > 220.0).size()
-			and plain_jump == expected_gaps[number].filter(func(g: float) -> bool: return g <= 220.0).size())
+				crossable = crossable and gap <= 484.0
+				if gap <= 433.0:
+					two_actions += 1
+				else:
+					three_actions += 1
+		_check("level %d: every gap is crossable with the measured reach (levels 1-2: jump 220 px, jump + dash 328 px; level 3: two actions 433 px, the three-action chain 484 px)" % number, crossable)
+		if number == 3:
+			_check("level 3: gap 1 (336 px) needs two actions and gaps 2 and 3 (450 and 484 px) the three-action chain", two_actions == 1 and three_actions == 2)
+		else:
+			var needs_dash: int = gaps.filter(func(g: float) -> bool: return g > 220.0).size()
+			_check("level %d: the 285 px gaps still need the dash and the 170 px gap only a jump" % number, needs_dash == expected_gaps[number].filter(func(g: float) -> bool: return g > 220.0).size())
 		level.free()
 		await _frames(2)
 	_clean_state()
