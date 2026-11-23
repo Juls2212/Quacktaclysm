@@ -89,6 +89,7 @@ func _ready() -> void:
 	player.set_auto_respawn(not show_game_over)
 	_apply_camera_limits()
 	_place_player()
+	_start_developer_shortcut()
 	_start_telemetry()
 	_apply_adaptive()
 	_apply_background()
@@ -139,6 +140,14 @@ func is_intro_visible() -> bool:
 ## The AI Director plan this level was loaded with (null before `_ready`).
 func get_applied_plan() -> DirectorPlan:
 	return _applied_plan
+
+
+func _start_developer_shortcut() -> void:
+	if not DeveloperShortcut.is_enabled():
+		return
+	var shortcut := DeveloperShortcut.new()
+	shortcut.name = "DeveloperShortcut"
+	add_child(shortcut)
 
 
 func _start_telemetry() -> void:
