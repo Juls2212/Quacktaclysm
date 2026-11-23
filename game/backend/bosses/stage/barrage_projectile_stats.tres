@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ProjectileStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://backend/combat/projectile_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+speed = 640.0
+damage = 1
+knockback = Vector2(220, -200)
+lifetime = 3.0
+destroy_on_hit = true
+destroy_on_world = true
+size_scale = 2.2
+rim_color = Color(0.12, 0.05, 0.02, 1)
+core_color = Color(1, 0.96, 0.8, 1)
+glow_color = Color(1, 0.55, 0.15, 1)
+glow_strength = 0.8
+trail_length = 90.0
