@@ -12,6 +12,7 @@ extends Resource
 @export_group("Texts")
 @export var toggle_text: String = "Efectos de corrupción"
 ## The option that switches the remote AI Director off (Phase 16b).
+@export var blood_toggle_text: String = "Sangre"
 @export var ai_toggle_text: String = "Adaptación con IA"
 
 
