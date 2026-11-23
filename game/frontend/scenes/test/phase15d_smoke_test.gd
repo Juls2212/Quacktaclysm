@@ -431,7 +431,13 @@ func _test_edge_cases() -> void:
 	var boss: BossBase = level.boss
 	boss.health.apply_damage(DamageInfo.create(boss.health.current_health + 5, Vector2.ZERO, level.player, CombatLayers.Team.PLAYER))
 	await _physics(4)
-	_check("edge: if the same hit kills the boss the sequence is skipped", director.sequences_started == 0 and not director.active and boss.state == BossBase.State.DEAD and not level.player.story_invulnerable)
+	var killed: bool = director.sequences_started == 0 and not director.active and (not is_instance_valid(boss) or boss.state == BossBase.State.DEAD)
+	# Phase 15q: since Phase 15n the guardian's last words hold the player safely (locked and invulnerable) until they end; skipping them gives it all back.
+	await _physics(70)
+	for node in level.find_children("*", "BossDialogue", true, false):
+		(node as BossDialogue).skip()
+	await _physics(10)
+	_check("edge: if the same hit kills the boss the sequence is skipped", killed and not level.player.story_invulnerable and not level.player.is_input_locked())
 	level.free()
 	await _frames(2)
 	# The player dies during the sequence (a kill zone, say).
@@ -643,8 +649,8 @@ func _test_boss_two_tuning() -> void:
 	_check("tuning: the phase 1 leap weight (0.6) and the leap timings are unchanged", is_equal_approx(light.weight, 0.6) and is_equal_approx(light.telegraph_time, 0.7)
 		and is_equal_approx(light.recovery_time, 0.8) and is_equal_approx(strong.telegraph_time, 0.7) and is_equal_approx(strong.recovery_time, 0.8))
 	var hazard := FloorHazardConfig.get_default()
-	_check("tuning: the spikes (1.2 s warning, 3.0 s active, 4.0 s rest) and the pad launch are unchanged", is_equal_approx(hazard.warning_time, 1.2) and is_equal_approx(hazard.active_time, 3.0)
-		and is_equal_approx(hazard.rest_time, 4.0) and is_equal_approx(BounceConfig.get_default().launch_velocity, -1030.0))
+	_check("tuning: the spikes (1.2 s warning, 3.0 s active, 4.0 s rest) are unchanged and the pad launch is the Phase 15d-bis one (-930)", is_equal_approx(hazard.warning_time, 1.2) and is_equal_approx(hazard.active_time, 3.0)
+		and is_equal_approx(hazard.rest_time, 4.0) and is_equal_approx(BounceConfig.get_default().launch_velocity, -930.0))
 	var stats: BossStats = boss.stats
 	_check("tuning: boss 2 HP is 50 (Phase 15d-bis, was 60); threshold and armor timings are unchanged (55%, 1.5 s, x1.35, x0.55, 1.1 s)", stats.max_health == 50 and is_equal_approx(stats.phase_2_health_ratio, 0.55)
 		and is_equal_approx(stats.phase_transition_time, 1.5) and is_equal_approx(stats.phase_2_speed_multiplier, 1.35) and is_equal_approx(stats.phase_2_pattern_gap_multiplier, 0.55)
@@ -656,9 +662,9 @@ func _test_boss_two_tuning() -> void:
 		and is_equal_approx(charge.cooldown, 2.2) and is_equal_approx(charge.charge_speed, 560.0) and is_equal_approx(volley.weight, 0.7) and is_equal_approx(volley.cooldown, 5.0))
 	for path in ["res://backend/bosses/placeholder_boss.tscn", "res://backend/bosses/boss_three.tscn"]:
 		var other := (load(path) as PackedScene).instantiate() as BossBase
-		# Boss 3 was redesigned in Phase 15e-1: 70 HP and its first line at 66.7%.
-		var expected_health: int = 40 if path.contains("placeholder") else 70
-		var expected_ratio: float = 0.5 if path.contains("placeholder") else 0.667
+		# Boss 3 was redesigned in Phase 15e-1: 102 HP (Phase 15p) and its first line at 45.1%.
+		var expected_health: int = 40 if path.contains("placeholder") else 102
+		var expected_ratio: float = 0.5 if path.contains("placeholder") else 0.451
 		_check("tuning: %s keeps its health and threshold" % path.get_file(), other.stats.max_health == expected_health and is_equal_approx(other.stats.phase_2_health_ratio, expected_ratio))
 		other.free()
 	boss.free()
