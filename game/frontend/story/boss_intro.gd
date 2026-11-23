@@ -98,7 +98,7 @@ func begin(player: Node2D) -> bool:
 		_player.died.connect(_abort)
 	started.emit()
 	_queue.enqueue("boss_vs", _step_vs, 10.0)
-	_queue.enqueue("boss_lines", _step_lines, 180.0)
+	_queue.enqueue("boss_lines", _step_lines, texts.intro_step_timeout)
 	_queue.enqueue("boss_fight", _step_fight)
 	return true
 
@@ -149,6 +149,20 @@ func _end() -> void:
 func _release_boss() -> void:
 	if is_instance_valid(_boss) and _boss.state != BossBase.State.DEAD:
 		_boss.hurtbox.set_enabled(true)
+
+
+## Ends the intro at once (a developer action): the presentation and the lines stop and the fight begins.
+func finish_now() -> void:
+	if not active:
+		return
+	_queue.clear()
+	if _fx != null and _fx.has_method(&"skip_presentation"):
+		_fx.call(&"skip_presentation")
+	if _dialogue != null:
+		_dialogue.skip()
+	order.append("fight")
+	_end()
+	finished.emit(true)
 
 
 ## The player died (a kill zone) before the fight began: everything stops and the boss never wakes.
