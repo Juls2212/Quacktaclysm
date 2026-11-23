@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="AbsorptionConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://frontend/fx/absorption_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+length = 3.6
+background_color = Color(0.025, 0.006, 0.01, 1)
+haze_color = Color(0.5, 0.06, 0.05, 1)
+edge_glow_color = Color(0.62, 0.07, 0.05, 1)
+ember_color = Color(1, 0.3, 0.12, 1)
+gem_color = Color(0.75, 0.12, 0.1, 1)
+gem_dark_color = Color(0.2, 0.02, 0.03, 0.85)
+tendril_color = Color(0.6, 0.08, 0.07, 1)
+hero_tint = Color(0.85, 0.55, 0.55, 1)
+bolt_color = Color(1, 0.18, 0.12, 1)
+bolt_core_color = Color(1, 0.82, 0.74, 1)
+bolts_from_emblem = 3
+bolts_from_fragment = 2
+bolts_from_edges = 4
+static_bolts = 3
+bolt_refresh_hz = 10.0
+bolt_width = 2.2
+bolt_jaggedness = 0.12
+bolt_branch_chance = 0.6
+particle_count = 70
+edge_ember_count = 46
+tendrils = 4
+emblem_radius = 84.0
+emblem_lift = 128.0
+convulsion_px = 7.0
+convulsion_tilt = 0.07
+heartbeat_hz = 1.1
+second_thump_delay = 0.22
+heartbeat_event = &"projectile_impact_world"
+heartbeat_pitch = 0.35
+heartbeat_db = -2.0
+music_duck_db = -10.0
+flare_cap = 0.28
+max_flashes_per_second = 3
+reduced_fade = 0.5
