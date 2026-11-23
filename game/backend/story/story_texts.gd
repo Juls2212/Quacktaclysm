@@ -4,10 +4,8 @@ extends Resource
 ## before the last boss, the four endings and the summary card. This resource
 ## (default_story_texts.tres) is the source of truth; docs/STORY.md is a readable copy of it.
 
-const ENDING_FULL: String = "ending_full"
-const ENDING_SCAR: String = "ending_scar"
-const ENDING_DOUBT: String = "ending_doubt"
-const ENDING_CORRUPT: String = "ending_corrupt"
+const ENDING_KEPT: String = "ending_kept"
+const ENDING_RELEASED: String = "ending_released"
 const DEFAULT_PATH: String = "res://backend/story/default_story_texts.tres"
 
 ## SoulStory entries (an untyped Array on purpose: typed arrays of script classes make Godot leak at exit).
@@ -33,6 +31,27 @@ const DEFAULT_PATH: String = "res://backend/story/default_story_texts.tres"
 @export var summary_kept_names_format: String = "Guardadas: %s"
 @export var summary_none_text: String = "ninguna"
 @export var summary_back_text: String = "Volver al menú principal"
+@export_group("Boss intro (Phase 15f)")
+## Every line of the intro waits for the confirm action. `%s` is the name of the confirm key as the player has it bound.
+## Seconds after a guardian falls before its last words begin (the fragment waits for them).
+@export_range(0.0, 5.0, 0.1, "suffix:s") var defeat_dialogue_delay: float = 0.9
+@export var advance_prompt_format: String = "%s ▸"
+@export var intro_skip_hint_format: String = "Mantén %s para saltar"
+## Seconds the confirm action must be HELD to skip the whole intro (a press only advances one line).
+@export_range(0.3, 5.0, 0.1, "suffix:s") var intro_skip_hold_seconds: float = 1.2
+## Safety net of the intro step in the queue: far longer than anyone reads (it must never advance a line by itself).
+@export_range(60.0, 36000.0, 60.0, "suffix:s") var intro_step_timeout: float = 7200.0
+@export_group("Shield of the last guardian")
+## Shown once per fight the first time the shield of the summoner stage blocks a hit.
+@export var shield_hint: String = "Derrota a los patitos"
+@export_group("Sensitive handling (Phase 15h)")
+## Shown in the credits («Acerca de») of the main menu; it never interrupts play.
+@export_multiline var content_notice: String = ""
+## Words no text of the ending «El acantilado» may contain (no method of any kind is ever named), compared without accents and in lower
+## case as whole words or phrases. The test reads this list.
+@export var ending_banned_terms: PackedStringArray = PackedStringArray()
+## Words and phrases that would present the act as a solution, a rest, a reunion or something heroic or beautiful.
+@export var ending_romanticizing_terms: PackedStringArray = PackedStringArray()
 @export_group("Hints")
 @export var skip_hint: String = "Pulsa Enter para saltar"
 @export var hold_skip_hint: String = "Mantén Enter para saltar"
