@@ -2,8 +2,7 @@ class_name StoryReel
 extends Node
 ## A short cinematic made of subtitle lines over one PrologueShots shot (the prologue's drawing
 ## system): cinema bars, typed subtitles, fades, an optional title card. Used for the grandfather's
-## scene before the last boss (shot CAVE, press confirm to skip, pauses the game meanwhile) and for
-## the four endings (shot EPILOGUE, hold confirm to skip). It never writes game state; it frees
+## scene before the last boss (shot CAVE, press confirm to skip, pauses the game meanwhile) (the endings have their own player, EndingCinematic). It never writes game state; it frees
 ## itself after `finished`. Works in headless runs too (nothing is drawn there), so tests can drive it.
 
 signal finished(skipped: bool)
@@ -28,8 +27,7 @@ const FADE_OUT: float = 1.0
 ## Presses are ignored this long after the start (a stray press must not skip the scene).
 const INPUT_GRACE: float = 0.5
 
-@export var shot: PrologueShots.Shot = PrologueShots.Shot.EPILOGUE
-@export var epilogue_style: String = "full"
+@export var shot: PrologueShots.Shot = PrologueShots.Shot.CAVE
 @export var title_text: String = ""
 @export var lines: Array[String] = []
 @export var skip_mode: SkipMode = SkipMode.HOLD
@@ -191,9 +189,10 @@ func _finish(skipped: bool) -> void:
 	was_skipped = skipped
 	_subtitle.text = ""
 	_title.visible = false
-	_fade_to(1.0, 0.4 if skipped else FADE_OUT)
+	var fade_seconds: float = 0.4 if skipped else FADE_OUT
+	_fade_to(1.0, fade_seconds)
 	# A timer that ignores pause: the scene may be paused by us.
-	get_tree().create_timer(0.45 if skipped else FADE_OUT + 0.05, true).timeout.connect(_end)
+	get_tree().create_timer(fade_seconds + 0.05, true).timeout.connect(_end)
 
 
 func _end() -> void:
@@ -215,7 +214,6 @@ func _show_shot() -> void:
 	# The music steps back while the story plays.
 	AudioDirector.set_music_duck(self, AudioEvents.get_default().duck_story_db)
 	_shots.length = total_length()
-	_shots.epilogue_style = epilogue_style
 	_shots.set_shot(shot)
 	if cave_light:
 		_dark.color = Color(0.05, 0.05, 0.07)
