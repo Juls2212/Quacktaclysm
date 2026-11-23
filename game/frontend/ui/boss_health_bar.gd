@@ -37,12 +37,12 @@ var possession_k: float = 0.0
 var possessed: bool = false
 
 ## Guard feedback (Phase 15e-3). The hint shows the first time a hit is blocked in a fight and never again until the next fight.
-const GUARD_HINT: String = "Rompe la guardia con golpe pesado o tajo de dash"
 const GUARD_HINT_TIME: float = 4.5
-var guard_hint_left: float = 0.0
-var guard_hint_shown: bool = false
-var guard_hint_count: int = 0
-var _guard: BossGuard = null
+## The shield of the summoner stage has its own one-time hint («Derrota a los patitos»).
+var shield_hint_left: float = 0.0
+var shield_hint_shown: bool = false
+var shield_hint_count: int = 0
+var _guard: BossShield = null
 var _boss: BossBase
 var _ghost_ratio: float = 0.0
 var _ghost_hold: float = 0.0
@@ -90,7 +90,7 @@ func bind(boss: BossBase) -> void:
 	boss.defeated.connect(_on_defeated)
 	boss.phase_transition_started.connect(_on_phase_transition)
 	boss.phase_changed.connect(_on_phase_changed)
-	_guard = boss.get_node_or_null(^"Guard") as BossGuard
+	_guard = boss.get_node_or_null(^"Shield") as BossShield
 	if _guard != null:
 		_guard.deflected.connect(_on_guard_deflected)
 
@@ -106,7 +106,7 @@ func _process(delta: float) -> void:
 		mark_pulses[i] = maxf(mark_pulses[i] - delta, 0.0)
 	marker_pulse_left = mark_pulses.max() if not mark_pulses.is_empty() else maxf(marker_pulse_left - delta, 0.0)
 	possession_k = move_toward(possession_k, 1.0 if possessed else 0.0, delta * 1.5)
-	guard_hint_left = maxf(guard_hint_left - delta, 0.0)
+	shield_hint_left = maxf(shield_hint_left - delta, 0.0)
 	if _drawer != null:
 		_drawer.queue_redraw()
 
@@ -127,16 +127,15 @@ func _on_phase_changed(new_phase: int) -> void:
 
 ## A hit was blocked by the guard: the first one of the fight shows the hint.
 func _on_guard_deflected(_info: DamageInfo) -> void:
-	if guard_hint_shown:
-		return
-	guard_hint_shown = true
-	guard_hint_count += 1
-	guard_hint_left = GUARD_HINT_TIME
+	if not shield_hint_shown:
+		shield_hint_shown = true
+		shield_hint_count += 1
+		shield_hint_left = GUARD_HINT_TIME
 
 
 func _on_activated() -> void:
-	guard_hint_shown = false
-	guard_hint_left = 0.0
+	shield_hint_shown = false
+	shield_hint_left = 0.0
 	possessed = false
 	possession_k = 0.0
 	marker_pulse_left = 0.0
@@ -161,8 +160,8 @@ func _update_ratio(current: int, maximum: int) -> void:
 
 func _hide() -> void:
 	visible = false
-	guard_hint_shown = false
-	guard_hint_left = 0.0
+	shield_hint_shown = false
+	shield_hint_left = 0.0
 	possessed = false
 	possession_k = 0.0
 	marker_pulse_left = 0.0
@@ -209,34 +208,9 @@ func _draw_bar() -> void:
 	_draw_guard(bar)
 
 
-## The guard meter under the bar while the guard is up (one shield box per breaking hit left), the stagger label while it is
-## broken, and the one-time hint. Shapes and words, not color alone.
+## The one-time hint of the summoner stage's shield (the armor shell of Phase 15f is gone).
 func _draw_guard(bar: Rect2) -> void:
-	var font: Font = GameFonts.BODY
 	var below: float = bar.end.y + 18.0
-	if _guard != null and _guard.state != BossGuard.State.DOWN:
-		var total: int = _guard.guard_break_hits
-		var left: int = total - _guard.break_hits
-		var label: String = "GUARDIA"
-		if _guard.state == BossGuard.State.STAGGER:
-			label = "ATURDIDO: ¡GOLPEA!"
-		elif _guard.state == BossGuard.State.REGEN:
-			label = "GUARDIA VOLVIENDO"
-		var box: float = 14.0
-		var gap: float = 6.0
-		var width: float = float(total) * (box + gap) - gap
-		var start_x: float = bar.position.x
-		for i in total:
-			var rect := Rect2(start_x + float(i) * (box + gap), bar.end.y + 6.0, box, box + 2.0)
-			_drawer.draw_rect(rect.grow(2.0), Color(StoneUi.INK, 0.9))
-			var up: bool = _guard.state == BossGuard.State.UP and i < left
-			_drawer.draw_rect(rect, Color(0.78, 0.9, 1.0, 0.95) if up else Color(0.2, 0.3, 0.5, 0.9))
-			if up:
-				_drawer.draw_line(rect.position + Vector2(box * 0.5, 2.0), rect.position + Vector2(box * 0.5, box), Color(StoneUi.INK, 0.7), 1.5)
-		var at := Vector2(start_x + width + 12.0, bar.end.y + 6.0 + 13.0)
-		_drawer.draw_string_outline(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 4, StoneUi.INK)
-		_drawer.draw_string(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, CREAM)
-		below += 14.0
-	if guard_hint_left > 0.0:
-		var alpha: float = clampf(guard_hint_left / 0.6, 0.0, 1.0)
-		StoneUi.spaced_text(_drawer, Vector2(bar.get_center().x, below + 12.0), GUARD_HINT, 15, Color(CREAM, alpha), 4)
+	if shield_hint_left > 0.0:
+		var shield_alpha: float = clampf(shield_hint_left / 0.6, 0.0, 1.0)
+		StoneUi.spaced_text(_drawer, Vector2(bar.get_center().x, below + 12.0), StoryTexts.get_default().shield_hint, 15, Color(CREAM, shield_alpha), 4)
