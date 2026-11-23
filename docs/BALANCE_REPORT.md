@@ -419,3 +419,68 @@ Las cifras de alcance no cambian (206,4 / 382,2 / 374,4 / 550,8 en recorrido del
 | 3 (x 4226-4710) | 285 | 484 | las tres acciones | 12,1 % (67 px de 550,8) | 20,5 % (125 px de 609) |
 
 Desplazamientos respecto al original: +51, +326 y +525 px.
+
+## Fase 15f: la capa de Kenzo con un golpe
+
+Calculado en `phase15f_smoke_test` (golpe pesado = 3 de daño y 1,3 s por ciclo, ventana vulnerable de 5,5 s: aturdido 2,5 s más regeneración 3,0 s).
+
+- Fase 2 (23 de vida) solo espada, ideal: 10,3 s con la capa (10,4 s sin capa); con dos golpes eran 12,2 s. Pelea entera con las posesiones: unos 37,8 s (bajo el tope de 60 s).
+- Solo onda (todos aciertan): nivel 0 = 65,4 s, nivel 1 = 31,4 s, nivel 2 = 28,1 s en toda la pelea (la fase 2 dura 18,4 / 10,3 / 9,3 s; hace falta un tajo pesado para romper la capa).
+- Contraste del borde de la capa (la mejor de la arista clara o el contorno oscuro): peor caso 3,85 sobre todos los colores del escenario, los tres perfiles y el rojo de la posesión (3,87 con el rojo); el relleno frente al contorno 5,34 (mínimo 2,5).
+
+## Fase 15g: placas eléctricas (las corrientes de aire se quitaron en la Fase 15o)
+
+Calculado en `phase15g_smoke_test` con las estadísticas reales del jugador (gravedad 1800, velocidad 300 px/s). La tabla de corrientes y de la ruta alta `UpperRouteD` ya no existe: el nivel 3 no tiene corrientes y la ruta alta se retiró con ellas.
+
+| Placa | Ciclo | Caminar fuera desde el centro | Margen sobre el aviso de 1,2 s |
+|---|---|---|---|
+| Tramo A, 220 px | 1,2 / 2,0 / 3,0 s | 0,48 s | 0,72 s (mínimo exigido 0,3 s) |
+
+Contraste (la mejor de la figura o el contorno oscuro) sobre todos los fondos y perfiles: aviso de placa 3,75; descarga 3,99; rayo 4,18; aire de corriente 3,77 (mínimo 2,5). Parpadeo de lámparas: 2,5 por segundo, máximo 0,30 de opacidad.
+
+## Fase 15h-bis: ventanas de tolerancia de los huecos del nivel 3
+
+Medidas **del modelo** (misma física que `player.gd`: velocidad 300, salto 620, doble salto 527, gravedad 1800, dash 700 px/s durante 0,18 s, despegue con el centro en el borde). Las ventanas del jugador real las mide `phase15h2_smoke_test`; **esa medición no se completó** (ver KNOWN_ISSUES).
+
+| Hueco | Ancho antes | Ancho después | Estrategia | Ventana de la 2.ª acción (modelo) | Margen de despegue (modelo) |
+|---|---|---|---|---|---|
+| 1 | 336 | 336 | salto + doble salto | ≈ 360 ms | 60 px de recorrido de sobra |
+| 1 | 336 | 336 | salto + dash | ≈ 375 ms | 53 px |
+| 1 | 336 | 336 | las tres | doble salto ≥ 400 ms, dash ≈ 375 ms | > 200 px |
+| 2 | 450 | 450 | las tres | doble salto ≈ 435 ms, dash ≈ 130 ms | 112 px |
+| 3 | 484 | 484 | las tres | doble salto ≈ 435 ms, dash ≈ 130 ms | 78 px |
+
+Salto + doble salto solo llega a 440 px y salto + dash solo a 433 px (con la tolerancia de 58 px del cuerpo), de modo que el hueco 2 (450) y el hueco 3 (484) siguen sin poder cruzarse con ellos, pero el margen en el 2 es de solo ~10 px.
+
+Medido con el nivel real (antes de arreglarlo): con el jugador parado en el borde del hueco 1, `Fast3` llegó en 2 s, lo golpeó dos veces y cayó al foso en menos de 5 s. Después: aproximación mínima de los enemigos a un borde 244 px, sin golpes ni caídas en 15 s.
+
+## Fase 15j: el jefe 3 de invocador (cálculo con los números reales del jugador)
+
+| Dato | Valor |
+|---|---|
+| PV por fase | fase 1: 24 PV (70 → 46), fase 2: 23 PV (46 → 23), fase 3: 23 PV |
+| Ciclo de la fase 2 con juego perfecto | ≈ 23 s (0,8 s + 2 × 2,5 s de invocación, 0,5 s de espera, 1,5 s de temblor, 0,6 s de salto, 0,7 s de derrumbe, 5,0 s de andanada, 1,0 s de brillo, 0,5 s de aterrizaje, 6,0 s de ventana, 0,9 s de vuelta) |
+| Daño por ventana (6 s menos 0,8 s de acercamiento) | espada ligera 11,6 · pesada 12,0 · onda nivel 0: 5,2 · nivel 1: 11,5 · nivel 2: 13,0 |
+| Ciclos de la fase 2 | espada sola: 2 · onda nivel 0: 5 · nivel 1: 2 · nivel 2: 2 |
+| Tiempos ideales solo con espada | fase 1 ≈ 11 s · fase 2 ≈ 44 s · fase 3 ≈ 10 s (más las dos posesiones) |
+| Tiempos ideales solo con onda (fase 3) | nivel 0: 23 s · nivel 1: 10 s · nivel 2: 9 s |
+| Margen de la andanada | peor caso 0,36 s sobre 0,3 s (de 600 planes; hace falta 0,78 s para pasar a la plataforma vecina y la proyectil tarda ≥ 1,14 s) |
+| Margen de los rayos rojos | peor caso 0,74 s sobre 0,3 s (1584 planes); carril de 130 px a ≤ 110 px del jugador |
+| Contraste (≥ 2,5) | aviso del rayo 3,08 · núcleo del rayo 4,64 · marcador de carril 3,11 · ojo 3,96 · peor con el rojo de posesión 3,73 |
+| Tiempo ocioso máximo | fase 1: 0,90 s · fase 2 (entre ciclos): 0,63 s · fase 3: 0,37 s (límite 1,5 s) |
+
+## Fase 15o y 15p: duración de la fase 1 del jefe 3 sin armadura
+
+Medido por `phase15j_smoke_test` («boss 3 ideal times», juego perfecto con la espada ligera, 2,22 PV por segundo):
+
+| | Fase 1 | Fase 2 | Fase 3 |
+|---|---|---|---|
+| Fase 15j (con armadura), 70 PV | 24 PV, ≈ 11 s | 23 PV, ≈ 44 s (2 ciclos) | 23 PV, ≈ 10 s |
+| Fase 15o (sin armadura, 70 PV) | 24 PV, **≈ 10 s** | igual | igual |
+| Fase 15p (102 PV, líneas 0,451 y 0,2255) | **56 PV, ≈ 24 s** | 23 PV, ≈ 44 s | 23 PV, ≈ 10 s |
+
+Los PV absolutos de las fases 2 y 3 no cambian (23 PV cada una): la línea 1 cae en 46 PV (102 × 0,451 = 46,0) y la línea 2 en 23 PV (102 × 0,2255 = 23,0). Las cifras de «≈ 30 s» y «65 s» que se escribieron en la Fase 15o eran estimaciones sin medir y quedan sustituidas por esta tabla.
+
+## Fase 15p: alcance de los huecos del nivel 3 (tabla de la prueba de la Fase 15b)
+
+Huecos 336 / 450 / 484 px (sin cambios). Con el doble salto y el dash ya disponibles en el nivel 3: salto + doble salto llega a 440 px y salto + dash a 433 px (hueco 1, 2 acciones); la cadena de tres acciones cruza los huecos 2 y 3. Los niveles 1 y 2 siguen con saltos y salto + dash (≤ 328 px).
