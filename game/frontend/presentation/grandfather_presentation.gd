@@ -35,20 +35,40 @@ const DEFAULT_PATH: String = "res://frontend/presentation/default_grandfather_pr
 @export_range(0.1, 5.0, 0.1, "suffix:s") var fade_in_time: float = 1.0
 @export_range(0.1, 5.0, 0.1, "suffix:s") var fade_out_time: float = 1.5
 @export_range(0.05, 1.0, 0.01) var max_alpha: float = 0.55
-## Levels where the silhouette is sharp; every other level shows it blurred.
+## Levels where the face is solid and sharp; every other level shows it as a faded memory.
 @export var sharp_levels: PackedInt32Array = PackedInt32Array([3])
-@export_range(8, 200, 1) var sharp_star_count: int = 72
-@export_range(4, 100, 1) var blurred_star_count: int = 24
-@export_range(2.0, 30.0, 1.0, "suffix:px") var sharp_glow_radius: float = 9.0
-@export_range(10.0, 90.0, 1.0, "suffix:px") var blurred_glow_radius: float = 34.0
-@export_range(0.1, 0.8, 0.01) var figure_height_ratio: float = 0.44
+## The face in the sky (Phase 15n): its opacity as a memory (levels 1 and 2) and as a solid face (level 3), its scale, where it hangs and its glow.
+@export_range(0.05, 1.0, 0.01) var face_memory_alpha: float = 0.4
+@export_range(0.05, 1.0, 0.01) var face_solid_alpha: float = 0.6
+@export_range(0.2, 4.0, 0.05) var face_scale: float = 1.4
 @export_range(0.0, 1.0, 0.01) var anchor_x_ratio: float = 0.8
-@export_range(0.0, 0.5, 0.01) var anchor_top_ratio: float = 0.09
-## The silhouette never goes lower than this fraction of the screen height (the sky area).
+@export_range(0.0, 0.6, 0.01) var face_anchor_y: float = 0.3
+## The face never hangs lower than this fraction of the screen height (the sky area).
 @export_range(0.2, 0.9, 0.01) var sky_bottom_ratio: float = 0.62
-@export_range(0.1, 3.0, 0.1, "suffix:Hz") var twinkle_hz: float = 0.7
-@export var star_color: Color = Color(0.86, 0.93, 1.0)
+@export_range(10.0, 400.0, 5.0, "suffix:px") var face_glow_radius_memory: float = 240.0
+@export_range(10.0, 400.0, 5.0, "suffix:px") var face_glow_radius_solid: float = 150.0
+@export var face_glow_color: Color = Color(0.86, 0.93, 1.0)
 @export var sound_event: StringName = &"grandfather_voice"
+@export_group("Sky face (Phase 15r)")
+## The grandfather in the sky is his full-body rig (DuckRig, GRANDFATHER) rendered small and shown big, so it is soft; the body fades into mist.
+## Opacity of the face in the endings.
+@export_range(0.05, 1.0, 0.01) var face_ending_alpha: float = 0.7
+## The offscreen picture is this small (pixels) and the rig is drawn this big inside it: the upscale is the blur.
+@export var sky_view_size: Vector2i = Vector2i(192, 224)
+@export_range(1.0, 8.0, 0.1) var sky_rig_scale: float = 5.2
+## Where the head sits in the offscreen picture (as a fraction of its size).
+@export var sky_head_at: Vector2 = Vector2(0.5, 0.42)
+## The head of the grandfather's figure in the rig's own space (the rig's origin is its body center).
+@export var sky_head_rig: Vector2 = Vector2(14.0, -8.0)
+## The picture fades out between these two heights (0 top, 1 bottom): the body is hidden by mist, only the face stays clear.
+@export_range(0.0, 1.0, 0.01) var sky_fade_from: float = 0.62
+@export_range(0.0, 1.0, 0.01) var sky_fade_to: float = 0.9
+## Blur strength in offscreen pixels (the upscale blurs it as well).
+@export_range(0.0, 4.0, 0.1) var sky_blur: float = 1.2
+@export var sky_mist_color: Color = Color(0.82, 0.88, 0.98)
+@export_range(0.0, 1.0, 0.01) var sky_mist_alpha: float = 0.5
+@export_range(0.0, 1.0, 0.01) var sky_grief_glow: float = 0.55
+@export_range(0.0, 0.5, 0.01) var sky_grief_tilt: float = 0.14
 
 
 static func get_default() -> GrandfatherPresentation:
