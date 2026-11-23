@@ -54,7 +54,7 @@ const BOSS_TIMES: Dictionary = {
 const BOSS_STATS: Dictionary = {
 	"placeholder": [40, 0.5, 1.5, 1.3, 0.6, 1.2],
 	"two": [50, 0.55, 1.5, 1.35, 0.55, 1.1],
-	"three": [70, 0.667, 1.2, 1.0, 0.7, 0.9],
+	"three": [102, 0.451, 1.2, 1.0, 0.7, 0.9],
 }
 ## The shape each kind must have (they differ so the player learns them).
 const SHAPES: Dictionary = {
@@ -263,14 +263,12 @@ func _test_contrast() -> void:
 
 func _test_story_patches() -> void:
 	var texts := load(StoryTexts.DEFAULT_PATH) as StoryTexts
-	var scar: String = " ".join(texts.get_ending("ending_scar").lines)
-	_check("story (b): the scar ending has the new grandfather line", scar.contains("Abuelo: Te dije que el resto era tuyo. No te dije cuánto pesaría: importa, y duele.")
-		and not scar.contains("daba igual lo que decidieras"))
+	var kept_ending: String = " ".join(texts.get_ending("ending_kept").lines)
+	_check("story (b): the kept ending (Phase 15h) ends with the grandfather's apology", kept_ending.contains("Abuelo: Perdóname, nieto.") and not kept_ending.contains("daba igual lo que decidieras"))
 	_check("story (c): the grandfather scene line has plain guillemets", texts.elder_lines.has("«Quien la empuñe decidirá cada alma: liberarla o cargarla.»")
 		and not " ".join(texts.elder_lines).contains("««") and not " ".join(texts.elder_lines).contains("»»"))
 	var storm: BossStory = texts.get_boss(3)
-	_check("story (a): the storm's two pre-fight lines are different (the second keeps its own wording)", storm.pre_lines.size() >= 2
-		and storm.pre_lines[0] != storm.pre_lines[1])
+	_check("story (a): the storm has one first-sight line and its last words (Phase 15n)", storm.pre_lines.size() == 1 and storm.defeat_lines.size() >= 2)
 	var no_duplicates: bool = true
 	for entry: Variant in texts.bosses:
 		var boss := entry as BossStory
@@ -278,7 +276,7 @@ func _test_story_patches() -> void:
 		said.append_array(boss.pre_lines)
 		for variant: Variant in boss.variant_lines.values():
 			said.append(String(variant))
-		said.append(boss.defeat_line)
+		said.append_array(boss.defeat_lines)
 		no_duplicates = no_duplicates and _unique(said)
 	for entry: Variant in texts.endings:
 		no_duplicates = no_duplicates and _unique((entry as EndingStory).lines)
@@ -291,7 +289,7 @@ func _test_story_patches() -> void:
 	for entry: Variant in texts.endings:
 		for line in (entry as EndingStory).lines:
 			short = short and line.length() <= 110
-	_check("story: the patched lines keep the 110-character limit", short and scar.length() > 0)
+	_check("story: the patched lines keep the 110-character limit", short)
 
 
 func _unique(lines: Array[String]) -> bool:
@@ -341,7 +339,7 @@ func _test_recorded_times() -> void:
 		# Phase 15c added the leap patterns of boss two on purpose: the recorded patterns are the other ones.
 		var recorded: Array[BossPattern] = []
 		for candidate in boss.patterns:
-			if candidate.fallback_priority == 0 and not (candidate is LeapPattern or candidate is BeamSweepPattern or candidate is LightningColumnsPattern or candidate is StompPattern) and String(candidate.pattern_id) != "volley_leap":
+			if candidate.fallback_priority == 0 and not (candidate is LeapPattern or candidate is SummonerCyclePattern or candidate is StompPattern) and String(candidate.pattern_id) != "volley_leap" and not (scene_key == "three" and String(candidate.pattern_id) == "volley"):
 				recorded.append(candidate)
 		var patterns_ok: bool = recorded.size() == table.size()
 		for pattern in recorded:
@@ -442,6 +440,10 @@ func _test_boss_telegraphs() -> void:
 		var drawer: TelegraphDrawer = null
 		for pattern in boss.patterns:
 			var id: String = String(pattern.pattern_id)
+			if pattern is SummonerCyclePattern and (pattern as SummonerCyclePattern).stage_of(boss) == null:
+				# Phase 15q: the summon cycle needs the level's BossStage (the pattern is never eligible without it); its telegraph is covered by phase15d/15j.
+				print("MEASURE|boss %s / %s: skipped here (no BossStage in this bare scene)" % [scene_key, id])
+				continue
 			if boss.state != BossBase.State.IDLE:
 				boss._cancel_current_pattern()
 				boss._set_state(BossBase.State.IDLE)
@@ -458,7 +460,7 @@ func _test_boss_telegraphs() -> void:
 					and is_equal_approx(drawer.fan_degrees, (pattern as ProjectileVolleyPattern).spread_angle_degrees))
 			if pattern is ChargePattern:
 				_check("boss %s / %s: the lane is the real charge distance" % [scene_key, id], is_equal_approx(drawer.reach,
-					(pattern as ChargePattern).charge_speed * (pattern as ChargePattern).charge_duration))
+					maxf((pattern as ChargePattern).planned_lane, 1.0)) and drawer.reach <= (pattern as ChargePattern).charge_speed * (pattern as ChargePattern).charge_duration + 0.01)
 			var guard: int = 0
 			var peak: float = 0.0
 			while pattern.phase_name == BossPattern.PHASE_TELEGRAPH and guard < 300:
