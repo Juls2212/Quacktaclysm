@@ -526,36 +526,34 @@ func _test_when_and_where() -> void:
 # 5. The reflection
 # ---------------------------------------------------------------------------------------------
 
-func _make_reflection(level_number: int, reduced: bool) -> GrandfatherReflection:
-	var reflection := GrandfatherReflection.new()
+func _make_reflection(level_number: int, reduced: bool) -> GrandfatherFace:
+	var reflection := GrandfatherFace.new()
 	reflection.setup(presentation, level_number, reduced)
 	return reflection
 
 
 func _test_reflection() -> void:
-	var blurred_one: GrandfatherReflection = _make_reflection(1, false)
-	var blurred_two: GrandfatherReflection = _make_reflection(2, false)
-	var sharp: GrandfatherReflection = _make_reflection(3, false)
-	_check("reflection: levels 1 and 2 are blurred (few stars, wide soft glow), level 3 is sharp (more stars, small glow)",
-		not blurred_one.sharp and not blurred_two.sharp and sharp.sharp and blurred_one.stars.size() == presentation.blurred_star_count and sharp.stars.size() == presentation.sharp_star_count
-		and sharp.stars.size() > blurred_one.stars.size() * 2 and blurred_one.glow_radius() > sharp.glow_radius() * 2.0)
+	var blurred_one: GrandfatherFace = _make_reflection(1, false)
+	var blurred_two: GrandfatherFace = _make_reflection(2, false)
+	var sharp: GrandfatherFace = _make_reflection(3, false)
+	_check("face (Phase 15n): levels 1 and 2 are a faded memory (opacity %.2f), level 3 is solid and sharp (%.2f)" % [presentation.face_memory_alpha, presentation.face_solid_alpha],
+		not blurred_one.sharp and not blurred_two.sharp and sharp.sharp and is_equal_approx(blurred_one.target_alpha(), presentation.face_memory_alpha) and is_equal_approx(sharp.target_alpha(), presentation.face_solid_alpha)
+		and sharp.target_alpha() > blurred_one.target_alpha() * 1.3)
 	# It stays in the sky area, in several screen sizes.
 	var inside: bool = true
 	for screen in [Vector2(1280, 720), Vector2(1920, 1080), Vector2(1024, 600), Vector2(1600, 900)]:
-		var rect: Rect2 = sharp.figure_rect(screen)
-		inside = inside and rect.position.x >= 0.0 and rect.end.x <= screen.x and rect.position.y >= 0.0 and rect.end.y <= screen.y * presentation.sky_bottom_ratio + 0.5
-	_check("reflection: the figure stays inside the sky area (above %.0f%% of the screen height) on every screen size" % (presentation.sky_bottom_ratio * 100.0), inside)
-	_check("reflection: its layer (%d) is above the sky (-6) and below the play field (0) and the UI" % sharp.layer, sharp.layer > -6 and sharp.layer < 0 and presentation.panel_layer > 0)
-	# Reduced mode: a plain fade with no twinkle.
-	var reduced: GrandfatherReflection = _make_reflection(3, true)
-	var constant: bool = true
-	var twinkles: bool = false
-	for i in sharp.stars.size():
-		constant = constant and is_equal_approx(reduced.star_factor(i, 0.0), reduced.star_factor(i, 0.37)) and is_equal_approx(reduced.star_factor(i, 0.0), 1.0)
-		twinkles = twinkles or not is_equal_approx(sharp.star_factor(i, 0.0), sharp.star_factor(i, 0.37))
-	_check("reflection: in reduced mode no twinkle, no motion (every star constant), outside it the stars twinkle", constant and twinkles)
+		var at: Vector2 = sharp.face_position(screen)
+		inside = inside and at.x >= 0.0 and at.x <= screen.x and at.y >= 0.0 and at.y <= screen.y * presentation.sky_bottom_ratio + 0.5
+	_check("face: it hangs inside the sky area (above %.0f%% of the screen height) on every screen size" % (presentation.sky_bottom_ratio * 100.0), inside)
+	_check("face: its layer (%d) is above the sky (-6) and below the play field (0) and the UI" % sharp.layer, sharp.layer > -6 and sharp.layer < 0 and presentation.panel_layer > 0)
+	# Reduced mode: a plain fade, a still portrait.
+	var reduced: GrandfatherFace = _make_reflection(3, true)
+	add_child(reduced)
+	await _frames(3)
+	_check("face (reduced): a still portrait and a plain fade (no glow pulse)", reduced.reduced and reduced.portrait != null and reduced.portrait.reduced)
+	reduced.free()
 	# Fades, in real game time.
-	var fading: GrandfatherReflection = _make_reflection(3, false)
+	var fading: GrandfatherFace = _make_reflection(3, false)
 	add_child(fading)
 	var elapsed: float = 0.0
 	var reached: float = -1.0
@@ -563,13 +561,13 @@ func _test_reflection() -> void:
 	while elapsed < presentation.fade_in_time + 1.0 and reached < 0.0:
 		await get_tree().process_frame
 		elapsed += get_process_delta_time()
-		if half_alpha_at < 0.0 and fading.alpha >= presentation.max_alpha * 0.5:
+		if half_alpha_at < 0.0 and fading.alpha >= fading.target_alpha() * 0.5:
 			half_alpha_at = elapsed
-		if fading.alpha >= presentation.max_alpha - 0.001:
+		if fading.alpha >= fading.target_alpha() - 0.001:
 			reached = elapsed
-	_check("reflection: it fades in about %.1f s (%.2f s measured, half way at %.2f s) up to %.2f" % [presentation.fade_in_time, reached, half_alpha_at, presentation.max_alpha], reached > 0.0 and absf(reached - presentation.fade_in_time) < 0.25 and fading.alpha <= presentation.max_alpha + 0.001)
+	_check("reflection: it fades in about %.1f s (%.2f s measured, half way at %.2f s) up to %.2f" % [presentation.fade_in_time, reached, half_alpha_at, fading.target_alpha()], reached > 0.0 and absf(reached - presentation.fade_in_time) < 0.25 and fading.alpha <= fading.target_alpha() + 0.001)
 	await _wait(0.4)
-	_check("reflection: it stays while the line is shown", is_equal_approx(fading.alpha, presentation.max_alpha) and fading.phase == GrandfatherReflection.Phase.HOLD)
+	_check("reflection: it stays while the line is shown", is_equal_approx(fading.alpha, fading.target_alpha()) and fading.phase == GrandfatherFace.Phase.HOLD)
 	var gone: Array[bool] = [false]
 	fading.faded_out.connect(func() -> void: gone[0] = true)
 	fading.fade_out()
@@ -580,12 +578,12 @@ func _test_reflection() -> void:
 	await _frames(2)
 	_check("reflection: it fades out about %.1f s (%.2f s measured) and removes itself" % [presentation.fade_out_time, out_elapsed], gone[0] and absf(out_elapsed - presentation.fade_out_time) < 0.25 and not is_instance_valid(fading))
 	# Reduced mode fades the same way (a plain fade).
-	var plain: GrandfatherReflection = _make_reflection(2, true)
+	var plain: GrandfatherFace = _make_reflection(2, true)
 	add_child(plain)
 	await _wait(presentation.fade_in_time * 0.5)
-	_check("reflection: in reduced mode it is a plain fade (half way at half the time: alpha %.2f)" % plain.alpha, plain.alpha > presentation.max_alpha * 0.3 and plain.alpha < presentation.max_alpha * 0.8)
+	_check("reflection: in reduced mode it is a plain fade (half way at half the time: alpha %.2f)" % plain.alpha, plain.alpha > plain.target_alpha() * 0.3 and plain.alpha < plain.target_alpha() * 0.8)
 	plain.free()
-	for node in [blurred_one, blurred_two, sharp, reduced]:
+	for node in [blurred_one, blurred_two, sharp]:
 		node.free()
 	# In a level: it is a child of the voice (not of Backdrop or ProfilePresenter) and it fades out and is freed with the line.
 	_clean_state()
@@ -596,7 +594,8 @@ func _test_reflection() -> void:
 	voice.dismiss(false)
 	level.get_node("ElderScene").played = false
 	await _until(func() -> bool: return voice.active, 4.0)
-	var in_level: GrandfatherReflection = voice.reflection
+	var in_level: GrandfatherFace = voice.reflection
+	await _frames(3)
 	_check("reflection: in level 3 it is sharp, a child of the voice (not inside Backdrop or ProfilePresenter) and in the sky layer range",
 		in_level != null and in_level.sharp and in_level.get_parent() == voice and not in_level.is_ancestor_of(level.get_node("Backdrop")) and in_level.layer == presentation.reflection_layer)
 	voice.dismiss(false)
@@ -610,7 +609,7 @@ func _test_reflection() -> void:
 		var small: LevelBase = await _load_level(level_number)
 		var small_voice: GrandfatherVoice = _guard(small)
 		await _until(func() -> bool: return small_voice.active, 4.0)
-		_check("reflection: level %d shows the blurred silhouette" % level_number, small_voice.reflection != null and not small_voice.reflection.sharp)
+		_check("face: level %d shows the faded memory, calm or speaking, never with tears" % level_number, small_voice.reflection != null and not small_voice.reflection.sharp and small_voice.reflection.portrait.find_child("Tears*", true, false) == null and (small_voice.reflection.portrait.expression == &"watching" or small_voice.reflection.portrait.expression == &"speaking"))
 		await _free_level(small)
 	# Reduced mode through the option: the voice builds a reduced reflection.
 	_clean_state()
@@ -684,7 +683,7 @@ func _test_contrast() -> void:
 # ---------------------------------------------------------------------------------------------
 
 func _test_epilogues() -> void:
-	var ids: Array[String] = ["ending_full", "ending_scar", "ending_doubt", "ending_corrupt"]
+	var ids: Array[String] = ["ending_kept", "ending_released"]
 	var all_there: bool = true
 	var seen: Dictionary = {}
 	var duplicates: bool = false
@@ -700,8 +699,8 @@ func _test_epilogues() -> void:
 			seen[text] = true
 			short_enough = short_enough and text.length() <= 120
 			total += 1
-	_check("epilogues: 4 endings x 3 variants = %d texts, none empty, none repeated, each short" % total, all_there and total == 12 and not duplicates and short_enough)
-	_check("epilogues: a variant out of range is clamped and an unknown ending has none", texts.epilogue_text("ending_full", 9) == texts.epilogue_text("ending_full", 2) and texts.epilogue_text("ending_full", -3) == texts.epilogue_text("ending_full", 0) and texts.epilogue_text("nope", 0).is_empty())
+	_check("epilogues: 2 endings x 3 variants = %d texts (Phase 15h), none empty, none repeated, each short" % total, all_there and total == 6 and not duplicates and short_enough)
+	_check("epilogues: a variant out of range is clamped and an unknown ending has none", texts.epilogue_text("ending_kept", 9) == texts.epilogue_text("ending_kept", 2) and texts.epilogue_text("ending_kept", -3) == texts.epilogue_text("ending_kept", 0) and texts.epilogue_text("nope", 0).is_empty())
 	# The ending is decided only by the souls released, for every variant.
 	var ending_ok: bool = true
 	var text_ok: bool = true
@@ -710,16 +709,17 @@ func _test_epilogues() -> void:
 			_clean_state()
 			GameState.director.set_forced_plan({"theme": "calma", "epilogue_variant": variant})
 			GameState.souls_released = released
+			GameState.souls_kept = 3 - released
 			var ending := ENDING_SCENE.instantiate() as EndingController
 			add_child(ending)
 			await _frames(2)
-			var expected_id: String = EndingSelector.ending_id_for(released)
+			var expected_id: String = EndingSelector.ending_id_for(released, 3 - released)
 			ending_ok = ending_ok and ending.shown_variant == expected_id and ending.shown_text == texts.get_ending(expected_id).summary_line
 			text_ok = text_ok and ending.shown_epilogue == texts.epilogue_text(expected_id, variant) and ending.shown_epilogue_variant == variant and ending.epilogue_label != null and ending.epilogue_label.text == ending.shown_epilogue and ending.epilogue_label.visible
 			ending.free()
 			await _frames(2)
-	_check("epilogues: the ending chosen by the souls released is the same for every variant (4 endings x 3 variants)", ending_ok)
-	_check("epilogues: the card shows the epilogue text of the plan variant (4 endings x 3 variants)", text_ok)
+	_check("epilogues: the ending chosen by the souls released is the same for every variant (2 endings x 3 variants, every kept/released split)", ending_ok)
+	_check("epilogues: the card shows the epilogue text of the plan variant (2 endings x 3 variants, every kept/released split)", text_ok)
 	# The variant comes from the plan: local without telemetry, local from the telemetry, remote when it arrives.
 	_clean_state()
 	_check("epilogues: continuing from disk (no telemetry) uses variant 0", GameState.director.epilogue_variant() == 0)
@@ -743,7 +743,7 @@ func _test_epilogues() -> void:
 	GameState.souls_released = 3
 	add_child(remote_ending)
 	await _frames(2)
-	_check("ending request: the card shows the remote variant text", remote_ending.shown_epilogue == texts.epilogue_text("ending_full", 2))
+	_check("ending request: the card shows the remote variant text", remote_ending.shown_epilogue == texts.epilogue_text(remote_ending.shown_variant, 2))
 	remote_ending.free()
 	await _frames(2)
 	_check("ending request: an answer after the ending was decided is discarded", not GameState.director.set_remote_plan(4, DirectorPlan.neutral()))
