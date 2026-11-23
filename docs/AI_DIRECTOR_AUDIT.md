@@ -47,7 +47,7 @@ El plan se aplica en `LevelBase._apply_adaptive` (que ya corre una vez al cargar
 | Agresión del jefe | `boss.set_aggression` | Se mantiene 0,9/1,0/1,15 del perfil; el Director solo puede moverlo dentro de ±0,05 |
 | Vida y daño | `BossStats`, hitboxes | Sin cambio posible: tope fijo, daño ≤ 1 corazón, vida del jefe intacta |
 | Introducción del jefe e historia | `BossIntro` / textos | Solo elegir entre líneas ya escritas; la IA no escribe diálogo del jefe |
-| Selección de final | `EndingSelector` (3/2/1/0 almas) | Los cuatro finales no cambian; el Director solo elige una variante de epílogo entre un máximo de tres ya escritas por final |
+| Selección de final | `EndingSelector` (mayoría de decisiones) | Los dos finales no cambian; el Director solo elige una variante de epílogo entre un máximo de tres ya escritas por final |
 | Perfil de corrupción | — | Nunca: el plan no lleva campo de perfil |
 
 ## 4. Persistencia sin clave nueva
