@@ -727,10 +727,15 @@ func _test_ability_card() -> void:
 	add_child(tutorial)
 	await _frames(3)
 	var controller := tutorial.get_node("TutorialController") as TutorialController
-	_check("tutorial: the heal step is the ninth and last", controller.steps.size() == 9 and String(controller.steps[8]["id"]) == "heal")
-	_check("tutorial: the heal text resolves its key from the InputMap", controller.build_text(String(controller.steps[8]["text"])).contains("E o Q") and not controller.build_text(String(controller.steps[8]["text"])).contains("{"))
+	var heal_step: Dictionary = {}
+	for step in controller.steps:
+		if String(step["id"]) == "heal":
+			heal_step = step
+	_check("tutorial: the heal step exists (Phase 15m: steps are independent)", not heal_step.is_empty())
+	_check("tutorial: the heal text resolves its key from the InputMap", controller.build_text(String(heal_step["text"])).contains("E o Q") and not controller.build_text(String(heal_step["text"])).contains("{"))
 	_check("tutorial: the player may practice the focus at full health", tutorial.player.focus_practice)
-	controller.current_index = 8
+	for kind in ["move", "jump", "dash", "attack", "heavy", "soul"]:
+		controller._on_action(kind)
 	controller.show_card_when_headless = true
 	controller._show_current_prompt()
 	await _frames(2)
