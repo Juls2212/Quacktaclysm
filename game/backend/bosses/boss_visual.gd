@@ -41,6 +41,7 @@ var _rise_px: float = 0.0
 var _tremble_px: float = 0.0
 var _tremble_hz: float = 22.0
 var _possession_time: float = 0.0
+var _was_exhausted: bool = false
 
 
 func _ready() -> void:
@@ -70,6 +71,7 @@ func _process(delta: float) -> void:
 	_update_pop(delta)
 	_update_leap_pose()
 	_update_possession(delta)
+	_update_exhausted()
 	if _flash_left > 0.0:
 		_flash_left -= delta
 		if _flash_left <= 0.0:
@@ -83,13 +85,8 @@ func _update_rig() -> void:
 	rig.grounded = _boss.is_on_floor()
 	rig.vertical_speed = _boss.velocity.y
 	rig.enraged = _boss.current_phase >= 2
-	# Boss 3: the floating eye in phases 1 and 3, Kenzo in phase 2 (the same rig).
-	var hover := _boss.hover as BossHover
-	rig.eye_form = hover != null and hover.eye_form and _boss.state != BossBase.State.DEAD
-	if rig.eye_form and _boss.is_target_valid():
-		rig.eye_look = (_boss.target.global_position - _boss.global_position) / 120.0
 	# The phase transition is a roar: the guardian shudders before its rage starts.
-	rig.hurt = _boss.state == BossBase.State.PHASE_TRANSITION and possession_pose < 0.05
+	rig.hurt = (_boss.state == BossBase.State.PHASE_TRANSITION and possession_pose < 0.05) or _boss.exhausted
 	if possession_rise > 0.02:
 		# Lifted off the ground: no feet on the floor, no walking.
 		rig.grounded = false
@@ -99,6 +96,12 @@ func _update_rig() -> void:
 	var pattern: BossPattern = _boss.current_pattern
 	if _boss.state != BossBase.State.PATTERN or pattern == null:
 		rig.action = DuckRig.Action.NONE
+		return
+	if pattern is SummonerCyclePattern:
+		# Summoning from the perch: arms raised and casting; otherwise standing (or hanging in the air).
+		var step: StringName = (pattern as SummonerCyclePattern).step_name()
+		rig.action = DuckRig.Action.CAST if step == &"summon" or step == &"wait_kills" or step == &"tremble" else DuckRig.Action.NONE
+		rig.phase = DuckRig.Phase.STRIKE
 		return
 	if pattern is ChargePattern:
 		rig.action = DuckRig.Action.CHARGE
@@ -114,6 +117,22 @@ func _update_rig() -> void:
 		_:
 			rig.phase = DuckRig.Phase.RECOVER
 	rig.phase_t = pattern.get_phase_progress()
+
+
+## The vulnerable window of boss 3: the duck kneels (squashed) and pants.
+func _update_exhausted() -> void:
+	if rig == null or _boss == null:
+		return
+	if _boss.exhausted:
+		var pant: float = 0.0 if not GameSettings.is_corruption_effects_enabled() else sin(Time.get_ticks_msec() * 0.011) * 0.025
+		var squash: float = 0.84 + pant
+		rig.scale.y = _rig_base_scale.y * squash
+		rig.position.y = _rig_base_position.y + (1.0 - squash) * 44.0
+		_was_exhausted = true
+	elif _was_exhausted:
+		_was_exhausted = false
+		rig.scale = _rig_base_scale
+		rig.position = _rig_base_position
 
 
 func _on_pattern_phase_changed(pattern_id: StringName, phase_name: StringName) -> void:
