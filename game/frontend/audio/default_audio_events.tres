@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="AudioEvents" load_steps=31 format=3]
+[gd_resource type="Resource" script_class="AudioEvents" load_steps=38 format=3]
 
 [ext_resource type="Script" path="res://frontend/audio/audio_events.gd" id="1_events"]
 [ext_resource type="Script" path="res://frontend/audio/audio_event.gd" id="2_event"]
+[ext_resource type="Script" path="res://frontend/audio/ending_music_slot.gd" id="3_slot"]
 
 [sub_resource type="Resource" id="Event_footstep"]
 script = ExtResource("2_event")
@@ -311,9 +312,73 @@ cooldown = 3.0
 max_voices = 1
 note = "La voz del abuelo aparece al empezar el nivel (suave)."
 
+[sub_resource type="Resource" id="Event_duck_cry_weak"]
+script = ExtResource("2_event")
+id = &"duck_cry_weak"
+files = Array[String](["ducks/quack_hero.wav"])
+volume_db = -12.0
+pitch_min = 0.72
+pitch_max = 0.78
+cooldown = 1.5
+max_voices = 1
+note = "Graznido débil y cansado (el pato de «Estrellas que suben» con la corrupción): usa el graznido del héroe más grave."
+
+[sub_resource type="Resource" id="Event_duck_cry_pain"]
+script = ExtResource("2_event")
+id = &"duck_cry_pain"
+files = Array[String](["ducks/quack_hurt.wav"])
+volume_db = -7.5
+pitch_min = 0.8
+pitch_max = 0.86
+cooldown = 1.5
+max_voices = 1
+note = "Graznido de dolor (tambaleo, caída y mano hacia las estrellas): el quejido del héroe más grave."
+
+[sub_resource type="Resource" id="Event_duck_cry_resist"]
+script = ExtResource("2_event")
+id = &"duck_cry_resist"
+files = Array[String](["ducks/quack_hero.wav"])
+volume_db = -6.5
+pitch_min = 0.58
+pitch_max = 0.64
+cooldown = 1.5
+max_voices = 1
+note = "Graznido forzado de resistencia cuando la corrupción le toma la mano: el graznido del héroe muy grave."
+
+[sub_resource type="Resource" id="Event_duck_cry_lonely"]
+script = ExtResource("2_event")
+id = &"duck_cry_lonely"
+files = Array[String](["ducks/quack_2.wav"])
+volume_db = -18.0
+pitch_min = 0.55
+pitch_max = 0.6
+cooldown = 1.5
+max_voices = 1
+note = "Un graznido lejano y solitario durante los planos largos de «El acantilado»."
+
+[sub_resource type="Resource" id="Slot_kept"]
+script = ExtResource("3_slot")
+file = "castle_on_the_mountain.ogg"
+track_pitch = 0.78
+cutoff_hz = 1500.0
+reverb_wet = 0.35
+reverb_room = 0.85
+base_duck_db = -4.0
+
+[sub_resource type="Resource" id="Slot_released"]
+script = ExtResource("3_slot")
+file = "dungeon.ogg"
+track_pitch = 0.7
+cutoff_hz = 1100.0
+reverb_wet = 0.5
+reverb_room = 0.95
+base_duck_db = -14.0
+
 [resource]
 script = ExtResource("1_events")
-events = [SubResource("Event_footstep"), SubResource("Event_exorcism"), SubResource("Event_boss_vs_sting"), SubResource("Event_title_card"), SubResource("Event_transition"), SubResource("Event_portal_lit"), SubResource("Event_portal_enter"), SubResource("Event_projectile_impact_world"), SubResource("Event_projectile_impact_player"), SubResource("Event_projectile_impact_enemy"), SubResource("Event_wave_impact"), SubResource("Event_wave_impact_world"), SubResource("Event_game_over"), SubResource("Event_soul_gain"), SubResource("Event_focus_start"), SubResource("Event_heal_done"), SubResource("Event_heal_denied"), SubResource("Event_soul_full"), SubResource("Event_pad_bounce"), SubResource("Event_double_jump"), SubResource("Event_spike_warning"), SubResource("Event_spike_rise"), SubResource("Event_boss_leap"), SubResource("Event_leap_land"), SubResource("Event_possession_start"), SubResource("Event_possession_roar"), SubResource("Event_possession_slam"), SubResource("Event_grandfather_voice")]
+events = [SubResource("Event_footstep"), SubResource("Event_exorcism"), SubResource("Event_boss_vs_sting"), SubResource("Event_title_card"), SubResource("Event_transition"), SubResource("Event_portal_lit"), SubResource("Event_portal_enter"), SubResource("Event_projectile_impact_world"), SubResource("Event_projectile_impact_player"), SubResource("Event_projectile_impact_enemy"), SubResource("Event_wave_impact"), SubResource("Event_wave_impact_world"), SubResource("Event_game_over"), SubResource("Event_soul_gain"), SubResource("Event_focus_start"), SubResource("Event_heal_done"), SubResource("Event_heal_denied"), SubResource("Event_soul_full"), SubResource("Event_pad_bounce"), SubResource("Event_double_jump"), SubResource("Event_spike_warning"), SubResource("Event_spike_rise"), SubResource("Event_boss_leap"), SubResource("Event_leap_land"), SubResource("Event_possession_start"), SubResource("Event_possession_roar"), SubResource("Event_possession_slam"), SubResource("Event_grandfather_voice"), SubResource("Event_duck_cry_weak"), SubResource("Event_duck_cry_pain"), SubResource("Event_duck_cry_resist"), SubResource("Event_duck_cry_lonely")]
+ending_kept_music = SubResource("Slot_kept")
+ending_released_music = SubResource("Slot_released")
 boss_music = {
 1: ["the_evil_one.ogg", 1.0],
 2: ["treacherous_path.ogg", 0.92],
