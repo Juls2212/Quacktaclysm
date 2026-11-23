@@ -83,6 +83,7 @@ extends Control
 ## "Efectos de corrupción" toggle; built in code next to the camera shake one.
 var corruption_check: CheckButton
 var ai_check: CheckButton
+var blood_check: CheckButton
 @onready var controls_button: Button = $OptionsPanel/Margin/Box/ControlsButton
 @onready var options_box: VBoxContainer = $OptionsPanel/Margin/Box
 ## The editable controls page; it takes the place of the options while it is open.
@@ -127,7 +128,8 @@ func _ready() -> void:
 	volume_label.text = volume_text
 	options_back_button.text = back_text
 	credits_back_button.text = back_text
-	credits_label.text = credits_body
+	# Phase 15h: the content notice goes with the credits (never a pop-up, never in the way of play).
+	credits_label.text = credits_body + "\n\n" + StoryTexts.get_default().content_notice
 	version_label.text = version_text
 	music_label.text = music_text
 	sfx_label.text = sfx_text
@@ -136,6 +138,10 @@ func _ready() -> void:
 	corruption_check.text = (load(OptionsBoard.PRESENTATION_PATH) as ProfilePresentation).toggle_text
 	shake_check.get_parent().add_child(corruption_check)
 	shake_check.get_parent().move_child(corruption_check, shake_check.get_index() + 1)
+	blood_check = CheckButton.new()
+	blood_check.text = (load(OptionsBoard.PRESENTATION_PATH) as ProfilePresentation).blood_toggle_text
+	corruption_check.get_parent().add_child(blood_check)
+	corruption_check.get_parent().move_child(blood_check, corruption_check.get_index() + 1)
 	ai_check = CheckButton.new()
 	ai_check.text = (load(OptionsBoard.PRESENTATION_PATH) as ProfilePresentation).ai_toggle_text
 	corruption_check.get_parent().add_child(ai_check)
@@ -165,6 +171,7 @@ func _ready() -> void:
 	sfx_slider.value = _settings["sfx_volume"]
 	shake_check.button_pressed = _settings["camera_shake"]
 	corruption_check.button_pressed = _settings["corruption_effects"]
+	blood_check.button_pressed = _settings["blood"]
 	ai_check.button_pressed = _settings["ai_adaptation"]
 	fullscreen_check.toggled.connect(_on_fullscreen_toggled)
 	volume_slider.value_changed.connect(_on_volume_changed)
@@ -172,6 +179,7 @@ func _ready() -> void:
 	sfx_slider.value_changed.connect(_on_setting_changed.bind("sfx_volume"))
 	shake_check.toggled.connect(_on_setting_changed.bind("camera_shake"))
 	corruption_check.toggled.connect(_on_setting_changed.bind("corruption_effects"))
+	blood_check.toggled.connect(_on_setting_changed.bind("blood"))
 	ai_check.toggled.connect(_on_setting_changed.bind("ai_adaptation"))
 	GameSettings.apply(_settings)
 	_show_main_buttons()
