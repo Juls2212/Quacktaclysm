@@ -18,7 +18,8 @@ const LEVEL_PATHS: Dictionary = {
 const SAVE_KEYS: Array[String] = ["save_version", "current_level", "checkpoint", "souls_released", "souls_kept", "decisions", "adaptive_profile"]
 const REL: String = "released"
 const KEP: String = "kept"
-const EXPECTED_ENDING: Dictionary = {3: "ending_full", 2: "ending_scar", 1: "ending_doubt", 0: "ending_corrupt"}
+## Phase 15h: two endings by the majority of the decisions (more kept than released -> kept; otherwise released).
+const EXPECTED_ENDING: Dictionary = {3: "ending_released", 2: "ending_released", 1: "ending_kept", 0: "ending_kept"}
 const MAX_LINE: int = 110
 
 var failures: int = 0
@@ -126,7 +127,7 @@ func _all_strings() -> Array[String]:
 		all.append_array(boss.pre_lines)
 		for variant: Variant in boss.variant_lines.values():
 			all.append(String(variant))
-		all.append(boss.defeat_line)
+		all.append_array(boss.defeat_lines)
 	for entry: Variant in texts.endings:
 		var ending := entry as EndingStory
 		all.append(ending.title)
@@ -140,7 +141,7 @@ func _all_strings() -> Array[String]:
 
 
 func _test_texts() -> void:
-	_check("texts: 3 souls, 3 guardians, 4 endings", texts.souls.size() == 3 and texts.bosses.size() == 3 and texts.endings.size() == 4)
+	_check("texts: 3 souls, 3 guardians, 2 endings", texts.souls.size() == 3 and texts.bosses.size() == 3 and texts.endings.size() == 2)
 	var all: Array[String] = _all_strings()
 	var empty: int = 0
 	var provisional: int = 0
@@ -174,28 +175,20 @@ func _test_texts() -> void:
 	var bosses_ok: bool = true
 	for level in [1, 2, 3]:
 		var boss: BossStory = texts.get_boss(level)
-		bosses_ok = bosses_ok and boss != null and boss.pre_lines.size() >= 2 and boss.pre_lines.size() <= 3 and not boss.defeat_line.is_empty() \
-				and boss.variant_lines.size() <= 2 and boss.lines_for("neutral").size() == boss.pre_lines.size() \
-				and boss.lines_for("corrupt").size() == boss.pre_lines.size() + 1 and boss.lines_for("compassionate").size() == boss.pre_lines.size() + 1 \
-				and boss.lines_for("corrupt").size() <= 4
-	_check("texts: each guardian has 2-3 lines, at most one variant line and a line when it falls", bosses_ok)
+		bosses_ok = bosses_ok and boss != null and boss.pre_lines.size() == 1 and boss.pre_lines[0].length() <= 80 and boss.duck_lines.size() == 1 and boss.duck_lines[0].length() <= 80 \
+				and boss.defeat_lines.size() >= 2 and boss.defeat_lines.size() <= 3 and boss.variant_lines.is_empty() and boss.lines_for("neutral").size() == 1 and boss.lines_for("corrupt").size() == 1
+		for defeat_line in boss.defeat_lines:
+			bosses_ok = bosses_ok and defeat_line.length() <= 120
+	_check("texts: each guardian has ONE short line at first sight (<= 80), one short duck line and 2-3 last words (<= 120) (Phase 15n)", bosses_ok)
 	var endings_ok: bool = true
 	for ending_id in EXPECTED_ENDING.values():
 		var ending: EndingStory = texts.get_ending(ending_id)
-		endings_ok = endings_ok and ending != null and ending.lines.size() >= 5 and ending.lines.size() <= 8 and not ending.title.is_empty() \
-				and ["full", "scar", "doubt", "corrupt"].has(ending.style) and FileAccess.file_exists("res://frontend/audio/music/" + ending.music) \
-				or (ending != null and ResourceLoader.exists("res://frontend/audio/music/" + ending.music))
-	_check("texts: every ending has a title, 5-8 lines, a style and an existing music track", endings_ok)
-	_check("texts: the endings have different titles and music styles", _distinct(texts.endings.map(func(e: Variant) -> String: return (e as EndingStory).title)) == 4
-		and _distinct(texts.endings.map(func(e: Variant) -> String: return (e as EndingStory).style)) == 4)
-	var scar: String = " ".join(texts.get_ending("ending_scar").lines)
-	var doubt: String = " ".join(texts.get_ending("ending_doubt").lines)
-	_check("texts: the scar ending names the kept soul and the doubt ending the released one", scar.contains("{kept}") and doubt.contains("{released}"))
-	var prophecy: bool = true
-	for ending_id in EXPECTED_ENDING.values():
-		prophecy = prophecy and " ".join(texts.get_ending(ending_id).lines).contains("empuñe") or ending_id == "ending_full" or ending_id == "ending_scar"
-	_check("texts: the prophecy ('quien la empuñe') is resolved in the endings", " ".join(texts.get_ending("ending_full").lines).contains("empuñe")
-		and scar.contains("profecía") and doubt.contains("empuñe") and " ".join(texts.get_ending("ending_corrupt").lines).contains("empuñe") and prophecy)
+		endings_ok = endings_ok and ending != null and ending.lines.size() >= 5 and ending.lines.size() <= 9 and not ending.title.is_empty() and ["kept", "released"].has(ending.style) and ending.beats != null
+	_check("texts: every ending has a title, 5-9 lines, a style and a beat list (Phase 15i-bis: the music lives in the audio table slots)", endings_ok)
+	_check("texts: the endings have different titles and music styles", _distinct(texts.endings.map(func(e: Variant) -> String: return (e as EndingStory).title)) == 2
+		and _distinct(texts.endings.map(func(e: Variant) -> String: return (e as EndingStory).style)) == 2)
+	_check("texts: there are exactly two endings (Phase 15h), the old four and their texts are gone", texts.endings.size() == 2 and texts.get_ending("ending_kept") != null and texts.get_ending("ending_released") != null
+		and texts.get_ending("ending_full") == null and texts.get_ending("ending_scar") == null and texts.get_ending("ending_doubt") == null and texts.get_ending("ending_corrupt") == null)
 	var moods: Array[String] = [texts.elder_script(0)[texts.elder_mood_index], texts.elder_script(1)[texts.elder_mood_index], texts.elder_script(2)[texts.elder_mood_index]]
 	_check("texts: the grandfather's tone changes with the souls released", _distinct(moods) == 3 and texts.elder_script(0).size() == texts.elder_lines.size() + 1)
 
@@ -209,13 +202,9 @@ func _distinct(values: Array) -> int:
 
 func _test_reading_times() -> void:
 	for ending_id in EXPECTED_ENDING.values():
-		var reel := StoryReel.new()
-		reel.title_text = texts.get_ending(ending_id).title
-		reel.lines = texts.ending_lines(ending_id, ["Daigo"] as Array[String], ["Hana"] as Array[String])
-		reel.hold_scale = 0.8
-		var length: float = reel.total_length()
-		_check("timing: %s lasts about 35-60 s (%.1f s)" % [ending_id, length], length >= 35.0 and length <= 62.0)
-		reel.free()
+		var beats: EndingBeatList = texts.get_ending(ending_id).beats
+		var length: float = beats.timed_seconds() if beats != null else 0.0
+		_check("timing: %s has %.0f s of timed beats (Phase 15i: inside %.0f-%.0f s) plus the lines the player reads" % [ending_id, length, beats.min_seconds, beats.max_seconds], beats != null and length >= beats.min_seconds and length <= beats.max_seconds)
 	var elder := StoryReel.new()
 	for index in 3:
 		elder.lines = texts.elder_script(index)
@@ -245,7 +234,7 @@ func _test_endings_table() -> void:
 		var label: String = "%s %s %s" % [choices[0], choices[1], choices[2]]
 		var expected: String = EXPECTED_ENDING[released]
 		_check("ending: %s -> %d released -> %s" % [label, released, expected], ending.shown_variant == expected
-			and ending.title_label.text == texts.get_ending(expected).title and EndingSelector.ending_id_for(released) == expected)
+			and ending.title_label.text == texts.get_ending(expected).title and EndingSelector.ending_id_for(released, 3 - released) == expected)
 		var lines: Array[String] = ending.get_reel_lines()
 		var joined: String = " ".join(lines)
 		var kept_name: String = ""
@@ -256,10 +245,6 @@ func _test_endings_table() -> void:
 			else:
 				released_name = texts.get_soul("fragment_level_%d" % (index + 1)).short_name
 		var names_ok: bool = not joined.contains("{") and not joined.contains("}")
-		if released == 2:
-			names_ok = names_ok and joined.contains(kept_name)
-		if released == 1:
-			names_ok = names_ok and joined.contains(released_name)
 		_check("ending: %s -> the lines name the right soul and leave no token" % label, names_ok, joined.substr(0, 60))
 		ending.free()
 		print("TABLE: %s -> %d -> %s | %s" % [label, released, expected, texts.get_ending(expected).title])
@@ -280,9 +265,14 @@ func _test_ending_sequence() -> void:
 	add_child(ending)
 	await _frames(3)
 	_check("sequence: the scene plays the reel first and keeps the card hidden", ending.reel != null and not ending.card_visible and not ending.box.visible)
-	_check("sequence: 5-8 lines, hold-to-skip mode", ending.reel.lines.size() >= 5 and ending.reel.lines.size() <= 8 and ending.reel.skip_mode == StoryReel.SkipMode.HOLD)
-	_check("sequence: the title card is the ending title", ending.reel.title_text == texts.get_ending("ending_scar").title)
-	await get_tree().create_timer(4.2).timeout
+	_check("sequence: 5-8 lines, hold-to-skip mode", ending.reel.lines.size() >= 5 and ending.reel.lines.size() <= 8 and is_equal_approx(ending.reel.hold_seconds, 1.2))
+	_check("sequence: the title card is the ending title", ending.reel.title_text == texts.get_ending("ending_released").title)
+	var waited_line: float = 0.0
+	Engine.time_scale = 20.0
+	while ending.reel.current_line_text().is_empty() and waited_line < 20.0:
+		await get_tree().process_frame
+		waited_line += get_process_delta_time()
+	Engine.time_scale = 1.0
 	_check("sequence: after the title the first line is typed", not ending.reel.current_line_text().is_empty() and not ending.reel.current_line_text().contains("{"), ending.reel.current_line_text())
 	# A short press does not skip; holding confirm does.
 	Input.action_press("ui_accept")
@@ -315,7 +305,7 @@ func _test_ending_sequence() -> void:
 	dark.reel.skip()
 	await get_tree().create_timer(0.8).timeout
 	_check("sequence: reel.skip() ends it and shows the card (0 released -> 'ninguna')", dark.card_visible and dark.released_names_label.text == "Liberadas: ninguna"
-		and dark.shown_variant == "ending_corrupt")
+		and dark.shown_variant == "ending_kept")
 	dark.free()
 	await _frames(2)
 
@@ -372,7 +362,7 @@ func _test_boss_dialogue() -> void:
 		level.encounter.encounter_started.emit()
 		_check("guardian (%s): speaks when the fight starts" % profile, dialogue.is_speaking() and dialogue.sequence_count == 1)
 		_check("guardian (%s): shows the boss name and the first line" % profile, dialogue.current_text() == "EL LEÑADOR: %s" % expected[0], dialogue.current_text())
-		_check("guardian (%s): %d lines (fixed lines + at most one variant)" % [profile, expected.size()], expected.size() == story.pre_lines.size() + (0 if profile == "neutral" else 1))
+		_check("guardian (%s): ONE line at first sight (Phase 15n)" % profile, expected.size() == 1)
 		_check("guardian (%s): the fight is never locked" % profile, not level.player.is_input_locked() and not get_tree().paused)
 		# Reading through every line (time is simulated by calling the line advance).
 		var guard: int = 0
@@ -383,7 +373,8 @@ func _test_boss_dialogue() -> void:
 		level.encounter.encounter_started.emit()
 		_check("guardian (%s): not repeated after a retry or respawn mid-fight" % profile, dialogue.sequence_count == 1 and not dialogue.is_speaking())
 		dialogue._on_boss_defeated(level.boss)
-		_check("guardian (%s): says one line when it falls" % profile, dialogue.is_speaking() and dialogue.current_text() == "EL LEÑADOR: %s" % story.defeat_line and dialogue.sequence_count == 2)
+		dialogue._start_defeat_dialogue(story)
+		_check("guardian (%s): its last words (2 to 3 lines) are said when it falls (Phase 15n)" % profile, dialogue.is_speaking() and dialogue.current_text() == "EL LEÑADOR: %s" % story.defeat_lines[0] and dialogue.sequence_count == 2)
 		level.free()
 		await _frames(2)
 	# Skippable with the confirm action, and the press is not consumed.
