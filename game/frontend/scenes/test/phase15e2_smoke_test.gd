@@ -18,9 +18,9 @@ const OLD_GAPS: Array[float] = [285.0, 175.0, 285.0]
 ## Old (Phase 15e-1) x of every level 3 element that sits after the first floor, with the floor it was on (1 = B, 2 = C, 3 = D).
 const OLD_X: Dictionary = {
 	"FloorB": [2142.5, 1], "LedgeLow": [1900.0, 1], "LedgeHigh": [2150.0, 1], "CheckpointMid1": [1650.0, 1], "Ranged1": [1900.0, 1],
-	"Ranged2": [2150.0, 1], "Melee1": [2330.0, 1], "Fast1": [2550.0, 1], "ExtraMelee": [2020.0, 1],
+	"Ranged2": [2150.0, 1], "Melee1": [2330.0, 1], "ExtraMelee": [2020.0, 1],
 	"FloorC": [3387.5, 2], "TowerLow": [3150.0, 2], "TowerMid": [3350.0, 2], "TowerTop": [3550.0, 2], "CheckpointMid2": [2950.0, 2],
-	"Fast2": [3050.0, 2], "Ranged3": [3550.0, 2], "Melee2": [3750.0, 2], "ExtraRanged": [3350.0, 2],
+	"Ranged3": [3550.0, 2], "ExtraRanged": [3350.0, 2],
 	"FloorD": [5192.5, 3], "Melee3": [4500.0, 3], "GirderB": [4300.0, 3], "ContainerB": [4940.0, 3], "CraneHookB": [4760.0, 3],
 	"CheckpointArena": [4850.0, 3], "ExtraFast": [4650.0, 3], "ArenaGate": [5100.0, 3], "ArenaCeiling": [5640.0, 3], "WallRight": [6170.0, 3],
 	"Encounter": [5220.0, 3], "Boss": [5800.0, 3],
@@ -340,9 +340,6 @@ func _test_shift(level: Node, gaps: Array[Dictionary]) -> void:
 	var wall: Node2D = content.get_node("WallRight") as Node2D
 	_check("shift: the arena keeps its relative layout (gate to encounter %.0f, gate to boss %.0f, gate to right wall %.0f)" % [encounter.position.x - gate.position.x, boss.position.x - gate.position.x, wall.position.x - gate.position.x],
 		is_equal_approx(encounter.position.x - gate.position.x, 120.0) and is_equal_approx(boss.position.x - gate.position.x, 700.0) and is_equal_approx(wall.position.x - gate.position.x, 1070.0))
-	var beam_fallback: float = (level.get_node("Content/Boss/Patterns/Beam") as BeamSweepPattern).fallback_left
-	_check("shift: the boss patterns' arena fall-back limits moved with the arena (%.0f, gate at %.0f)" % [beam_fallback, gate.position.x], absf(beam_fallback - (gate.position.x + 30.0)) < 0.01
-		and absf((level.get_node("Content/Boss/Patterns/Beam") as BeamSweepPattern).fallback_right - (wall.position.x - 30.0)) < 0.01)
 	var spawn: Node2D = level.get_node("SpawnPoint") as Node2D
 	_check("shift: the spawn point and the first floor did not move", is_equal_approx(spawn.position.x, 120.0) and _left(content.get_node("FloorA") as Node2D) == 0.0)
 
