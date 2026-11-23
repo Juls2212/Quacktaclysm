@@ -23,16 +23,14 @@ Todo lo que sigue se probó solo con pruebas automáticas en modo headless (sin 
 `COR-03 / aspecto corrupto / liberar 0 almas, entrar al nivel 3 / viñeta oscura en los bordes sin tapar el suelo / la viñeta tapa los pinchos de la derecha / Alta`.
 Añade una captura o un vídeo corto si puedes.
 
-### Atajos para ver los cuatro finales
+### Atajos para ver los dos finales
 
-Cada final depende solo de cuántas almas liberas (3, 2, 1, 0). El camino más rápido, en depuración: en cada nivel pulsa **F2** (arena) y **F4** (matar al jefe), camina hasta el fragmento que suelta, y elige **Liberar** o **Conservar** en el panel. Con el nivel 3 hecho, el juego abre el final solo.
+El final depende de la mayoría de las tres decisiones (guardadas > liberadas → «Estrellas que suben»; si no, «El acantilado»).
 
 | Final | Elecciones (nivel 1, 2, 3) |
 |---|---|
-| El cielo se abre | Liberar, Liberar, Liberar |
-| La cicatriz del cielo | Liberar, Liberar, Conservar (o cualquier mezcla con 2 liberadas) |
-| El filo y la duda | Conservar, Conservar, Liberar (o cualquier mezcla con 1 liberada) |
-| La nueva estrella caída | Conservar, Conservar, Conservar |
+| Estrellas que suben | Conservar ×3, o 2 conservadas y 1 liberada (cualquier orden) |
+| El acantilado | Liberar ×3, o 2 liberadas y 1 conservada (cualquier orden) |
 
 Para repetir con otras elecciones: Menú principal → «Nueva partida» (confirma que reemplaza el guardado).
 
@@ -79,10 +77,27 @@ Para repetir con otras elecciones: Menú principal → «Nueva partida» (confir
 | COR-04 | Aspecto corrupto | Opciones → apaga «Efectos de corrupción» con un nivel abierto | Vuelve todo a neutral (sin viñeta, sin tinte, sin brillo, sin filtro de música); la placa y la línea de consecuencias se quedan; los avisos de ataque siguen visibles (#39) | | |
 | AUD-03 | Audio | Escucha un nivel con el aspecto corrupto | La música suena más grave y apagada sin ser molesta (#52) | | |
 | AUD-04 | Audio | Habla un guardián / se muestra el abuelo | La música baja un poco y vuelve al terminar (#52, #57) | | |
-| FIN-01 | Historia / finales | Final «El cielo se abre» (3 liberadas) | Secuencia de ≈ 35-60 s con título, 7 líneas, epílogo dorado con estrellas que suben y música `title_screen`; mantener Enter la salta; luego la tarjeta de resumen con los nombres | | |
-| FIN-02 | Historia / finales | Final «La cicatriz del cielo» (2 liberadas) | Nombra el alma guardada en las líneas 1 y 3; epílogo al atardecer; música `castle_on_the_mountain`; resumen correcto | | |
-| FIN-03 | Historia / finales | Final «El filo y la duda» (1 liberada) | Nombra la única alma liberada; epílogo nocturno con una estrella brillante; música `dungeon` | | |
-| FIN-04 | Historia / finales | Final «La nueva estrella caída» (0 liberadas) | Epílogo rojo, estrellas que caen, el pato con aura y ojos violetas; música `the_evil_one`; la tarjeta dice «Liberadas: ninguna» | | |
+| FIN-01 | Finales | «Estrellas que suben»: 3/0 y 2/1 guardadas | Ciudad que recupera luz, pato que se apaga; termina en «Perdóname, nieto.» | |
+| FIN-02 | Finales | «El acantilado»: 0/3 y 1/2 guardadas | Atardecer, acantilado, la cámara sube y funde a blanco; nada después | |
+| FIN-03 | Finales | Avance solo con Enter, también con la tecla reasignada | Primera pulsación completa, segunda avanza; esperar no avanza | |
+| FIN-04 | Finales | Saltar manteniendo confirmar 1,2 s y pausar con Esc | Salta a la tarjeta; la pausa congela la escena | |
+| FIN-05 | Finales | «Efectos de corrupción» desactivado | Fundidos estáticos, mismo texto, sin destellos | |
+| FIN-06 | Finales | Tarjeta de «El acantilado» | Línea de apoyo visible; no aparece en el otro final | |
+| FIN-07 | Finales | Menú principal → Acerca de | Aviso de contenido visible (sin ventana emergente) | |
+| FIN-08 | Finales | «Estrellas que suben»: ver el arco completo (venas que trepan, respiración jadeante, caída, primer plano, ala hacia las estrellas, último aliento) | Doloroso y triste pero sin nada gráfico; el latido se apaga y la música se va | |
+| FIN-09 | Finales | El rostro del abuelo en los cuatro estados (observa, habla, sufre, se quiebra) | Se lee como un rostro de pato viejo (no una constelación); lágrimas que corren; sus ojos siguen al pato | |
+| FIN-10 | Finales | «El acantilado»: el salto | Solo silueta; no se ve impacto ni suelo; la cámara se queda en el borde vacío con la bufanda, la espada y la pluma | |
+| FIN-11 | Finales | Lo que viene tras el salto en «El acantilado» | Silencio y viento frío, sin música; duelo del abuelo; tarjeta con el mensaje de apoyo | |
+| FIN-12 | Finales | Ritmo y duración | Cada final dura 45-75 s sin contar la lectura; las líneas solo avanzan con Enter | |
+| FIN-13 | Finales | «El acantilado», plano del borde vacío | Sin barra rara, sin espada ni capa; una pluma pequeña que se lee como pluma | |
+| FIN-14 | Finales | El corte en los dos finales | Se corta a blanco (o al cielo) lentamente ANTES del acto; no se ve ni se oye nada del acto; solo viento después | |
+| FIN-15 | Finales | Tarjeta final de los dos finales | Aparece el mensaje de apoyo en ambos | |
+| FIN-16 | Finales | Cierre de «El acantilado» | Rostro impasible del abuelo (sin lágrimas) y su única línea «Se ha sellado la profecía.» | |
+| FIN-17 | Finales | Graznidos | Solo en los beats previstos; ninguno al arrodillarse, en el corte ni después; uno solitario en el acantilado | |
+| FIN-18 | Finales | Silencio en el corte | Sin música ni voz del abuelo en el corte y después | |
+| FIN-19 | Finales | Música de cada final | «Estrellas que suben» lenta y pesada; «El acantilado» escasa y fría; distintas entre sí | |
+| FIN-20 | Finales | Saltar, pausar y salir durante un final | El audio se detiene y se devuelve (sin reverb ni filtro residuales) | |
+| FIN-21 | Finales | Arrepentimientos | Los dos finales incluyen líneas de arrepentimiento del pato | |
 | FIN-05 | Historia / finales | En cada final, pulsa Enter una vez y luego mantenlo | Una pulsación corta no salta; mantener ≈ 1,2 s salta a la tarjeta | | |
 | FIN-06 | Historia / finales | En la tarjeta pulsa «Volver al menú principal» | Vuelve al menú; la música vuelve a la del menú sin filtro ni pitch raro | | |
 | CON-01 | Controles | Opciones → «Controles…»: cambia una acción (p. ej. saltar a otra tecla) | La captura funciona con teclado y ratón; el cambio se aplica al instante; Esc cancela la captura (#32) | | |
@@ -221,3 +236,94 @@ Para repetir con otras elecciones: Menú principal → «Nueva partida» (confir
 - [ ] La línea nunca aparece en una pelea, sobre la intro del jefe, sobre una tarjeta de habilidad ni al continuar en el checkpoint de la arena; se cierra si empieza el encuentro.
 - [ ] Al reintentar el nivel la línea no se repite.
 - [ ] Los 4 finales x 3 variantes: el final que suena es el mismo y la tarjeta cambia el cierre (probar con `QUACKTACLYSM_DIRECTOR_PLAN` y `epilogue_variant` 0, 1 y 2).
+
+## Capa de armadura e introducciones (Fase 15f)
+
+- [ ] Kenzo (fase 2) lleva una capa de placas sobre el cuerpo; la espada ligera y la onda rebotan (chispa, grieta, «BLOQUEADO»).
+- [ ] UN golpe pesado o tajo de dash rompe la capa: salen fragmentos, el cuerpo brilla (2,5 s, «ATURDIDO: ¡GOLPEA!») y luego las placas vuelven una a una (3,0 s).
+- [ ] La pista «Rompe la capa con golpe pesado o tajo de dash» sale una vez por pelea; ya no hay cajas bajo la barra.
+- [ ] Con «Efectos de corrupción» apagado: sin partículas ni pulso, la capa solo cambia con un desvanecimiento corto.
+- [ ] Introducción de El Leñador, La Cosa del Pantano y El Ojo de la Tormenta: cada guardián dice 4 líneas, el pato su monólogo, y NADA avanza solo: Enter completa la línea y luego pasa a la siguiente («Enter ▸»); mantener Enter salta todo.
+- [ ] Al morir y reintentar, o al continuar desde la arena, la introducción no se repite; la pausa detiene la introducción.
+
+## Escenario del nivel 3 (Fase 15g)
+
+- [ ] Corriente de aire (primer tramo y cerca de la arena): avisa (rejilla brillante y aire que se junta), eleva mientras está activa y deja subir hasta las plataformas altas; el salto y el doble salto siguen funcionando; no ayuda a cruzar los huecos.
+- [ ] Placa eléctrica (primer tramo): aviso de 1,2 s con borde discontinuo, descarga de 2 s que quita 1 corazón, el dash es inmune; las plataformas encima son seguras y siempre da tiempo de salir andando.
+- [ ] Ruta alta: se llega con la corriente, se puede bajar caminando por el extremo (sin trampas).
+- [ ] Decorado: los charcos salpican al caer o hacer dash, las lámparas parpadean al pasar (nunca con destellos fuertes), las cadenas se balancean y hay torres rotas de fondo.
+- [ ] Arena del jefe 3: tres corrientes bajas que ayudan a alcanzar el ojo; sin plataformas ni placas; se detienen durante la posesión.
+- [ ] Con «Efectos de corrupción» apagado: sin partículas, parpadeo ni balanceo; todo cambia de estado sin movimiento.
+
+### Huecos del nivel 3 (Fase 15h-bis)
+
+| ID | Área | Comprobación | Resultado esperado | Estado |
+|---|---|---|---|---|
+| HUE-01 | Nivel 3 | Quedarse en el borde del hueco 1 con enemigos vivos | Ningún enemigo llega a menos de ~250 px, ni golpea ni empuja | |
+| HUE-02 | Nivel 3 | Cruzar el hueco 1 con salto + doble salto, y con salto + dash | Se cruza sin precisión extrema (ventana amplia) | |
+| HUE-03 | Nivel 3 | Cruzar los huecos 2 y 3 con salto + doble salto + dash | Posible, más exigente en el 3; con solo doble salto, solo dash o salto simple no se cruza | |
+| HUE-04 | Nivel 3 | Jugar con menos de 2 decisiones (partida creada a mano) | Hueco 1 cruzable con salto + dash | |
+| HUE-05 | Nivel 3 | Caer 3 veces en el mismo hueco | No aparece nada | |
+| HUE-06 | Nivel 3 | Caer una cuarta vez | Aparece una plataforma de restos de 140 px en medio de ese hueco (solo ese) y sigue ahí al reaparecer | |
+| HUE-07 | Nivel 3 | Empezar partida nueva o cargar un guardado | La plataforma ya no está | |
+
+### Jefe 3 rediseñado (Fase 15j)
+
+| ID | Área | Comprobación | Resultado esperado | Estado |
+|---|---|---|---|---|
+| J3-01 | Fase 1 | Pelear contra el pato solo | Tajo, carga y andanada; coraza que se rompe con un golpe pesado; sin plataformas, patitos ni ojo | |
+| J3-02 | Umbrales | Bajar el jefe al 66,7 % y al 33,3 % | Una posesión en cada cruce, en orden | |
+| J3-03 | Fase 2 | Plataformas y percha | Suben en ~1,2 s; todas se alcanzan con salto simple; la percha no se pisa | |
+| J3-04 | Fase 2 | Invocación | Patitos de 2 en 2 cada 2,5 s hasta 6; máximo 6 vivos | |
+| J3-05 | Fase 2 | Escudo | Burbuja visible y «BLOQUEADO» mientras viva un patito; pista «Derrota a los patitos» una vez | |
+| J3-06 | Fase 2 | Derrumbe | El suelo tiembla 1,5 s (grietas, sacudida), el jefe salta y el suelo cae | |
+| J3-07 | Fase 2 | Andanada | 5 s de proyectiles a la altura de cada plataforma, avisados 0,8 s; siempre hay una plataforma segura | |
+| J3-08 | Fase 2 | Vacío | Caer cuesta 1 corazón y devuelve al jugador a la plataforma más baja; nunca al punto de control | |
+| J3-09 | Fase 2 | Suelo y ventana | El contorno brilla 1 s, el suelo vuelve, las plataformas se quedan; el jefe cae agotado 6 s sin escudo ni coraza | |
+| J3-10 | Fase 2 | Ciclos | Con solo espada la fase 2 pide 2 o 3 ciclos | |
+| J3-11 | Fase 3 | Ojo rojo | Las plataformas se hunden; el ojo rojo es invulnerable; el pato sin coraza; rayos avisados ≥ 1 s con un carril seguro | |
+| J3-12 | Robustez | Cruzar un umbral en medio de cada mecánica; morir, reintentar, salir y pausar | La arena queda limpia y el reintento empieza en la fase 1 | |
+| J3-13 | Reducido | «Efectos de corrupción» desactivado | Sin partículas, sacudida ni destellos; cambios de estado estáticos | |
+| SAN-01 | Sangre | Opciones (menú principal y de pausa) | Aparece «Sangre», activada por defecto; al desactivarla no sale sangre, solo chispas | |
+| SAN-02 | Sangre | Golpear a un enemigo vivo, a un duckling y al bruto bloqueado | Salpica (el duckling menos); con armadura o escudo bloqueando solo chispas | |
+| SAN-03 | Sangre | Matar enemigos y derrotar un jefe | Ráfaga mayor al matar; ráfaga grande con el jefe | |
+| SAN-04 | Sangre | Recibir daño y usar el dash | Salpicadura pequeña al recibir daño; ninguna durante el dash | |
+| SAN-05 | Sangre | Los finales, el prólogo y las escenas de historia | No aparece sangre en ninguno | |
+| SAN-06 | Sangre | Avisos, pinchos y placas con manchas en el suelo | Siguen legibles; las manchas se desvanecen en unos 8 s | |
+| SAN-07 | Sangre | Reiniciar nivel, reintentar y pausar | No queda sangre; en pausa se queda quieta | |
+| VEN-01 | Venas | «Estrellas que suben» completo | Termina sin trabarse; el ojo, el ala y las venas se ven bien, sin barras ni discos planos | |
+| VEN-02 | Venas | Primer fragmento conservado, en el juego | Venas moradas tenues en brazo y cuello; con dos, pecho y cara; con tres, extendidas | |
+| VEN-03 | Venas | Fragmentos liberados | No aparecen venas | |
+| VEN-04 | Venas | Avisos y proyectiles con venas | Siguen legibles; la silueta del pato no se pierde | |
+| VEN-05 | Venas | «Efectos de corrupción» desactivado | Venas estáticas y finas, sin pulso | |
+| ABS-01 | Absorción | Conservar un fragmento | Secuencia oscura de unos 3,6 s con latido, viñeta morada y música atenuada; la tarjeta aparece después | |
+| ABS-02 | Absorción | Esc durante la secuencia y modo reducido | Salta a la tarjeta; en reducido es un fundido oscuro estático | |
+| ABS-03 | Absorción | Liberar un fragmento | Conserva su animación luminosa | |
+| TUT-01 | Tutorial | Matar al muñeco antes de que hable | Revive solo a ~1 s; el tutorial no se bloquea | |
+| TUT-02 | Tutorial | Hacer las acciones en otro orden o antes de pedirlas | Cuentan igual, se tachan en la lista y el muñeco lo comenta | |
+| TUT-03 | Tutorial | Mantener la tecla de confirmar ~2 s | La barra de abajo se llena, el tutorial se salta y la salida se abre | |
+| TUT-04 | Tutorial | Reasignar una tecla (por ejemplo saltar) | El aviso del tutorial muestra la tecla nueva | |
+| TUT-05 | Tutorial | Lista de tareas arriba a la izquierda | Un paso hecho se marca y el cartel de su estación se pone verde | |
+| TUT-06 | Tutorial | Morir, caerse, pausar y pulsar sin parar | No se pierde progreso ni se bloquea nada | |
+| TUT-07 | Tutorial | Entrar en la salida sin terminar y terminado | Sin terminar dice qué falta; terminado pasa al nivel 1 | |
+| DLG-01 | Diálogos | Ver a un guardián por primera vez | Una línea suya y a lo sumo una del pato; luego combate; un reintento no repite | |
+| DLG-02 | Diálogos | Derrotar a un guardián | 2–3 líneas con Enter (mantener salta), el fragmento aparece después, sin repetir | |
+| FRG-01 | Fragmentos | Matar enemigos normales y patitos | Fragmento azul que flota y vuela al pato; suma alma una sola vez; el patito, menos | |
+| CRY-01 | Graznidos | Golpear enemigos, patitos y jefes | Graznido en cada golpe que aterriza (sin ruido excesivo); ninguno en golpes bloqueados | |
+| PRO-01 | Prólogo | Ver, saltar, pausar y salir del prólogo | Hay música y efectos; se detienen limpiamente; respetan los volúmenes | |
+| ABU-01 | Abuelo | Línea del abuelo al empezar los niveles | Rostro en el cielo: recuerdo tenue en los niveles 1 y 2, nítido en el 3; sin lágrimas | |
+| ULT-01 | Final | Conservar o liberar el fragmento del jefe 3 | Sin tarjeta de habilidad: va directo al final (absorción oscura / liberación luminosa) | |
+| ABS-01 | Absorción | Conservar el fragmento de un jefe | Fondo oscuro con toques rojos, emblema abajo, rayos rojos finos que entran en el pato, partículas, el pato convulsiona y su corrupción avanza; 3–4 s; Esc salta; sin destellos fuertes | |
+| ABS-02 | Absorción | Lo mismo con «Efectos de corrupción» apagado | Fundido rojo quieto con el emblema y unos pocos rayos fijos, sin parpadeo | |
+| N3-01 | Nivel 3 | Recorrer «La tormenta» | Ya no hay columnas con flechas; los huecos y los puntos de control son los de siempre; se llega al jefe | |
+| J3-01 | Jefe 3 | Pelear la fase 1 | Sin capa de armadura: cualquier golpe hace daño; la fase de los patitos sigue con su escudo | |
+| COR-01 | Pato | Jugar con 0, 1, 2 y 3 fragmentos conservados | Venas, ojo nublado, plumas y ala oscuros cambian por etapa, dentro del cuerpo, sin capas sueltas | |
+| COR-02 | Finales | Ver los dos finales | Cada pose es un solo dibujo coherente (cabeza, ala, venas, ojo); sin sangre ni herida; la luz suave solo detrás | |
+| DER-01 | Jefes | Derrotar a cada jefe y leer sus últimas palabras | El jugador no puede moverse (y no recibe daño) mientras habla; con Enter avanza, manteniéndolo salta; al terminar el fragmento aparece y el jugador vuelve a moverse | |
+| DER-02 | Jefes | Pausar o salir durante las últimas palabras | Nada queda bloqueado al volver; al decidir el fragmento se ve la absorción o la liberación y luego la tarjeta (niveles 1 y 2) o el final (nivel 3) | |
+| J3-02 | Jefe 3 | Fase 1 con solo espada | Dura unos 25 s de juego perfecto (más si se falla); las fases 2 y 3 igual que antes | |
+| REG-01 | Niveles | Morir cuatro veces en el mismo hueco del nivel 3 | Aparece la plataforma de ayuda sin errores en la consola; el resto de huecos no la tienen | |
+| ABU-01 | Abuelo | Empezar los niveles 1, 2 y 3 y ver los dos finales | Se ve su figura entera en el cielo con el cuerpo en la niebla y solo la cara clara, algo borrosa y translúcida (tenue en 1 y 2, más presente en 3 y en los finales); sin lágrimas ni formas encima; con efectos apagados es una imagen quieta | |
+| FIN-01 | Finales | Ver el final conservado | Tras el corte a blanco se ve la silueta oscura del pato arrodillado con la espada clavada a su lado y luego quieta junto a ella; nada de sangre ni contacto; solo viento frío | |
+| FIN-02 | Finales | Ver el final del acantilado | Sobre el blanco, la silueta del pato en el borde mirando al cielo, que se desvanece; después el borde vacío con su espada y su sombrero; el pato nunca salta ni cae | |
+| ALM-01 | Jefes | Derrotar a cada guardián | El cuerpo se desvanece, aparece su alma en azul y dice las líneas con su nombre («Alma del Leñador»…); al terminar se deshace en partículas que forman el cristal; la decisión llega después; saltar (mantener Enter) va directo al cristal | |
