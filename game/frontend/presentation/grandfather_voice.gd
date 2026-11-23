@@ -25,7 +25,7 @@ var shown_source: String = ""
 var shown_count: int = 0
 var active: bool = false
 var panel_layer: CanvasLayer = null
-var reflection: GrandfatherReflection = null
+var reflection: GrandfatherFace = null
 
 var _level: LevelBase = null
 var _queue: PresentationQueue = null
@@ -143,8 +143,8 @@ func _present() -> void:
 	_fading = false
 	_remaining = presentation.show_time
 	var reduced: bool = not GameSettings.is_corruption_effects_enabled()
-	reflection = GrandfatherReflection.new()
-	reflection.name = "GrandfatherReflection"
+	reflection = GrandfatherFace.new()
+	reflection.name = "GrandfatherFace"
 	reflection.setup(presentation, level_number, reduced)
 	add_child(reflection)
 	_build_panel()
