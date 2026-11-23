@@ -147,3 +147,109 @@ El bot de resistencia (5400 fotogramas por nivel, tres semillas por escena, más
 - Sin verificar en una ventana real: el tono de las líneas del banco y de los 12 epílogos (el responsable y la Ingeniera 2 deben revisar el español), la legibilidad y el tiempo de la línea (6,5 s), el aspecto del reflejo (silueta de estrellas borrosa/nítida) y que la línea no moleste en la práctica.
 - La lista de palabras prohibidas está duplicada (recurso de Godot y `director.py`); si se cambia una, hay que cambiar la otra.
 - No se ejecutaron la suite completa ni el soak. Se actualizaron a propósito dos comprobaciones de `phase16b_smoke_test` (la petición del nivel 3 ahora pide el final) y no se volvió a ejecutar esa escena. Pruebas antiguas que podrían notar el cambio: `phase14d_smoke_test` y los tests del final (la tarjeta tiene una etiqueta más), `phase14f_smoke_test` (la tabla de audio tiene un evento más) y los tests de nivel/flujo (cada nivel numerado tiene un nodo más).
+
+## Fase 15f
+
+- Sin verificar en una ventana real: la legibilidad de la capa de armadura (placas, grieta, fragmentos, regeneración), la duración y el ritmo de las introducciones de los tres guardianes y el tono de los textos en español (revisar con el responsable y la Ingeniera 2).
+- Una introducción solo avanza con la acción de confirmar: si el jugador la reasigna a una tecla que no recuerda, el indicador muestra el nombre de la tecla actual.
+- No se ejecutaron la suite completa ni el soak. Pruebas antiguas que podrían notar el cambio: `phase14d_smoke_test` (líneas de los guardianes), `phase15b_smoke_test` (introducción, que ahora espera a Enter; se actualizó), `phase15e1_smoke_test` (guardia; se actualizó y se ejecutó) y los tests de flujo de jefes.
+
+## Fase 15g
+
+- Sin verificar en una ventana real: la sensación y la altura de las corrientes, la legibilidad y la justicia de las placas, la utilidad de las rutas altas, y la legibilidad y el rendimiento del decorado.
+- El nivel 3 está lleno de enemigos y de plataformas fijadas por la Fase 15e-2, así que el escenario nuevo cabe en pocos sitios: una banda de placas y una corriente en el primer tramo, una corriente con una plataforma alta cerca de la arena, y solo estos dos tramos tienen ruta alta nueva. La corriente del tramo final queda a 100 px del enemigo extra de ese tramo y del punto de control (no a 150 px como las placas).
+- No se ejecutaron la suite completa ni el soak. Pruebas antiguas que podrían notar el cambio: `phase15e2_smoke_test` (geometría; se ejecutó y pasa) y `phase15e1_smoke_test` (arena; se ejecutó y pasa, con dos posiciones nuevas en el barrido), además de los tests de nivel 3 y de flujo.
+
+## Fase 15h
+
+- Sin verificar en una ventana real: el tono emocional y el ritmo de ambos finales, la legibilidad de las escenas dibujadas por código y la sensación del avance con Enter.
+- La revisión del texto en español (sobre todo el final «El acantilado» y el mensaje de apoyo) la debe hacer el responsable del proyecto.
+- `phase14d_smoke_test` conserva 2 fallos anteriores a esta fase (líneas de los guardianes de la Fase 15f más largas de 110 caracteres y con 3 a 5 líneas, y el test espera 2-3): son expectativas antiguas, no del final.
+- No se ejecutaron la suite completa ni el soak. Pruebas antiguas que podrían notar el cambio: `adaptive_phase9_smoke_test` (usa el nombre `ending_corrupt` en su tabla), `phase16a_smoke_test`, `phase16b_smoke_test` y las de las fases 12b (actualizadas pero no ejecutadas).
+
+## Fase 15h-bis
+
+- **`phase15h2_smoke_test` NO está confirmada:** su única corrida se cortó a los 5 minutos y midió 0 ms por un error del propio test (faltaba reiniciar `PauseLock`, `AbilityCard` y `BossDialogue`, que bloquean los controles, y el nivel mostraba la pantalla de fin de partida). Ambos errores están corregidos pero la escena no se volvió a ejecutar, así que las ventanas reales de tolerancia siguen sin medir. Las comprobaciones del enemigo en el borde (aproximación mínima 244 px, sin golpes ni caídas) sí se midieron con el nivel real.
+- Sin verificar en una ventana real: la sensación de cada hueco, las plataformas de restos y que el jugador no vea saltar un enemigo que se detiene antes del borde.
+- Los enemigos a distancia (disparos) pueden seguir golpeando a un jugador parado en el borde: el retroceso solo se eliminó para los de contacto.
+- Pruebas antiguas sin ejecutar que podrían notar el cambio: `phase15b`, `phase15e2` (ejecutada, pasa; Fast1, Fast2 y Melee2 salieron de su tabla de desplazamiento) y las del Director que cuentan enemigos.
+
+## Fase 15i
+
+- Sin verificar en una ventana real y en movimiento: el ritmo cinematográfico, el aspecto del retrato del abuelo (visto solo en imágenes fijas), el tono emocional de los dos finales y la legibilidad de la silueta durante el salto. Las imágenes fijas de revisión sí muestran el rostro, la ciudad, las venas y el acantilado.
+- La revisión del texto en español de ambos finales la debe hacer el responsable del proyecto.
+- La parte del pato que «extiende un ala» es un dibujo añadido sobre el rig (el rig no tiene ese gesto), así que puede notarse distinta del resto del cuerpo.
+- La espada se oculta en el rig cuando cae y se dibuja aparte; la mano del rig no suelta nada, solo desaparece la hoja.
+- Pruebas antiguas actualizadas pero sin ejecutar: `phase14d_smoke_test` (sus 2 fallos de la Fase 15f siguen pendientes), `phase14e_smoke_test`, `level_phase12b_smoke_test`, `level_phase12b_playthrough_test`.
+
+## Fase 15j
+
+- **Sin verificar en una ventana real:** el ritmo de los ciclos (unos 23 s cada uno), la legibilidad de la andanada y de los rayos rojos, lo justo que resulta el vacío, y la duración y la dificultad del jefe 3.
+- `phase15j_smoke_test` falló una vez (el chequeo de las salvas del ojo, sin identificar la causa: parece intermitente) y pasó en la corrida siguiente, ya con diagnóstico en el mensaje.
+- `phase15d_smoke_test` falla en «tuning: the spikes … and the pad launch are unchanged» (pinchos y trampolín del jefe 2): no tiene relación con esta fase; viene de un cambio anterior de esos números.
+- Pruebas actualizadas pero **no ejecutadas**: `level_phase12b_smoke_test`, `phase14e_smoke_test`, `phase14f_smoke_test`, `phase15e2_smoke_test`, `phase16a_smoke_test` (ids de patrones del jefe 3 y clases quitadas).
+- Quedan sin uso los estilos de aviso `boss_beam` y `boss_columns` del conjunto de telegrafías (`TelegraphSet`), porque `phase14e_smoke_test` comprueba que existan todos.
+- La luz de los rayos rojos se compone con la tinta de posesión persistente: el peor contraste medido es 3,08 (aviso) y 3,73 con el rojo de la posesión.
+
+## Fase 15i-bis
+
+- Sin verificar en una ventana real y con sonido: el tono, la música procesada (tono bajo, filtro y reverb sobre pistas existentes), los graznidos reutilizados (no hay un graznido real de dolor o soledad: son el graznido del héroe y su quejido más graves), la pluma y el retrato impasible. Conviene añadir música y graznidos reales más adelante (ver HANDOFF).
+- En las pruebas aceleradas algunos graznidos no suenan porque el recuperador de eventos cuenta tiempo real; a velocidad normal sí.
+- El cambio a «cortar antes del acto» quita el paso al vacío que se pidió en la Fase 15i: es la regla de seguridad nueva.
+- `phase14f_smoke_test` falló antes de estos cambios en el chequeo del cableado por `grandfather_voice` (de la Fase 16c); ahora lo cubre `phase16c` y los graznidos `phase15i`.
+
+## Fase 15k
+
+- Sin verificar en una ventana real: el aspecto de la sangre, la legibilidad con manchas en el suelo y el rendimiento. La capa z -2 queda debajo de los avisos; si el terreno de algún nivel se dibuja por encima, las manchas no se verían (habría que subir la capa por debajo de los avisos).
+- Las manchas solo aparecen donde hay suelo debajo (trazo al mundo, 360 px); en el vacío las gotas simplemente se desvanecen.
+- Contraste peor caso con manchas: 2,59 (aviso `melee_tough` contra el suelo), muy cerca del mínimo de 2,5; no se debe subir la opacidad de la mancha (0,45) sin volver a medir.
+- `phase14e_smoke_test` tenía una línea obsoleta (`scar`, de la Fase 15h) que impedía cargarla; se corrigió. Además fallan en esa prueba comprobaciones de jefes (`charge` lane, `summon_cycle` del jefe 3) que ya venían del rediseño del jefe 3 (15j) y no tienen que ver con la sangre.
+
+## Fase 15l
+
+- Sin verificar en una ventana real por el dueño: el aspecto de las venas, la secuencia de absorción oscura y el rendimiento del final. El trabón original NO se pudo reproducir en el equipo de desarrollo (el final completo terminó en 78 s, unos 135 fotogramas por segundo sin límite): la causa más probable es el coste de dibujo por fotograma en equipos más modestos; se redujo (de 7,4 a 4,4 ms por fotograma en la medición) y se añadieron el vigilante y los topes. Si el trabón persiste hay que pedir el registro del equipo.
+- El latido de la absorción usa el impacto de proyectil en el mundo con el tono muy bajo (no hay un latido real); conviene un archivo propio.
+- Las líneas del final avanzan solas tras 120 s sin respuesta (seguridad contra bloqueos).
+- La prueba de `phase15l` midió el final con el reloj acelerado; el coste por fotograma en un equipo sin GPU potente no está medido.
+
+## Fase 15m
+
+- Sin verificar por la dueña en una ventana real: la duración del tutorial (objetivo 2 a 3 minutos), la claridad de las indicaciones y las frases del muñeco. El prólogo en vídeo hay que saltarlo para ver el nivel (no se tocó).
+- El texto de aviso (arriba, centrado) puede solaparse un poco con el indicador de vida cuando la frase es larga.
+- La pulsación larga de confirmar para saltar usa la misma acción que las tarjetas: mantenerla con una tarjeta abierta cuenta igual.
+- La fuzz-test usa señales simuladas del jugador (no teclas reales) salvo la muerte, las caídas y la pausa.
+- Pruebas antiguas tocadas a propósito y que NO se ejecutaron: `combat_phase13c_smoke_test` y `wave_phase12c_smoke_test` (solo su parte del tutorial). Hay pruebas que no se tocaron (`flow_*`, `bot_phase13_soak_test`, `phase16*`) y que cargan el tutorial.
+
+## Fase 15n
+
+- Sin verificar por la dueña en una ventana real: la longitud de los diálogos, la sensación de los fragmentos azules, el volumen de los graznidos, el audio del prólogo y el retrato del abuelo en el cielo. El audio del prólogo reutiliza archivos existentes (sin un cierre propio de música).
+- El enlace de sonidos de impacto del director no existe en las ejecuciones sin ventana: la prueba de graznidos lo conecta a mano, igual que lo haría el juego.
+- El monólogo largo del pato y las variantes por perfil de los guardianes ya no se dicen (quedan los campos en el recurso).
+- `phase15b_smoke_test` falla en 3 comprobaciones de los huecos del nivel 3 (anteriores a esta fase). Pruebas tocadas a propósito y NO ejecutadas: `phase14e`, `phase15f`, `phase15i`.
+
+## Fase 15o
+
+- Sin verificar por la dueña en una ventana real: el aspecto de la absorción roja (cantidad y grosor de los rayos, el emblema abajo, el brillo de los ojos), la calidad de los dibujos de la corrupción (las venas de la etapa 1 son muy tenues a propósito; el cuerpo se ve poco con la espada delante), el nivel 3 sin columnas y el jefe 3 sin armadura (la fase 1 es bastante más corta: puede hacer falta subir su vida).
+- Los finales siguen sin vista frontal: todas las poses son de perfil (el rig solo se dibuja así). La pose «reach» sigue pasando el ala por delante de la cara.
+- El fragmento de la absorción (`GemDrawer`) conserva su brillo azul propio sobre el fondo rojo.
+- Pruebas tocadas a propósito y no ejecutadas: `phase15f` (sustituidas sus pruebas de la armadura por una de «sin armadura»); `phase15i` (cambia `_weapon` / `_arm_angle` por `figure`).
+
+## Fase 15p
+
+- Tras caer un jefe el jugador queda bloqueado e invulnerable mientras suenan sus últimas palabras y no avanzan solas: hay que pulsar la confirmación (o mantenerla) para continuar. Es intencionado (Fase 15n); si en ventana resulta incómodo se puede añadir un tiempo máximo.
+- La fase 1 del jefe 3 dura ahora unos 24 s ideales: sin verificar en ventana.
+- Pruebas ejecutadas más de una vez por errores de las propias pruebas durante esta fase: `phase15j` (3 veces) y `phase15f` (2).
+
+## Fase 15q
+
+- La prueba `phase15h2` mide ahora con 480 pasos de física por segundo a factor 8; dura unos 255 s y su presupuesto es de 290 s: en un equipo más lento puede agotarlo (lo dice con un fallo explícito, no con ceros).
+- La telegrafía del ciclo de invocación del jefe 3 ya no se prueba en `phase14e` (necesita el escenario del nivel); la cubren `phase15d` y `phase15j`.
+- Pendiente de ventana real: nada de esta fase cambia el aspecto ni el equilibrio.
+- La prueba de resistencia de bots (`bot_phase13_soak_test`) no terminó dentro de 10 minutos en la verificación de la Fase 15q (75 comprobaciones correctas, ningún fallo y ninguna línea de «flushing queries»); su duración completa queda por confirmar en la ejecución de la suite.
+
+## Fase 15r
+
+- **Sin verificar en una ventana real por la dueña:** el aspecto del abuelo en el cielo (su figura es de perfil y encorvada: la cara se lee, pero es pequeña y su moño oscuro es poco legible sobre cielos claros), las tres siluetas (la del pato tumbado se lee como una forma baja; el moño y el ala dejan un contorno irregular) y el aspecto del alma de cada guardián (sobre fondos claros del nivel 1 el azul contrasta poco).
+- El alma del Ojo de la Tormenta es su figura de pato poseído tal como la dibuja el rig, teñida de azul; no hay un diseño de espíritu aparte.
+- El abuelo del cielo solo tiene las poses de su figura (quieto y hablando); la pena es la cabeza inclinada y el brillo tenue.
+- Pruebas que mencionan el retrato antiguo y deben correr completas en la suite: `phase15i`, `phase15n`, `phase16c`.
