@@ -54,3 +54,7 @@ Una sola vez, en `LevelBase._apply_adaptive`, al cargar el nivel; nunca durante 
 - **`next_level = 4`** es el final: la petición lleva `allowed_pattern_ids` vacío y solo importa `epilogue_variant`. Es compatible con las peticiones anteriores (1 a 3). Se envía al decidir el fragmento del nivel 3 (el mismo presupuesto de 3 s y el mismo respaldo local).
 - **`grandfather_line`** (cadena o `null`, opcional en la respuesta): UNA línea en la voz del abuelo para el tema de la respuesta. El servicio la valida (8 a 18 palabras, 110 caracteres, sin cifras, enlaces, marcas, saltos de línea ni emojis, sin reproche ni mecánicas); si no cumple, `null`. En `next_level = 4`, en modo mock y en fallback siempre es `null`. El juego la valida otra vez; si falla o falta, usa el banco local. La petición sigue sin llevar texto libre del jugador.
 - La línea se usa solo si el plan de ese nivel es el remoto; no se guarda ni se registra su contenido.
+
+## Epílogos (Fase 15h)
+
+Hay 6 epílogos (2 finales x 3 variantes). La petición del final sigue siendo `next_level = 4` y `epilogue_variant` (0 a 2) solo elige el texto de la tarjeta; el final lo decide la mayoría de las decisiones y nunca la variante.
