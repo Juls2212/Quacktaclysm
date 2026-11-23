@@ -22,9 +22,9 @@ const AGGRESSION: Dictionary = {"compassionate": 0.9, "neutral": 1.0, "corrupt":
 const EXTRAS_IN_CORRUPT: Dictionary = {2: 2, 3: 3}
 const BASELINE_ENEMIES: Dictionary = {1: 6, 2: 8, 3: 9}
 const RUNS: Array[Dictionary] = [
-	{"name": "(a) always released", "choices": ["released", "released", "released"], "tiers": [0, 0, 0], "after_second": "compassionate", "final": "compassionate", "ending": "ending_full"},
-	{"name": "(b) always kept", "choices": ["kept", "kept", "kept"], "tiers": [0, 1, 2], "after_second": "corrupt", "final": "corrupt", "ending": "ending_corrupt"},
-	{"name": "(c) released, kept, released", "choices": ["released", "kept", "released"], "tiers": [0, 0, 1], "after_second": "neutral", "final": "compassionate", "ending": "ending_scar"},
+	{"name": "(a) always released", "choices": ["released", "released", "released"], "tiers": [0, 0, 0], "after_second": "compassionate", "final": "compassionate", "ending": "ending_released"},
+	{"name": "(b) always kept", "choices": ["kept", "kept", "kept"], "tiers": [0, 1, 2], "after_second": "corrupt", "final": "corrupt", "ending": "ending_kept"},
+	{"name": "(c) released, kept, released", "choices": ["released", "kept", "released"], "tiers": [0, 0, 1], "after_second": "neutral", "final": "compassionate", "ending": "ending_released"},
 ]
 
 var failures: int = 0
@@ -71,6 +71,15 @@ func _wait_for(condition: Callable) -> bool:
 func _scene_is(path: String) -> bool:
 	var scene: Node = get_tree().current_scene
 	return scene != null and scene.scene_file_path == path and not SceneManager.is_transitioning()
+
+
+## Phase 15q: since Phase 15n the guardian's last words come before the fragment; nobody presses Enter in this test, so they are skipped. Always true.
+func _skip_last_words() -> bool:
+	var scene: Node = get_tree().current_scene if get_tree().current_scene != null else self
+	for node in scene.find_children("*", "BossDialogue", true, false):
+		if (node as BossDialogue).is_speaking():
+			(node as BossDialogue).skip()
+	return true
 
 
 func _find_fragment() -> SoulFragment:
@@ -163,7 +172,7 @@ func _play(run: Dictionary) -> void:
 		level.refine_wait_timeout = 1.0
 		level.boss.hurtbox.receive_hit(DamageInfo.create(9999, Vector2.ZERO, level.player, CombatLayers.Team.PLAYER))
 		_check("%s: boss killed with a lethal DamageInfo" % step, level.boss.state == BossBase.State.DEAD)
-		var spawned: bool = await _wait_for(func() -> bool: return _find_fragment() != null)
+		var spawned: bool = await _wait_for(func() -> bool: return _skip_last_words() and _find_fragment() != null)
 		_check("%s: fragment spawned" % step, spawned)
 		if not spawned:
 			return
