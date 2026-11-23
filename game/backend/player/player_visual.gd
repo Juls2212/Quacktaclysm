@@ -25,6 +25,7 @@ var _ragdoll: DuckRagdoll
 var _step_progress: float = 0.0
 ## Seconds since the last extra jump, or -1 (the ring under the feet lasts DOUBLE_JUMP_RING seconds).
 var _double_jump_time: float = -1.0
+var _corruption_clock: float = 0.0
 const DOUBLE_JUMP_RING: float = 0.4
 
 
@@ -53,6 +54,7 @@ func _process(delta: float) -> void:
 	# revive() brings the player back without `respawned`; drop the ragdoll either way.
 	if _ragdoll != null and _player != null and not _player.is_dead:
 		_on_respawned()
+	_refresh_corruption(delta)
 	_update_rig()
 	_update_footsteps(delta)
 	if not _blinking:
@@ -61,6 +63,18 @@ func _process(delta: float) -> void:
 	if _blink_timer <= 0.0:
 		_blink_timer = _player.stats.hurt_blink_interval
 		modulate.a = 1.0 if is_equal_approx(modulate.a, blink_alpha) else blink_alpha
+
+
+## The corruption stage of the duck is part of the rig itself (Phase 15o): the fragments kept (already in the save: no new key) and the
+## «Efectos de corrupcion» option (static and thin when off), read again about once a second.
+func _refresh_corruption(delta: float) -> void:
+	_corruption_clock -= delta
+	if rig == null or (_corruption_clock > 0.0 and rig.corruption_stage == clampi(GameState.souls_kept, 0, 3)):
+		return
+	_corruption_clock = 1.0
+	rig.corruption_stage = clampi(GameState.souls_kept, 0, 3)
+	rig.corruption_growth = 1.0
+	rig.corruption_reduced = not GameSettings.is_corruption_effects_enabled()
 
 
 ## Footsteps are paced by the distance walked on the floor, so they match the run cycle.
