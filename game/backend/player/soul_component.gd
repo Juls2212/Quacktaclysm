@@ -86,9 +86,17 @@ func deny(reason: StringName) -> void:
 	heal_denied.emit(reason)
 
 
-func _on_sword_hit(_hurtbox: Hurtbox, _info: DamageInfo) -> void:
-	add_soul(config.gain_for_sword(_player.current_sword_kind))
+func _on_sword_hit(hurtbox: Hurtbox, _info: DamageInfo) -> void:
+	add_soul(_override_for(hurtbox, config.gain_for_sword(_player.current_sword_kind)))
 
 
-func _on_wave_hit(_hurtbox: Hurtbox, _info: DamageInfo) -> void:
-	add_soul(config.gain_wave)
+func _on_wave_hit(hurtbox: Hurtbox, _info: DamageInfo) -> void:
+	add_soul(_override_for(hurtbox, config.gain_wave))
+
+
+## What a hit is worth: an enemy with `soul_gain_override()` (a duckling) fixes the value itself, so a summoned crowd cannot fill the meter.
+func _override_for(hurtbox: Hurtbox, normal: int) -> int:
+	var owner_node: Node = hurtbox.get_parent() if hurtbox != null else null
+	if owner_node != null and owner_node.has_method(&"soul_gain_override"):
+		return int(owner_node.call(&"soul_gain_override"))
+	return normal
