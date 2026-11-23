@@ -15,7 +15,7 @@ extends Resource
 ## Phase 2 starts when health <= max_health * this ratio.
 @export_range(0.0, 1.0, 0.01) var phase_2_health_ratio: float = 0.5
 ## Health ratios (descending) at which phase 2, 3... begin (Phase 15e-1). Empty (bosses 1 and 2) = the single threshold
-## `phase_2_health_ratio`. Boss 3 uses [0.667, 0.333].
+## `phase_2_health_ratio`. Boss 3 uses [0.451, 0.2255] of its 102 HP (Phase 15p).
 @export var phase_thresholds: PackedFloat32Array = PackedFloat32Array()
 ## The boss is invulnerable and idle while changing phase.
 @export_range(0.0, 10.0, 0.1, "suffix:s") var phase_transition_time: float = 1.5
