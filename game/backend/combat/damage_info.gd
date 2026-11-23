@@ -7,7 +7,7 @@ var knockback: Vector2 = Vector2.ZERO
 var source: Node = null
 var team: CombatLayers.Team = CombatLayers.Team.ENEMY
 ## What attacked (Phase 15e-1): &"light", &"heavy", &"dash_slash" or &"wave" for the player's attacks, empty otherwise.
-## A guard (BossGuard) reads it to block or to break.
+## A guard (BossShield) reads it to block or to break.
 var attack_kind: StringName = &""
 
 
