@@ -56,6 +56,8 @@ var _scene_age: float = 0.0
 var _rng := RandomNumberGenerator.new()
 ## Duck instance id -> time (s) its next quack is allowed.
 var _quack_ready: Dictionary = {}
+## Times of the latest hit cries (the global rate limit looks at the last second).
+var _cry_times: Array[float] = []
 ## Music profile state: current pitch / cutoff, our filter on the Music bus, who set it, the fade.
 var _mix_pitch: float = 1.0
 var _mix_cutoff: float = ProfileLook.FILTER_OPEN_HZ
@@ -142,7 +144,7 @@ func play_sfx(file: String, pitch_jitter: float = 0.06, volume_db: float = 0.0, 
 ## Plays one event of the audio table (default_audio_events.tres). Returns false, and plays nothing,
 ## when the event is unknown, still in its cooldown, already sounding `max_voices` times, or when its
 ## `source` is gone or dead.
-func play_event(event_id: StringName, source: Variant = null, volume_offset_db: float = 0.0) -> bool:
+func play_event(event_id: StringName, source: Variant = null, volume_offset_db: float = 0.0, pitch_scale: float = 1.0) -> bool:
 	var event: AudioEvent = _audio_events().get_event(event_id)
 	if event == null:
 		push_warning("AudioDirector: unknown audio event '%s'" % event_id)
@@ -165,7 +167,7 @@ func play_event(event_id: StringName, source: Variant = null, volume_offset_db: 
 	var file: String = event.pick_file(_rng)
 	if file.is_empty():
 		return false
-	var pitch: float = _rng.randf_range(event.pitch_min, maxf(event.pitch_min, event.pitch_max))
+	var pitch: float = _rng.randf_range(event.pitch_min, maxf(event.pitch_min, event.pitch_max)) * pitch_scale
 	var stream: AudioStream = _load(SFX_DIR + file)
 	var length: float = stream.get_length() / pitch if stream != null and stream.get_length() > 0.0 else EVENT_DEFAULT_LENGTH
 	active.append(now + length)
@@ -547,10 +549,8 @@ func _on_hit_received(_info: DamageInfo, applied: bool, hurtbox: Hurtbox) -> voi
 	else:
 		play_sfx("hit_%d.ogg" % _rng.randi_range(1, 2), 0.1)
 		play_sfx(_clash(), 0.12, -6.0)
-		if victim is BossBase:
-			_quack("quack_boss.wav", victim, 0.9, 0.08, -2.0, 1.15)
-		else:
-			_quack("quack_hurt.wav", victim, 0.3, 0.1, -3.0, 0.8)
+		if victim != null and (victim is BossBase or victim is EnemyBase):
+			_hit_cry(victim)
 
 
 func _on_enemy_died(enemy: EnemyBase) -> void:
@@ -640,6 +640,35 @@ func _clash() -> String:
 
 ## Plays a duck voice at most once every `cooldown` seconds per duck (so a crowd does not
 ## turn into noise).
+## The cry of a duck enemy that was hit: a random file from the table, a random pitch, a per-target cooldown and a global cap per second.
+func _hit_cry(victim: Node) -> bool:
+	var table: AudioEvents = _audio_events()
+	var now: float = Time.get_ticks_msec() / 1000.0
+	var id: int = victim.get_instance_id()
+	if now < float(_quack_ready.get(id, 0.0)):
+		return false
+	while not _cry_times.is_empty() and now - _cry_times[0] > 1.0:
+		_cry_times.pop_front()
+	if _cry_times.size() >= table.hit_cry_global_per_second:
+		return false
+	var is_boss: bool = victim is BossBase
+	var files: PackedStringArray = table.boss_cry_files if is_boss else table.hit_cry_files
+	if files.is_empty():
+		return false
+	var pitch: float = _rng.randf_range(table.hit_cry_pitch_min, table.hit_cry_pitch_max)
+	var volume: float = table.boss_cry_volume_db if is_boss else table.hit_cry_volume_db
+	if is_boss:
+		pitch *= table.boss_pitch_factor
+	elif victim is Duckling:
+		pitch *= table.duckling_pitch_factor
+		volume -= 3.0
+	_quack_ready[id] = now + table.hit_cry_target_cooldown
+	_cry_times.append(now)
+	_count(events_played, &"hit_cry")
+	play_sfx("ducks/" + files[_rng.randi_range(0, files.size() - 1)], 0.0, volume, pitch)
+	return true
+
+
 func _quack(file: String, duck: Object, cooldown: float, jitter: float, volume_db: float,
 		pitch: float = 1.0) -> void:
 	var id: int = duck.get_instance_id()
