@@ -1,19 +1,23 @@
 class_name ExorcismCutscene
 extends CanvasLayer
-## What keeping a soul fragment looks like: a full-screen exorcism (~6 s) and then the card of the
-## power it gave. The hero (DuckRig) stands in the dark before the blue gem; it cracks and turns
-## red, a red exorcism circle lights under him, he levitates and shakes while red soul threads
-## spiral into his chest, the gem bursts inside him in a red-white flash, and he lands with a
-## smoking red aura and a red eye. Then the card: the boss whose soul was devoured, the power,
-## what it changes, a line of dread and the corruption meter.
-## Holds the PauseLock while open (the game and the level's advance wait), consumes Esc so the pause
-## menu never opens: Esc skips to the card; Enter, Space, click or Esc on the card fade back to the
-## game. Visual only: reads GameState.souls_kept and the player's wave tier, writes nothing.
+## What keeping a soul fragment looks like (Phase 15o: the dark background with RED touches and the emblem at the bottom are back, with much more
+## animation; Phase 15l's purple vignette is gone). 3 to 4 s (AbsorptionConfig): near-black background, red embers rising from the edges, the
+## emblem of the guardian at the bottom igniting and pulsing, the fragment darkening and trembling, and thin jagged RED lightning bolts (redrawn a
+## few times a second, branching) that arc from the emblem, from the fragment and from the edges of the screen and ALL converge into the duck,
+## together with dark-red particles and tendrils streaming into his chest. The duck is the rig itself: it convulses, its eyes flare red (the rig's
+## own possession look) and its corruption stage visibly grows (veins clipped to its parts, a clouded iris, darker feathers: no overlays). A heavy
+## heartbeat plays (an existing sound, lower pitch) and the music ducks. Photosensitivity: bolts are thin lines; the only full-screen tint is the
+## heartbeat pulse (never above the config's cap, at most three a second). In reduced mode ("Efectos de corrupcion" off) it is a static red-tinted
+## fade with the emblem and a few static bolts: no flicker, no particles, no convulsion.
+## Then the card (levels 1 and 2 only): the boss whose soul was devoured, the power, what it changes, a line of dread and the corruption meter.
+## Holds the PauseLock while open (the game and the level's advance wait), consumes Esc so the pause menu never opens: Esc skips to the card (or
+## to the end for the last boss); Enter, Space, click or Esc on the card fade back to the game. Visual only: reads GameState.souls_kept and the
+## player's wave tier, writes nothing.
 
 const RED := Color("c2331f")
 const RING := Color("ff3a24")
 const CARD_BG := Color("0d0607")
-const CUT_LENGTH: float = 6.0
+const SCREEN := Vector2(1280.0, 720.0)
 
 ## fragment_id -> {"boss", "power", "quote"}.
 @export var powers: Dictionary = {
@@ -47,11 +51,35 @@ var _font: Font
 var _italic: FontVariation
 var _spaced: FontVariation
 var _tier: int = 1
+var config: AbsorptionConfig = null
+var reduced: bool = false
+## 0..1, how strong the last heartbeat still glows (it decays).
+var pulse: float = 0.0
+## How many heartbeat thumps played and the biggest full-screen tint drawn (the tests read them).
+var thumps: int = 0
+var peak_overlay_alpha: float = 0.0
+## The corruption stage the duck ends the sequence at (the fragments kept, including this one).
+var target_stage: int = 1
+## The lightning bolts of this frame: {pts: PackedVector2Array, width: float, source: StringName, branch: bool}. The tests read them.
+var bolts: Array[Dictionary] = []
+var bolt_redraws: int = 0
+var peak_bolts: int = 0
+var sources_seen: Dictionary = {}
+var particles: Array[Dictionary] = []
+var embers: Array[Dictionary] = []
+var _beat_clock: float = 99.0
+var _second_thump_left: float = -1.0
+var _bolt_clock: float = 99.0
+var _rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
 	layer = 90
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	if config == null:
+		config = AbsorptionConfig.get_default()
+	reduced = not GameSettings.is_corruption_effects_enabled()
+	_rng.seed = 4242
 	_font = ThemeDB.fallback_font
 	_italic = FontVariation.new()
 	_italic.variation_transform = Transform2D(Vector2(1, 0), Vector2(0.22, 1), Vector2.ZERO)
@@ -60,19 +88,30 @@ func _ready() -> void:
 	var caster: Variant = player.get(&"wave_caster") if player != null and is_instance_valid(player) else null
 	if caster is Object and (caster as Object).has_method(&"get_effective_tier"):
 		_tier = int((caster as Object).call(&"get_effective_tier"))
+	target_stage = clampi(int(GameState.souls_kept), 1, 3)
 	_stage = _full_control(_draw_stage)
 	_hero = DuckRig.new()
 	_hero.look = DuckRig.Look.HERO
 	_hero.scale = Vector2.ONE * 3.0
 	_hero.position = _hero_home()
+	# The corruption lives inside the rig: the previous stages are whole, the new one grows during the sequence.
+	_hero.corruption_stage = target_stage
+	_hero.corruption_growth = 0.0
+	_hero.corruption_reduced = reduced
 	add_child(_hero)
+	AudioDirector.set_music_duck(self, config.music_duck_db)
+	for i in config.edge_ember_count:
+		embers.append({"p": Vector2(_rng.randf() * SCREEN.x, SCREEN.y + _rng.randf() * 80.0), "v": 30.0 + _rng.randf() * 70.0, "r": 1.2 + _rng.randf() * 2.2, "k": _rng.randf()})
 	_overlay = _full_control(_draw_overlay)
 	_card = _full_control(_draw_card)
 	_holds_lock = true
 	PauseLock.request(self, get_tree())
+	if reduced:
+		_build_bolts(true)
 
 
 func _exit_tree() -> void:
+	AudioDirector.release_music_duck(self)
 	if _holds_lock:
 		_holds_lock = false
 		PauseLock.release(self, get_tree())
@@ -81,8 +120,17 @@ func _exit_tree() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
-	if _card_t < 0.0 and _t >= CUT_LENGTH:
+	if _card_t < 0.0:
+		_heartbeat(delta)
+		_update_bolts(delta)
+		_update_particles(delta)
+	if _card_t < 0.0 and _t >= config.length:
+		if config.no_card_fragments.has(fragment_id):
+			# The last boss: no card and no new power, the sequence goes straight on to the ending.
+			_finish()
+			return
 		_card_t = 0.0
+		bolts.clear()
 	if _card_t >= 0.0:
 		_card_t += delta
 	if _leaving >= 0.0:
@@ -94,6 +142,13 @@ func _process(delta: float) -> void:
 			_finish()
 			return
 	_animate_hero()
+	# The main bolts always end exactly in the chest, however much the duck shakes between two redraws of the bolts.
+	var chest_now: Vector2 = _chest()
+	for bolt in bolts:
+		if not bool(bolt["branch"]):
+			var pts: PackedVector2Array = bolt["pts"]
+			pts[pts.size() - 1] = chest_now
+			bolt["pts"] = pts
 	_stage.queue_redraw()
 	_overlay.queue_redraw()
 	_card.queue_redraw()
@@ -110,8 +165,8 @@ func _input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 	if _card_t < 0.0:
 		if esc:
-			# Skip straight to the card.
-			_t = CUT_LENGTH
+			# Skip straight to the card (or to the end when there is none).
+			_t = config.length
 		return
 	if _card_t > 0.3 and _leaving < 0.0:
 		_leaving = 0.0
@@ -142,174 +197,311 @@ func _finish() -> void:
 # =====================================================================================
 
 func _hero_home() -> Vector2:
-	return Vector2(560, 470)
+	return Vector2(440, 450)
+
+
+## The sequence's progress, 0..1.
+func _u() -> float:
+	return clampf(_t / config.length, 0.0, 1.0)
+
+
+## A heavy double thump (lub-dub), an existing sound at a low pitch; the screen tint follows it. Silent after the sequence.
+func _heartbeat(delta: float) -> void:
+	pulse = maxf(pulse - delta * 3.0, 0.0)
+	_beat_clock += delta
+	if _beat_clock >= 1.0 / config.heartbeat_hz:
+		_beat_clock = 0.0
+		_thump()
+		_second_thump_left = config.second_thump_delay
+	elif _second_thump_left >= 0.0:
+		_second_thump_left -= delta
+		if _second_thump_left < 0.0:
+			_thump()
+
+
+func _thump() -> void:
+	thumps += 1
+	pulse = 1.0
+	AudioDirector.play_event(config.heartbeat_event, null, config.heartbeat_db, config.heartbeat_pitch)
 
 
 func _animate_hero() -> void:
-	var t: float = _t
-	var lift: float = smoothstep(2.2, 2.6, t) * (1.0 - smoothstep(4.5, 5.0, t))
-	var shake: Vector2 = Vector2(sin(t * 80.0), cos(t * 67.0)) * 4.0 * smoothstep(2.4, 2.7, t) * (1.0 - smoothstep(3.9, 4.1, t))
-	var red: float = smoothstep(2.2, 3.0, t) * (1.0 - 0.7 * smoothstep(4.5, 5.5, t))
-	var pos: Vector2 = _hero_home() + Vector2(0, -36.0 * lift) + shake + _screen_shake()
+	var u: float = _u()
+	var convulse: float = 0.0 if reduced else smoothstep(0.25, 0.4, u) * (1.0 - smoothstep(0.85, 0.97, u))
+	var shake: Vector2 = Vector2(sin(_t * 71.0), cos(_t * 59.0)) * config.convulsion_px * convulse
+	var tint: float = smoothstep(0.1, 0.8, u) if not reduced else clampf(_t / config.reduced_fade, 0.0, 1.0)
+	var pos: Vector2 = _hero_home() + shake
 	var s: float = 3.0
 	if _card_t >= 0.0:
-		# Steps aside, smaller, keeping his aura, to make room for the card.
+		# Steps aside, smaller, keeping his tint, to make room for the card.
 		var k: float = smoothstep(0.0, 0.6, _card_t)
 		pos = pos.lerp(Vector2(200, 560), k)
 		s = lerpf(3.0, 2.0, k)
 	_hero.position = pos
 	_hero.scale = Vector2.ONE * s
-	_hero.rotation = -0.18 * lift
-	_hero.modulate = Color.WHITE.lerp(Color(0.6, 0.18, 0.16), red)
+	_hero.rotation = sin(_t * 23.0) * config.convulsion_tilt * convulse
+	_hero.modulate = Color.WHITE.lerp(config.hero_tint, tint)
+	# The corruption stage advances inside the rig; its eyes flare red with the heartbeat (the rig's own possession look).
+	_hero.corruption_growth = smoothstep(0.2, 0.85, u) if not reduced else (1.0 if u > 0.3 else 0.0)
+	_hero.possession = 0.0 if reduced else smoothstep(0.35, 0.7, u) * (0.55 + 0.45 * pulse) * (1.0 - smoothstep(0.92, 1.0, u))
+	_hero.possession_color = config.bolt_color
+	_hero.possession_hz = config.heartbeat_hz
 
 
-## Screen position of the hero's eye and of his chest.
-func _eye() -> Vector2:
-	return _hero.position + Vector2(11.5, -14.0).rotated(_hero.rotation) * _hero.scale.y
-
-
+## Screen position of the hero's chest (where everything converges).
 func _chest() -> Vector2:
-	return _hero.position + Vector2(2, -2).rotated(_hero.rotation) * _hero.scale.y
+	return _hero.position + Vector2(2, -18).rotated(_hero.rotation) * _hero.scale.y
 
 
-func _screen_shake() -> Vector2:
-	var k: float = smoothstep(4.0, 4.05, _t) * (1.0 - smoothstep(4.05, 4.5, _t))
-	return Vector2(sin(_t * 95.0), cos(_t * 83.0)) * 9.0 * k
+func _emblem_center() -> Vector2:
+	return Vector2(SCREEN.x * 0.5, SCREEN.y - config.emblem_lift)
+
+
+func _fragment_pos() -> Vector2:
+	var wobble: Vector2 = Vector2.ZERO if reduced else Vector2(sin(_t * 1.4) * 4.0, cos(_t * 1.1) * 6.0)
+	var u: float = _u()
+	var tremble: Vector2 = Vector2.ZERO if reduced else Vector2(sin(_t * 61.0), cos(_t * 53.0)) * 3.0 * smoothstep(0.1, 0.3, u)
+	var travel: float = smoothstep(0.75, 1.0, u)
+	return (Vector2(820, 330) + wobble).lerp(_chest(), travel) + tremble
 
 
 # =====================================================================================
-# Stage (behind the hero): darkness, the circle, the gem, the soul threads
+# Lightning and particles
+# =====================================================================================
+
+## Rebuilds the bolts a few times a second (never every frame: a bolt that jitters at 60 Hz would strobe).
+func _update_bolts(delta: float) -> void:
+	if reduced:
+		return
+	_bolt_clock += delta
+	if _bolt_clock < 1.0 / config.bolt_refresh_hz:
+		return
+	_bolt_clock = 0.0
+	_build_bolts(false)
+
+
+func _build_bolts(static_ones: bool) -> void:
+	bolts.clear()
+	var u: float = _u()
+	var rise: float = smoothstep(0.08, 0.35, u) if not static_ones else 1.0
+	var fade: float = 1.0 - smoothstep(0.93, 1.0, u)
+	var strength: float = rise * fade
+	if strength <= 0.01:
+		return
+	var chest: Vector2 = _chest()
+	var count_emblem: int = config.static_bolts if static_ones else int(round(float(config.bolts_from_emblem) * strength))
+	var count_fragment: int = 0 if static_ones else int(round(float(config.bolts_from_fragment) * strength))
+	var count_edges: int = 0 if static_ones else int(round(float(config.bolts_from_edges) * strength))
+	for i in count_emblem:
+		var from: Vector2 = _emblem_center() + Vector2(_rng.randf_range(-70.0, 70.0), -20.0)
+		_add_bolt(from, chest, &"emblem", static_ones)
+	for i in count_fragment:
+		_add_bolt(_fragment_pos(), chest, &"fragment", false)
+	for i in count_edges:
+		var side: int = _rng.randi() % 3
+		var from_edge: Vector2 = Vector2(0.0 if side == 0 else SCREEN.x, _rng.randf_range(70.0, 520.0)) if side < 2 else Vector2(_rng.randf_range(80.0, SCREEN.x - 80.0), 70.0)
+		_add_bolt(from_edge, chest, &"edge", false)
+	peak_bolts = maxi(peak_bolts, bolts.size())
+	bolt_redraws += 1
+
+
+func _add_bolt(from: Vector2, to: Vector2, source: StringName, static_bolt: bool) -> void:
+	sources_seen[source] = int(sources_seen.get(source, 0)) + 1
+	var pts: PackedVector2Array = _jagged(from, to, config.bolt_jaggedness)
+	bolts.append({"pts": pts, "width": config.bolt_width, "source": source, "branch": false})
+	if static_bolt:
+		return
+	# A short side branch from a random point of the bolt (it never reaches the duck on its own: the main bolt does).
+	if pts.size() > 4 and _rng.randf() < config.bolt_branch_chance:
+		var at: int = 1 + _rng.randi() % (pts.size() - 3)
+		var dir: Vector2 = (to - from).normalized().rotated(_rng.randf_range(-0.9, 0.9))
+		bolts.append({"pts": _jagged(pts[at], pts[at] + dir * _rng.randf_range(40.0, 110.0), config.bolt_jaggedness), "width": config.bolt_width * 0.55, "source": source, "branch": true})
+
+
+## A jagged line from `a` to `b` (midpoint displacement, the last point is exactly `b`).
+func _jagged(a: Vector2, b: Vector2, jag: float) -> PackedVector2Array:
+	var pts := PackedVector2Array([a, b])
+	var spread: float = a.distance_to(b) * jag
+	for _round in 4:
+		var next := PackedVector2Array([pts[0]])
+		for i in pts.size() - 1:
+			var mid: Vector2 = pts[i].lerp(pts[i + 1], 0.5)
+			var normal: Vector2 = (pts[i + 1] - pts[i]).orthogonal().normalized()
+			next.append(mid + normal * _rng.randf_range(-spread, spread))
+			next.append(pts[i + 1])
+		pts = next
+		spread *= 0.5
+	return pts
+
+
+func _update_particles(delta: float) -> void:
+	if reduced:
+		return
+	for ember in embers:
+		ember["p"] = (ember["p"] as Vector2) + Vector2(sin(_t * 0.8 + float(ember["k"]) * 6.0) * 14.0, -float(ember["v"])) * delta
+		if (ember["p"] as Vector2).y < -10.0:
+			ember["p"] = Vector2(_rng.randf() * SCREEN.x, SCREEN.y + 10.0)
+	var u: float = _u()
+	if u > 0.1 and u < 0.93 and particles.size() < config.particle_count and _rng.randf() < 0.9:
+		var angle: float = _rng.randf() * TAU
+		var from: Vector2 = _chest() + Vector2.from_angle(angle) * _rng.randf_range(260.0, 620.0)
+		particles.append({"p": from, "t": 0.0, "dur": _rng.randf_range(0.7, 1.3), "a": from, "r": _rng.randf_range(1.5, 3.4)})
+	for particle in particles:
+		particle["t"] = float(particle["t"]) + delta
+		var k: float = clampf(float(particle["t"]) / float(particle["dur"]), 0.0, 1.0)
+		particle["p"] = (particle["a"] as Vector2).lerp(_chest(), k * k)
+	particles = particles.filter(func(q: Dictionary) -> bool: return float(q["t"]) < float(q["dur"]))
+
+
+# =====================================================================================
+# Stage (behind the hero): darkness with red touches, the emblem, the fragment, the tendrils
 # =====================================================================================
 
 func _draw_stage() -> void:
 	var c: Control = _stage
-	var t: float = _t
-	var fade_in: float = clampf(t / 0.6, 0.0, 1.0)
-	c.draw_rect(Rect2(Vector2.ZERO, Vector2(1280, 720)), Color(0.03, 0.02, 0.025, fade_in))
-	var tint: float = smoothstep(2.2, 3.2, t) * (1.0 - 0.6 * smoothstep(4.5, 5.5, t))
-	if tint > 0.0:
-		for k in 5:
-			c.draw_circle(_hero_home(), 520.0 - float(k) * 90.0, Color(0.25, 0.02, 0.02, 0.06 * tint))
+	var u: float = _u()
+	var fade_in: float = clampf(_t / (0.6 if not reduced else config.reduced_fade), 0.0, 1.0)
+	c.draw_rect(Rect2(Vector2.ZERO, SCREEN), Color(config.background_color, fade_in))
+	var haze: float = smoothstep(0.1, 0.8, u)
+	# Red touches: a glow at the bottom (where the emblem is), a deep red haze round the duck and a red glow along both edges.
+	for k in 5:
+		c.draw_circle(_hero_home(), 520.0 - float(k) * 90.0, Color(config.haze_color, 0.09 * haze))
+	for k in 6:
+		var w: float = 90.0 - float(k) * 14.0
+		c.draw_rect(Rect2(0.0, 0.0, w, SCREEN.y), Color(config.edge_glow_color, 0.05 * haze))
+		c.draw_rect(Rect2(SCREEN.x - w, 0.0, w, SCREEN.y), Color(config.edge_glow_color, 0.05 * haze))
 	if _card_t >= 0.0:
-		c.draw_rect(Rect2(Vector2.ZERO, Vector2(1280, 720)), Color(0.0, 0.0, 0.0, 0.35 * smoothstep(0.0, 0.5, _card_t)))
+		c.draw_rect(Rect2(Vector2.ZERO, SCREEN), Color(0.0, 0.0, 0.0, 0.35 * smoothstep(0.0, 0.5, _card_t)))
 		return
-	# Exorcism circle under the hero.
-	var circle: float = smoothstep(1.1, 1.8, t) * (1.0 - 0.5 * smoothstep(4.6, 5.6, t))
-	if circle > 0.0:
-		_draw_circle_of(c, _hero_home() + Vector2(0, 80), circle)
-	# The gem: blue, then cracking red, then drained into him.
-	var gem_pos := Vector2(820, 330) + Vector2(sin(t * 1.4) * 4.0, cos(t * 1.1) * 6.0)
-	var red: float = smoothstep(1.2, 2.0, t)
-	var crack: float = smoothstep(1.0, 1.6, t)
-	var tremble: Vector2 = Vector2(sin(t * 60.0), cos(t * 55.0)) * 3.0 * smoothstep(1.0, 1.3, t)
-	var size: float = 44.0 * (1.0 - 0.75 * smoothstep(2.4, 4.0, t))
-	if t < 4.05:
-		var travel: float = smoothstep(3.7, 4.05, t)
-		GemDrawer.draw(c, gem_pos.lerp(_chest(), travel) + tremble, size, t, Color(0.6, 0.9, 1.0), red, crack)
-	# Soul threads and sparks spiralling from the gem into his chest.
-	var threads: float = smoothstep(2.2, 2.6, t) * (1.0 - smoothstep(3.9, 4.1, t))
-	if threads > 0.0:
-		for k in 4:
-			var pts := PackedVector2Array()
-			for i in 20:
-				var u: float = float(i) / 19.0
-				var p: Vector2 = gem_pos.lerp(_chest(), u)
-				var wave: float = sin(u * PI) * (60.0 + float(k) * 20.0) * sin(t * 3.0 + float(k) * 1.6)
-				pts.append(p + Vector2(0, -1).rotated(float(k) * 0.4) * wave)
-			c.draw_polyline(pts, Color(RING, 0.25 * threads), 6.0, true)
-			c.draw_polyline(pts, Color(1.0, 0.55, 0.4, 0.85 * threads), 2.0, true)
-		for k in 14:
-			var u: float = fposmod(t * 0.9 + float(k) / 14.0, 1.0)
-			var p: Vector2 = gem_pos.lerp(_chest(), u)
-			var spiral: Vector2 = Vector2.from_angle(u * TAU * 2.0 + float(k)) * 40.0 * (1.0 - u)
-			c.draw_circle(p + spiral, 2.6, Color(1.0, 0.7, 0.55, threads * (1.0 - u * 0.5)))
+	for ember in embers:
+		var alpha: float = 0.25 + 0.55 * float(ember["k"])
+		c.draw_circle(ember["p"], float(ember["r"]) * 2.2, Color(config.ember_color, 0.12 * alpha * haze))
+		c.draw_circle(ember["p"], float(ember["r"]), Color(config.ember_color.lightened(0.3), alpha * haze))
+	_draw_emblem(c, u)
+	# The fragment: it darkens to red-black and trembles, then is drawn into his chest.
+	var dark: float = smoothstep(0.0, 0.35, u)
+	var size: float = 44.0 * (1.0 - 0.7 * smoothstep(0.55, 1.0, u))
+	if u < 1.0:
+		var at: Vector2 = _fragment_pos()
+		GemDrawer.draw(c, at, size, _t, config.gem_color, 0.0, smoothstep(0.1, 0.6, u))
+		c.draw_colored_polygon(_ellipse(at, size * 0.36, size * 0.82), Color(config.gem_dark_color, config.gem_dark_color.a * dark))
+	# Tendrils of dark red light reach from the fragment and from the emblem to the duck (none in reduced mode).
+	var reach: float = smoothstep(0.15, 0.6, u) * (1.0 - smoothstep(0.9, 1.0, u))
+	if reach > 0.0 and not reduced:
+		for source_index in 2:
+			var origin: Vector2 = _fragment_pos() if source_index == 0 else _emblem_center()
+			for k in config.tendrils:
+				var pts := PackedVector2Array()
+				for i in 20:
+					var f: float = float(i) / 19.0
+					var p: Vector2 = origin.lerp(_chest(), f * reach)
+					var wave: float = sin(f * PI) * (40.0 + float(k) * 14.0) * sin(_t * 2.6 + float(k) * 1.7 + float(source_index))
+					pts.append(p + Vector2(0, -1).rotated(float(k) * 0.55) * wave)
+				c.draw_polyline(pts, Color(config.tendril_color, 0.28), 7.0, true)
+				c.draw_polyline(pts, Color(0.12, 0.01, 0.02, 0.9), 3.4, true)
+				c.draw_polyline(pts, Color(config.tendril_color.lightened(0.35), 0.8), 1.2, true)
 
 
-func _draw_circle_of(c: Control, center: Vector2, k: float) -> void:
-	var rx: float = 240.0
-	var ry: float = 56.0
-	var glow := Color(RING, 0.18 * k)
-	var line := Color(RING, 0.95 * k)
-	for ring in [[1.0, false], [0.82, true], [0.64, false]]:
-		var s: float = ring[0]
-		var pts := PackedVector2Array()
-		for i in 73:
-			var a: float = TAU * float(i) / 72.0
-			pts.append(center + Vector2(cos(a) * rx * s, sin(a) * ry * s))
-		c.draw_polyline(pts, glow, 9.0, true)
-		if bool(ring[1]):
-			for i in range(0, 72, 3):
-				c.draw_line(pts[i], pts[i + 1], line, 2.4, true)
-		else:
-			c.draw_polyline(pts, line, 2.4, true)
-	# Inverted five-pointed star.
+## The emblem at the bottom of the screen: a ritual circle with a star and rune ticks that ignites (red glow, rings that pulse and turn) and the
+## sign of the guardian whose soul is devoured in its middle (an axe, a drop, an eye), all drawn by code. Static in reduced mode.
+func _draw_emblem(c: Control, u: float) -> void:
+	var center: Vector2 = _emblem_center()
+	var ignite: float = smoothstep(0.0, 0.3, u) if not reduced else 1.0
+	var beat: float = 0.0 if reduced else pulse
+	var spin: float = 0.0 if reduced else _t * 0.5
+	var radius: float = config.emblem_radius
+	for k in 4:
+		c.draw_circle(center, radius * (1.5 - 0.25 * float(k)), Color(config.edge_glow_color, (0.05 + 0.04 * beat) * ignite))
+	var ring_color: Color = Color(config.bolt_color, (0.5 + 0.4 * beat) * ignite)
+	c.draw_arc(center, radius, 0.0, TAU, 64, Color(0.0, 0.0, 0.0, 0.8 * ignite), 7.0, true)
+	c.draw_arc(center, radius, 0.0, TAU, 64, ring_color, 3.0, true)
+	c.draw_arc(center, radius * 0.72, 0.0, TAU, 48, ring_color, 2.0, true)
+	for i in 24:
+		var a: float = spin + TAU * float(i) / 24.0
+		var long_tick: bool = i % 3 == 0
+		c.draw_line(center + Vector2.from_angle(a) * radius * (0.8 if long_tick else 0.9), center + Vector2.from_angle(a) * radius * 0.98, ring_color, 2.0 if long_tick else 1.2, true)
 	var star := PackedVector2Array()
-	for i in 5:
-		var a: float = PI * 0.5 + TAU * float(i * 2 % 5) / 5.0
-		star.append(center + Vector2(cos(a) * rx * 0.62, sin(a) * ry * 0.62))
+	for i in 8:
+		star.append(center + Vector2.from_angle(-spin * 1.4 + TAU * float(i) / 8.0 * 3.0) * radius * 0.7)
 	star.append(star[0])
-	c.draw_polyline(star, glow, 8.0, true)
-	c.draw_polyline(star, line, 2.2, true)
-	# Small runes turning between the rings.
-	for i in 14:
-		var a: float = _t * 0.5 + TAU * float(i) / 14.0
-		var p: Vector2 = center + Vector2(cos(a) * rx * 0.91, sin(a) * ry * 0.91)
-		match i % 3:
-			0:
-				c.draw_line(p + Vector2(0, -6), p + Vector2(0, 4), line, 1.6, true)
-				c.draw_line(p + Vector2(0, -6), p + Vector2(4, -2), line, 1.6, true)
-			1:
-				c.draw_line(p + Vector2(-3, 4), p + Vector2(0, -5), line, 1.6, true)
-				c.draw_line(p + Vector2(0, -5), p + Vector2(3, 4), line, 1.6, true)
-			_:
-				c.draw_arc(p, 3.0, 0.0, PI * 1.5, 8, line, 1.6, true)
+	c.draw_polyline(star, Color(config.bolt_color, 0.55 * ignite), 1.6, true)
+	_draw_sign(c, center, radius * 0.34, ring_color, ignite)
+
+
+func _draw_sign(c: Control, center: Vector2, size_px: float, color: Color, ignite: float) -> void:
+	var ink := Color(0.0, 0.0, 0.0, 0.85 * ignite)
+	match fragment_id:
+		"fragment_level_1":
+			# An axe: a haft and a curved blade.
+			c.draw_line(center + Vector2(-size_px * 0.5, size_px * 0.8), center + Vector2(size_px * 0.35, -size_px * 0.8), ink, 7.0, true)
+			c.draw_line(center + Vector2(-size_px * 0.5, size_px * 0.8), center + Vector2(size_px * 0.35, -size_px * 0.8), color, 3.0, true)
+			var blade := PackedVector2Array([center + Vector2(size_px * 0.2, -size_px * 0.85), center + Vector2(size_px * 0.95, -size_px * 0.5), center + Vector2(size_px * 0.8, size_px * 0.05), center + Vector2(size_px * 0.2, -size_px * 0.2)])
+			c.draw_colored_polygon(blade, Color(color, 0.7 * ignite))
+			c.draw_polyline(blade + PackedVector2Array([blade[0]]), color, 2.0, true)
+		"fragment_level_2":
+			# A drop over two waves.
+			var drop := PackedVector2Array([center + Vector2(0.0, -size_px)])
+			for i in 13:
+				var a: float = -PI / 3.0 + (PI * 4.0 / 3.0) * float(i) / 12.0
+				drop.append(center + Vector2(0.0, size_px * 0.25) + Vector2(cos(a), sin(a)) * size_px * 0.62)
+			c.draw_colored_polygon(drop, Color(color, 0.55 * ignite))
+			c.draw_polyline(drop + PackedVector2Array([drop[0]]), color, 2.0, true)
+			for w in 2:
+				var wave := PackedVector2Array()
+				for i in 9:
+					wave.append(center + Vector2(-size_px + size_px * 2.0 * float(i) / 8.0, size_px * (0.95 + 0.25 * float(w)) + sin(float(i) * 1.6 + float(w)) * 4.0))
+				c.draw_polyline(wave, color, 2.0, true)
+		_:
+			# An eye with a pupil and a bolt through it.
+			var lid_top := PackedVector2Array()
+			var lid_bottom := PackedVector2Array()
+			for i in 11:
+				var x: float = -size_px + size_px * 2.0 * float(i) / 10.0
+				var y: float = sin(float(i) / 10.0 * PI) * size_px * 0.62
+				lid_top.append(center + Vector2(x, -y))
+				lid_bottom.append(center + Vector2(x, y))
+			c.draw_polyline(lid_top, color, 2.4, true)
+			c.draw_polyline(lid_bottom, color, 2.4, true)
+			c.draw_circle(center, size_px * 0.34, ink)
+			c.draw_circle(center, size_px * 0.24, Color(color, 0.9 * ignite))
+			c.draw_line(center + Vector2(size_px * 0.15, -size_px * 0.9), center + Vector2(-size_px * 0.1, size_px * 0.05), ink, 4.0, true)
+			c.draw_line(center + Vector2(-size_px * 0.1, size_px * 0.05), center + Vector2(size_px * 0.2, size_px * 0.9), ink, 4.0, true)
 
 
 # =====================================================================================
-# Overlay (over the hero): the red eye, the burst, the aura, cinema bars, grain, vignette
+# Overlay (over the hero): the red lightning, the particles, the heartbeat tint, grain and cinema bars
 # =====================================================================================
 
 func _draw_overlay() -> void:
 	var c: Control = _overlay
-	var t: float = _t
-	var eye: float = smoothstep(2.4, 2.8, t)
-	if eye > 0.0:
-		var e: Vector2 = _eye()
-		var pulse: float = 0.8 + 0.2 * sin(t * 6.0)
-		c.draw_circle(e, 18.0 * pulse * _hero.scale.y / 3.0, Color(RING, 0.25 * eye))
-		c.draw_circle(e, 7.0 * _hero.scale.y / 3.0, Color(1.0, 0.25, 0.15, eye))
-		c.draw_circle(e, 2.5 * _hero.scale.y / 3.0, Color(1.0, 0.9, 0.8, eye))
-	# Smoking red aura once it is over.
-	var aura: float = smoothstep(4.4, 5.0, t)
-	if aura > 0.0:
-		var base: Vector2 = _hero.position
-		var s: float = _hero.scale.y / 3.0
-		c.draw_colored_polygon(_ellipse(base + Vector2(0, 78) * s, 130.0 * s, 24.0 * s), Color(RED, 0.25 * aura))
-		for k in 10:
-			var u: float = fposmod(t * 0.5 + float(k) / 10.0, 1.0)
-			var x: float = (float(k) - 4.5) * 22.0 * s
-			var p: Vector2 = base + Vector2(x + sin(u * 6.0 + float(k)) * 8.0, (70.0 - u * 170.0) * s)
-			c.draw_arc(p, 6.0 * s, PI * 0.2, PI * 1.2, 6, Color(1.0, 0.35, 0.25, aura * (1.0 - u) * 0.8), 2.0, true)
-	# The burst: red-white flash, radial rays.
-	var burst: float = smoothstep(3.95, 4.05, t) * (1.0 - smoothstep(4.1, 4.6, t))
-	if burst > 0.0:
-		var o: Vector2 = _chest()
-		c.draw_rect(Rect2(Vector2.ZERO, Vector2(1280, 720)), Color(0.85, 0.2, 0.12, 0.55 * burst))
-		for k in 6:
-			c.draw_circle(o, 60.0 + float(k) * 70.0, Color(1.0, 0.85, 0.8, 0.12 * burst))
-		for k in 12:
-			var dir := Vector2.from_angle(TAU * float(k) / 12.0 + 0.2)
-			c.draw_line(o + dir * 60.0, o + dir * 900.0, Color(1.0, 0.9, 0.85, 0.5 * burst), 3.0, true)
-	# Grain, vignette and cinema bars.
-	var seed_step: int = int(t * 24.0)
+	var u: float = _u()
+	if _card_t < 0.0:
+		for bolt in bolts:
+			var pts: PackedVector2Array = bolt["pts"]
+			var w: float = float(bolt["width"])
+			var a: float = 1.0 if not reduced else 0.7
+			c.draw_polyline(pts, Color(config.bolt_color, 0.16 * a), w * 4.0, true)
+			c.draw_polyline(pts, Color(config.bolt_color, 0.85 * a), w * 1.6, true)
+			c.draw_polyline(pts, Color(config.bolt_core_color, a), w * 0.7, true)
+		for particle in particles:
+			var life: float = float(particle["t"]) / float(particle["dur"])
+			c.draw_circle(particle["p"], float(particle["r"]) * 2.0, Color(config.ember_color, 0.14 * life))
+			c.draw_circle(particle["p"], float(particle["r"]) * (1.0 - 0.5 * life), Color(config.tendril_color.lightened(0.25), 0.4 + 0.5 * life))
+	# The heartbeat tint: the only full-screen flash, never above the config's cap (static and absent in reduced mode).
+	var tint: float = 0.0
+	if not reduced:
+		tint = minf(config.flare_cap * pulse * smoothstep(0.2, 0.6, u), config.flare_cap)
+	else:
+		tint = config.flare_cap * 0.5 * clampf(_t / config.reduced_fade, 0.0, 1.0) * (0.0 if _card_t >= 0.0 else 1.0)
+	if tint > 0.0:
+		c.draw_rect(Rect2(Vector2.ZERO, SCREEN), Color(config.bolt_color, tint))
+		peak_overlay_alpha = maxf(peak_overlay_alpha, tint)
+	# Grain and cinema bars.
+	var seed_step: int = int(_t * 24.0)
 	for i in 120:
 		var p := Vector2(_h(i * 3 + seed_step) * 1280.0, _h(i * 3 + seed_step + 1) * 720.0)
 		c.draw_rect(Rect2(p, Vector2(2, 2)), Color(1, 1, 1, 0.03))
-	var edge := Color(0, 0, 0, 0.7)
-	var clear := Color(0, 0, 0, 0)
-	c.draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(300, 0), Vector2(300, 720), Vector2(0, 720)]), PackedColorArray([edge, clear, clear, edge]))
-	c.draw_polygon(PackedVector2Array([Vector2(980, 0), Vector2(1280, 0), Vector2(1280, 720), Vector2(980, 720)]), PackedColorArray([clear, edge, edge, clear]))
-	var bar: float = 70.0 * clampf(t / 0.5, 0.0, 1.0)
+	var bar: float = 70.0 * clampf(_t / 0.5, 0.0, 1.0)
 	c.draw_rect(Rect2(0, 0, 1280, bar), Color.BLACK)
 	c.draw_rect(Rect2(0, 720.0 - bar, 1280, bar), Color.BLACK)
 
