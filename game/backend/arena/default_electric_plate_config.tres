@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ElectricPlateConfig" format=3]
+
+[ext_resource type="Script" path="res://backend/arena/electric_plate_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+warning_time = 1.2
+active_time = 2.0
+rest_time = 3.0
+damage = 1
+knockback = Vector2(140, -260)
+rehit_interval = 0.5
+band_height = 22.0
+max_particles = 14
