@@ -115,9 +115,13 @@ func _run_scenario(title: String, mode: String, code: int, body: String) -> void
 	level.level_completed.connect(func(number: int) -> void: completed.append(number))
 	level.boss.hurtbox.receive_hit(DamageInfo.create(999, Vector2.ZERO, level.player, CombatLayers.Team.PLAYER))
 	var waited: float = 0.0
-	while _find_fragment() == null and waited < 5.0:
+	while _find_fragment() == null and waited < 8.0:
 		await get_tree().process_frame
 		waited += get_process_delta_time()
+		# Phase 15q: since Phase 15n the guardian's last words come first (the fragment waits for them); no key is pressed here, so they are skipped.
+		for node in level.find_children("*", "BossDialogue", true, false):
+			if (node as BossDialogue).is_speaking():
+				(node as BossDialogue).skip()
 	_check("[%s] the boss fell and its fragment appeared" % title, _find_fragment() != null)
 	if _find_fragment() == null:
 		level.free()
