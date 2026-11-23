@@ -36,7 +36,7 @@ const SAVE_KEYS: Array[String] = ["save_version", "current_level", "checkpoint",
 const PROFILES: Array[String] = ["compassionate", "neutral", "corrupt"]
 const PROFILE_AGGRESSION: Dictionary = {"compassionate": 0.9, "neutral": 1.0, "corrupt": 1.15}
 # Phase 14d: the ending depends only on the souls released (3 / 2 / 0 in these three scenarios).
-const PROFILE_ENDING: Dictionary = {"compassionate": "ending_full", "neutral": "ending_scar", "corrupt": "ending_corrupt"}
+const PROFILE_ENDING: Dictionary = {"compassionate": "ending_released", "neutral": "ending_released", "corrupt": "ending_kept"}
 ## Designed enemy counts: level -> {melee, fast, ranged} of the BASELINE and the number of corrupted extras.
 const DESIGNED: Dictionary = {
 	1: {"melee": 3, "fast": 2, "ranged": 1, "extras": 0},
@@ -44,6 +44,10 @@ const DESIGNED: Dictionary = {
 	3: {"melee": 3, "fast": 3, "ranged": 3, "extras": 3},
 }
 const GROUND_TOP: float = 600.0
+
+## Phase 15q: level 3 gaps are 336 / 450 / 484 px; the chain (jump + double jump + dash) crosses up to 484 px.
+const LEVEL_THREE_CHAIN_FIRST_GAP: float = 330.0
+const LEVEL_THREE_CHAIN_REACH: float = 490.0
 
 var failures: int = 0
 var started_signals: Array[String] = []
@@ -165,6 +169,15 @@ func _free_fragments() -> void:
 	for child in get_children():
 		if child is SoulFragment:
 			child.free()
+
+
+## Phase 15q: since Phase 15n the guardian's last words come before the fragment; nobody presses Enter in this test, so they are skipped. Always true.
+func _skip_last_words() -> bool:
+	var scene: Node = get_tree().current_scene if get_tree().current_scene != null else self
+	for node in scene.find_children("*", "BossDialogue", true, false):
+		if (node as BossDialogue).is_speaking():
+			(node as BossDialogue).skip()
+	return true
 
 
 func _find_fragment() -> SoulFragment:
@@ -391,7 +404,7 @@ func _test_extra_bosses() -> void:
 	var three: BossBase = BOSS_THREE.instantiate() as BossBase
 	var signatures: Array[Dictionary] = [_pattern_signature(one), _pattern_signature(two), _pattern_signature(three)]
 	_check("boss 2: stats", two.stats.boss_id == &"boss_two" and two.stats.max_health == 50 and not two.stats.display_name.is_empty())
-	_check("boss 3: stats", three.stats.boss_id == &"boss_three" and three.stats.max_health == 70 and not three.stats.display_name.is_empty())
+	_check("boss 3: stats", three.stats.boss_id == &"boss_three" and three.stats.max_health == 102 and not three.stats.display_name.is_empty())
 	_check("bosses: more health than the previous one", one.stats.max_health < two.stats.max_health and two.stats.max_health < three.stats.max_health)
 	_check("bosses: different phase-2 configuration", two.stats.phase_2_health_ratio != one.stats.phase_2_health_ratio
 		and three.stats.phase_2_speed_multiplier != two.stats.phase_2_speed_multiplier and three.stats.phase_2_pattern_gap_multiplier != two.stats.phase_2_pattern_gap_multiplier)
@@ -402,16 +415,16 @@ func _test_extra_bosses() -> void:
 		and _swipe_width(two) > _swipe_width(one) and charge_two.weight > (two.get_node("Patterns/Swipe") as SwipePattern).weight)
 	var has_swipe: bool = false
 	var has_charge: bool = false
-	var beams: int = 0
-	var columns: int = 0
+	var cycles: int = 0
+	var volleys: int = 0
 	for child in three.get_node("Patterns").get_children():
 		has_swipe = has_swipe or child is SwipePattern
 		has_charge = has_charge or child is ChargePattern
-		beams += 1 if child is BeamSweepPattern else 0
-		columns += 1 if child is LightningColumnsPattern else 0
-	# Phase 15e-1: boss 3 was redesigned (the two volleys are gone): Kenzo's swipe and charge, the eye's beam and columns.
-	_check("boss 3: combines the swipe, the charge, the sweeping beam and the lightning columns", has_swipe and has_charge and beams >= 1 and columns >= 1)
-	_check("boss 3: three phases (two thresholds) and a floating eye", three.stats.get_phase_thresholds().size() == 2 and three.hover != null)
+		cycles += 1 if child is SummonerCyclePattern else 0
+		volleys += 1 if child is ProjectileVolleyPattern else 0
+	# Phase 15j: boss 3 is the possessed duck (swipe, charge, volley), the summoner cycle in phase 2, and the red eye in phase 3.
+	_check("boss 3: combines the swipe, the charge, the volley and the summoner cycle", has_swipe and has_charge and volleys >= 1 and cycles == 1)
+	_check("boss 3: three phases (two thresholds) and no floating eye any more", three.stats.get_phase_thresholds().size() == 2 and three.get_node_or_null("Hover") == null)
 	_check("boss 3: shorter gaps than boss 1 and boss 2", three.stats.pattern_gap_time < two.stats.pattern_gap_time and two.stats.pattern_gap_time < one.stats.pattern_gap_time)
 	one.free()
 	two.free()
@@ -602,7 +615,7 @@ func _test_completion_last_level() -> void:
 	var completed: Array[int] = []
 	level.level_completed.connect(func(number: int) -> void: completed.append(number))
 	_kill_boss(level)
-	var spawned: bool = await _wait_until(func() -> bool: return _find_fragment() != null, 120)
+	var spawned: bool = await _wait_until(func() -> bool: return _skip_last_words() and _find_fragment() != null, 120)
 	_check("level 3: boss defeat spawns the fragment", spawned)
 	level.player.global_position = _find_fragment().global_position
 	var opened: bool = await _wait_until(func() -> bool: return level.get_node("DecisionPanel").is_open(), 60)
@@ -632,7 +645,7 @@ func _test_completion_last_level() -> void:
 	level_two.decision_flow.refiner = fake_two
 	level_two.advance_delay = 0.2
 	_kill_boss(level_two)
-	await _wait_until(func() -> bool: return _find_fragment() != null, 120)
+	await _wait_until(func() -> bool: return _skip_last_words() and _find_fragment() != null, 120)
 	level_two.player.global_position = _find_fragment().global_position
 	await _wait_until(func() -> bool: return level_two.get_node("DecisionPanel").is_open(), 60)
 	level_two.get_node("DecisionPanel").release_button.pressed.emit()
@@ -654,6 +667,10 @@ func _test_completion_last_level() -> void:
 	GameState.record_decision("fragment_level_3", "boss_three", 3, GameState.CHOICE_RELEASED)
 	_kill_boss(level_rejected)
 	await _wait_until(func() -> bool: return level_rejected.is_completed, 120)
+	# Phase 15q: the guardian's last words (Phase 15n) hold the player until they are confirmed or skipped.
+	for i in 90:
+		await get_tree().physics_frame
+		_skip_last_words()
 	await _physics(5)
 	_check("level 3: rejected ending keeps control, marker rolled back", level_rejected.is_completed and not level_rejected.player.is_input_locked()
 		and not SceneManager.is_transitioning() and GameState.checkpoint == "level_3_start" and not GameState.is_game_completed()
@@ -784,7 +801,7 @@ func _test_ending_scene() -> void:
 	var summaries: Array = []
 	for story: Variant in (load(StoryTexts.DEFAULT_PATH) as StoryTexts).endings:
 		summaries.append((story as EndingStory).summary_line)
-	_check("ending: four distinct summaries", summaries.size() == 4 and summaries.size() == _unique_count(summaries))
+	_check("ending: two distinct summaries (Phase 15h)", summaries.size() == 2 and summaries.size() == _unique_count(summaries))
 	probe.free()
 	_clean_state()
 	var weird_config: AdaptiveConfig = (GameState.get_adaptive_config() as AdaptiveConfig).duplicate(true) as AdaptiveConfig
@@ -793,14 +810,14 @@ func _test_ending_scene() -> void:
 	var unknown: EndingController = ENDING_SCENE.instantiate() as EndingController
 	add_child(unknown)
 	await _physics(2)
-	_check("ending: deterministic, an unknown adaptive ending variant changes nothing (0 released = corrupt ending)",
-		unknown.shown_variant == "ending_corrupt" and not unknown.ending_label.text.is_empty())
+	_check("ending: deterministic, an unknown adaptive ending variant changes nothing (no decision = the released ending, Phase 15h)",
+		unknown.shown_variant == "ending_released" and not unknown.ending_label.text.is_empty())
 	unknown.free()
 	_clean_state()
 	var empty_state: EndingController = ENDING_SCENE.instantiate() as EndingController
 	add_child(empty_state)
 	await _physics(2)
-	_check("ending: an empty/default state works (0 released)", empty_state.shown_variant == "ending_corrupt"
+	_check("ending: an empty/default state works (no decision: released >= kept, the released ending)", empty_state.shown_variant == "ending_released"
 		and empty_state.released_label.text == empty_state.texts.summary_released_format % 0
 		and empty_state.kept_label.text == empty_state.texts.summary_kept_format % 0
 		and empty_state.released_names_label.text == empty_state.texts.summary_released_names_format % empty_state.texts.summary_none_text)
@@ -898,6 +915,10 @@ func _test_gap_crossings() -> void:
 	widths.sort()
 	for width in widths:
 		var plain: bool = width <= 0.85 * reach["jump"]
+		if width > LEVEL_THREE_CHAIN_FIRST_GAP:
+			# Phase 15q: the level 3 gaps (336 / 450 / 484 px, agreed in Phase 15h) need the double jump and the three-action chain; phase15h2 measures them
+			# with the real player. This sweep only knows jump and jump + dash.
+			continue
 		for use_dash in [false, true]:
 			_clean_state()
 			var world := Node2D.new()
@@ -1034,6 +1055,8 @@ func _test_reachability(level_number: int) -> void:
 		and String((arena_cp as Checkpoint).checkpoint_id) == "level_%d_arena" % level_number and checkpoints.size() >= 3 - (1 if level_number == 1 else 0))
 	# Reachability.
 	var dash_reach: float = reach["dash_max"]
+	if level_number == 3:
+		dash_reach = LEVEL_THREE_CHAIN_REACH / 0.9 # Phase 15q: level 3 is crossed with the double jump chain (phase15h2 measures it)
 	var with_dash: int = _min_dashes(surfaces, start_index, arena_index, true, dash_reach)
 	var jump_only: int = _min_dashes(surfaces, start_index, arena_index, false, dash_reach)
 	var boss_with_dash: int = _min_dashes(surfaces, start_index, boss_index, true, dash_reach)
@@ -1059,7 +1082,10 @@ func _test_reachability(level_number: int) -> void:
 		if width <= 0.0:
 			continue
 		var kind: String = "INVALID"
-		if width <= 0.85 * reach["jump"]:
+		if level_number == 3 and width > LEVEL_THREE_CHAIN_FIRST_GAP - 1.0 and width <= LEVEL_THREE_CHAIN_REACH:
+			kind = "double-jump chain (Phase 15h, measured by phase15h2)"
+			dash_gaps += 1
+		elif width <= 0.85 * reach["jump"]:
 			kind = "plain jump"
 			plain_gaps += 1
 		elif width >= 1.1 * reach["jump"] and width <= 0.9 * reach["dash"]:
