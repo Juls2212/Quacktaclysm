@@ -12,6 +12,8 @@ const LAYER_ENEMY_HURTBOX: int = 4
 const LAYER_PLAYER_HITBOX: int = 5
 const LAYER_ENEMY_HITBOX: int = 6
 const LAYER_ENEMY: int = 7
+## The perch where only a boss stands (Phase 15j): the player does not collide with it.
+const LAYER_BOSS_PERCH: int = 8
 
 
 ## Converts a 1-based layer number into its collision bit.
