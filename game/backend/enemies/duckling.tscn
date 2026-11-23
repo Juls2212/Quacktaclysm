@@ -1,0 +1,48 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="PackedScene" path="res://backend/enemies/enemy_base.tscn" id="1_base"]
+[ext_resource type="Script" path="res://backend/enemies/duckling.gd" id="2_script"]
+[ext_resource type="Resource" path="res://backend/enemies/stats/duckling_stats.tres" id="3_stats"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
+size = Vector2(18, 28)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_attack"]
+size = Vector2(26, 22)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_contact"]
+size = Vector2(14, 24)
+
+[node name="Duckling" instance=ExtResource("1_base")]
+script = ExtResource("2_script")
+stats = ExtResource("3_stats")
+
+[node name="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_body")
+
+[node name="CollisionShape2D" parent="Hurtbox"]
+shape = SubResource("RectangleShape2D_body")
+
+[node name="Visual" parent="."]
+modulate = Color(0.8, 0.5, 1, 1)
+look = 3
+tough_look = 3
+
+[node name="Rig" parent="Visual"]
+position = Vector2(0, 0.8)
+scale = Vector2(0.55, 0.55)
+
+[node name="CollisionShape2D" parent="AttackPivot/Hitbox"]
+position = Vector2(22, 0)
+shape = SubResource("RectangleShape2D_attack")
+
+[node name="LedgeCheck" parent="."]
+position = Vector2(14, 10)
+target_position = Vector2(0, 18)
+
+[node name="WallCheck" parent="."]
+position = Vector2(0, 4)
+target_position = Vector2(16, 0)
+
+[node name="CollisionShape2D" parent="ContactHitbox"]
+shape = SubResource("RectangleShape2D_contact")
