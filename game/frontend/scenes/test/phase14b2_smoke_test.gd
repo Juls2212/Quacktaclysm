@@ -427,10 +427,11 @@ func _test_tutorial_hints() -> void:
 	add_child(level)
 	await _frames(2)
 	var controller: TutorialController = level.get_node("TutorialController")
-	var wave_step: String = String(controller.steps[5]["text"])
-	var heavy_step: String = String(controller.steps[6]["text"])
-	_check("tutorial: the wave and heavy prompts no longer hardcode the mouse button", not wave_step.to_lower().contains("clic") and not heavy_step.to_lower().contains("clic")
-		and wave_step.contains("{wave}") and heavy_step.contains("{heavy_attack}"))
+	var heavy_step: String = ""
+	for step in controller.steps:
+		if String(step["id"]) == "heavy":
+			heavy_step = String(step["text"])
+	_check("tutorial: the heavy prompt does not hardcode the mouse button (Phase 15m: the wave is no longer a tutorial step)", not heavy_step.to_lower().contains("clic") and heavy_step.contains("{heavy_attack}"))
 	var before: String = controller.build_text("{jump}")
 	_check("tutorial: default hint shows both bindings by name", before.replace(ControlsConfig.HINT_SPACE, " ") == "Barra espaciadora o Flecha arriba", before)
 	_check("tutorial: mouse bindings read as names, not keys", controller.build_text("{attack}").replace(ControlsConfig.HINT_SPACE, " ") == "J o Clic izquierdo"
