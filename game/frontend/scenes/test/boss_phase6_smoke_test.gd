@@ -329,7 +329,7 @@ func _test_swipe() -> void:
 
 func _test_charge() -> void:
 	await _reset_player()
-	var spec: Dictionary = {"telegraph_time": 0.3, "charge_speed": 400.0, "charge_duration": 0.5, "recovery_time": 0.3}
+	var spec: Dictionary = {"telegraph_time": 0.3, "charge_speed": 400.0, "charge_duration": 0.5, "recovery_time": 0.3, "min_useful_lane": 0.0}
 	var boss := _make_boss([_charge(&"charge", spec)], {}, PLAYER_START.x + 150.0)
 	var hitbox: Hitbox = boss.get_node("AttackPivot/Hitbox")
 	var start_x: float = boss.global_position.x
