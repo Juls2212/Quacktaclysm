@@ -4,15 +4,14 @@
 
 [resource]
 script = ExtResource("1_stats")
-; Final guardian (name shown by BossNames), redesigned in Phase 15e-1 in three phases: the floating eye (1), Kenzo on the
-; floor behind a guard (2) and the eye again with the storm at full strength (3). 70 HP (was 80), lines at 66.7% and 33.3%.
-; Telegraphs of the storm patterns never shrink (scale_telegraph_with_speed is off for them), so the speed multipliers are
-; 1.0 and the harder phases come from shorter gaps and cooldowns instead.
+; Final guardian (name shown by BossNames), redesigned in Phase 15j: the possessed duck alone behind its shell (1), the summoner stage with
+; platforms, ducklings, the collapsing floor and the vulnerable window (2) and the red eye with the duck without its shell (3). 102 HP (Phase 15p: phase 1 = 56 HP, phases 2 and 3 = 23 HP each), lines at
+; 45.1% and 22.55%. Telegraphs never shrink (the speed multipliers are 1.0; the harder phases come from shorter gaps and cooldowns instead).
 boss_id = &"boss_three"
 display_name = "El Ojo de la Tormenta"
-max_health = 70
-phase_2_health_ratio = 0.667
-phase_thresholds = PackedFloat32Array(0.667, 0.333)
+max_health = 102
+phase_2_health_ratio = 0.451
+phase_thresholds = PackedFloat32Array(0.451, 0.2255)
 phase_transition_time = 1.2
 phase_2_speed_multiplier = 1.0
 phase_2_pattern_gap_multiplier = 0.7
