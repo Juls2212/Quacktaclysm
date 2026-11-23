@@ -1,9 +1,8 @@
 class_name EndingController
 extends Control
-## The ending scene. The ending is chosen ONLY by the number of souls released (EndingSelector:
-## 3 = full compassion, 2 = compassion with a scar, 1 = power with doubt, 0 = the duck becomes the
-## new corruption). It plays a short subtitle sequence (StoryReel over the prologue's shot system,
-## hold confirm to skip) and then shows the summary card: the counters and the NAMES of the souls
+## The ending scene. The ending is chosen ONLY by the majority of the three decisions (EndingSelector:
+## more souls kept than released = «Estrellas que suben», otherwise «El acantilado»). It plays the ending's cinematic (EndingCinematic: a
+## beat list over a scene drawn by code, hold confirm to skip) and then shows the summary card: the counters and the NAMES of the souls
 ## released and kept, with a button back to the main menu. It never writes GameState (the "ending"
 ## checkpoint marker stays, so "Continuar" reopens this scene) and needs no network. All texts live
 ## in StoryTexts. Automated (headless) runs go straight to the card unless `skip_reel_when_headless`
@@ -14,10 +13,8 @@ signal card_shown
 
 @export var texts: StoryTexts
 @export var skip_reel_when_headless: bool = true
-## Reading-time multiplier of the sequence (see StoryReel.hold_scale).
-@export var reel_hold_scale: float = 0.8
 
-## The ending id shown (ending_full / ending_scar / ending_doubt / ending_corrupt).
+## The ending id shown (ending_kept / ending_released).
 var shown_variant: String = ""
 ## The summary sentence of that ending.
 var shown_text: String = ""
@@ -25,9 +22,11 @@ var shown_text: String = ""
 var shown_epilogue: String = ""
 var shown_epilogue_variant: int = 0
 var epilogue_label: Label = null
+## The line of support of the final card (only the ending «El acantilado» has one).
+var support_label: Label = null
 var released_names: Array[String] = []
 var kept_names: Array[String] = []
-var reel: StoryReel = null
+var reel: EndingCinematic = null
 var card_visible: bool = false
 
 @onready var title_label: Label = $Center/Box/TitleLabel
@@ -43,7 +42,7 @@ var card_visible: bool = false
 func _ready() -> void:
 	if texts == null:
 		texts = load(StoryTexts.DEFAULT_PATH) as StoryTexts
-	shown_variant = EndingSelector.ending_id_for(GameState.souls_released)
+	shown_variant = EndingSelector.ending_id_for(GameState.souls_released, GameState.souls_kept)
 	var story: EndingStory = texts.get_ending(shown_variant)
 	released_names = EndingSelector.soul_names(GameState.decisions, texts, GameState.CHOICE_RELEASED)
 	kept_names = EndingSelector.soul_names(GameState.decisions, texts, GameState.CHOICE_KEPT)
@@ -58,9 +57,8 @@ func _ready() -> void:
 	shown_epilogue_variant = GameState.director.epilogue_variant()
 	shown_epilogue = texts.epilogue_text(shown_variant, shown_epilogue_variant)
 	_build_epilogue_label()
+	_build_support_label(story)
 	back_button.pressed.connect(_on_back_pressed)
-	if story != null and not story.music.is_empty():
-		AudioDirector.play_music(story.music)
 	if skip_reel_when_headless and DisplayServer.get_name() == "headless":
 		_show_card()
 	else:
@@ -76,17 +74,28 @@ func get_reel_lines() -> Array[String]:
 
 
 func _play_reel(story: EndingStory) -> void:
-	reel = StoryReel.new()
-	reel.shot = PrologueShots.Shot.EPILOGUE
-	reel.epilogue_style = story.style if story != null else "full"
+	reel = EndingCinematic.new()
+	reel.style = story.style if story != null else "kept"
+	reel.beats = story.beats if story != null else null
 	reel.title_text = title_label.text
 	reel.lines = get_reel_lines()
-	reel.skip_mode = StoryReel.SkipMode.HOLD
 	reel.skip_hint_text = texts.hold_skip_hint
 	reel.hold_seconds = 1.2
-	reel.hold_scale = reel_hold_scale
+	# The corruption the duck shows scales with the fragments kept.
+	reel.corruption_scale = clampf(float(GameState.souls_kept) / 3.0, 0.34, 1.0)
+	# Each ending has its own music, processed by code (the slots of the audio table).
+	var audio: AudioEvents = AudioEvents.get_default()
+	reel.music_slot = audio.ending_kept_music if shown_variant == StoryTexts.ENDING_KEPT else audio.ending_released_music
+	reel.line_changed.connect(_on_reel_line)
 	reel.finished.connect(_on_reel_finished)
 	add_child(reel)
+
+
+## The grandfather's lines are marked with a soft sound (an existing event), except after the cut: there only the wind is heard.
+func _on_reel_line(_index: int, text: String) -> void:
+	var beat: EndingBeat = reel.current_beat() if reel != null else null
+	if text.begins_with(texts.elder_speaker + ":") and (beat == null or beat.voiced):
+		AudioDirector.play_event(&"grandfather_voice")
 
 
 func _on_reel_finished(_skipped: bool) -> void:
@@ -115,6 +124,22 @@ func _build_epilogue_label() -> void:
 	epilogue_label.add_theme_font_size_override(&"font_size", maxi(ending_label.get_theme_font_size(&"font_size") - 2, 12))
 	ending_label.get_parent().add_child(epilogue_label)
 	ending_label.get_parent().move_child(epilogue_label, ending_label.get_index() + 1)
+
+
+## The line of support under the epilogue on the card of the ending that needs it (built in code, hidden when the ending has none).
+func _build_support_label(story: EndingStory) -> void:
+	support_label = Label.new()
+	support_label.name = "SupportLabel"
+	var line: String = story.support_line if story != null else ""
+	support_label.text = line
+	support_label.visible = not line.is_empty()
+	support_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	support_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	support_label.custom_minimum_size = Vector2(640.0, 0.0)
+	support_label.add_theme_font_override(&"font", ending_label.get_theme_font(&"font"))
+	support_label.add_theme_font_size_override(&"font_size", maxi(ending_label.get_theme_font_size(&"font_size") - 4, 12))
+	ending_label.get_parent().add_child(support_label)
+	ending_label.get_parent().move_child(support_label, epilogue_label.get_index() + 1)
 
 
 func _names_text(names: Array[String]) -> String:
