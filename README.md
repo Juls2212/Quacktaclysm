@@ -48,7 +48,7 @@ builds/           Salida de la exportación (ignorada por Git)
 
 **Corrupción visible y audible (Fase 14c):** el perfil adaptativo (compasivo / neutral / corrupto) se nota en el mundo. Con el perfil **corrupto** el fondo se vuelve violeta frío y desaturado, aparece una viñeta oscura en los bordes, los enemigos y jefes brillan (ojo y aro de la cabeza), el pato tiene un aura tenue y la música suena más grave y apagada. Con el **compasivo** todo es más cálido y dorado y la música no se apaga. Con el **neutral** el aspecto es el de siempre. Al tomar una decisión que **cambia** el perfil, la placa de la corrupción y la pantalla dan un destello breve y los colores y la música cambian de forma gradual. Es solo presentación: ningún valor de juego cambia. En **Opciones** hay un interruptor **"Efectos de corrupción"** (activado por defecto): apagado, desaparecen los tintes, la viñeta, los destellos, el brillo y los efectos de música, pero la placa del HUD y la línea de consecuencias se quedan. Se guarda en `user://settings.cfg` junto al resto de opciones (nunca en la partida).
 
-**Historia y cuatro finales (Fase 14d):** cada alma tiene nombre, un recuerdo (se ve en el panel de decisión) y una frase para liberarla y otra para conservarla; los tres guardianes hablan al empezar el combate (Enter salta las líneas) y una al caer; el abuelo vuelve al llegar al nivel 3 (escena corta de unos 20 s, Enter la salta) y revela el sentido de la profecía. El final depende **solo de cuántas almas liberaste**: 3 = *El cielo se abre*, 2 = *La cicatriz del cielo* (nombra el alma guardada), 1 = *El filo y la duda* (nombra la única liberada), 0 = *La nueva estrella caída*. Cada final es una secuencia de subtítulos de ~35-60 s sobre el sistema de planos del prólogo (**mantén Enter para saltarla**) y termina en una tarjeta de resumen con los contadores y los **nombres** de las almas liberadas y guardadas. Todo el guion está en `game/backend/story/default_story_texts.tres` y, para leerlo y revisarlo, en `docs/STORY.md`.
+**Historia y dos finales (Fases 14d y 15h):** cada alma tiene nombre, un recuerdo (se ve en el panel de decisión) y una frase para liberarla y otra para conservarla; los tres guardianes hablan al empezar el combate (Enter salta las líneas) y una al caer; el abuelo vuelve al llegar al nivel 3 (escena corta de unos 20 s, Enter la salta) y revela el sentido de la profecía. El final depende **solo de cuántas almas liberaste**: 3 = *El cielo se abre*, 2 = *La cicatriz del cielo* (nombra el alma guardada), 1 = *El filo y la duda* (nombra la única liberada), 0 = *La nueva estrella caída*. Cada final es una secuencia de subtítulos de ~35-60 s sobre el sistema de planos del prólogo (**mantén Enter para saltarla**) y termina en una tarjeta de resumen con los contadores y los **nombres** de las almas liberadas y guardadas. Todo el guion está en `game/backend/story/default_story_texts.tres` y, para leerlo y revisarlo, en `docs/STORY.md`.
 
 **Ataques legibles (Fase 14e):** cada ataque enemigo avisa con una forma dibujada en el suelo que **se llena durante la preparación**: el golpe cuerpo a cuerpo, un arco corto delante (naranja; rojo claro y más ancho en el enemigo robusto); el enemigo rápido, un carril estrecho que marca la embestida (amarillo); el que dispara, una línea fina hacia ti (rosa); y los jefes, un arco ancho (golpe), un carril largo (embestida) o varias líneas en abanico (descarga). Además hay un signo de exclamación sobre la cabeza de los enemigos, un sonido distinto por tipo, un destello blanco y un pequeño rebote al recibir un golpe (algo más fuerte en los jefes), un tinte apagado mientras se recuperan (la ventana para castigarlos) y una pequeña alma que sale al morir. **No cambia ningún tiempo ni valor del juego**, y los avisos se ven siempre, también con "Efectos de corrupción" desactivado. Todo se retoca en `game/frontend/fx/default_telegraphs.tres`.
 
@@ -183,7 +183,7 @@ La salida queda en `game/builds/Quacktaclysm.exe` (la ruta del preset; `builds/`
 - `docs/HANDOFF.md` — **punto de entrada**: estado actual, cómo ejecutar, dónde está cada recurso editable, reglas (y la guía para sustituir arte y contenido).
 - `docs/QA_CHECKLIST.md` — lista de pruebas manuales en ventana real, en orden de juego.
 - `docs/BALANCE_REPORT.md` — medición de balance con bots y propuestas de ajuste (sin aplicar).
-- `docs/STORY.md` — guion de la historia, las almas, los guardianes, el abuelo y los cuatro finales.
+- `docs/STORY.md` — guion de la historia, las almas, los guardianes, el abuelo y los dos finales («Estrellas que suben» y «El acantilado»).
 - `docs/ADAPTIVE_CONTRACT.md` — contrato del perfil adaptativo y del servicio de IA.
 - `docs/CHANGES_FROM_DESIGN.md` — diferencias entre el diseño original y la implementación.
 - `docs/KNOWN_ISSUES.md` — límites conocidos y todo lo que falta por verificar jugando.
@@ -208,3 +208,51 @@ El servicio de IA tiene un endpoint nuevo, `POST /v1/director/plan`, que propone
 ## La voz del abuelo (Fase 16c)
 
 Al empezar cada nivel el abuelo dice una frase breve (un recuerdo en los niveles 1 y 2, su voz en el 3) con su reflejo de estrellas en el cielo, y cada final tiene tres variantes de epílogo según cómo se jugó. La frase sale del servicio de IA si hay conexión y es válida; si no, de un banco local. Ver `docs/STORY.md` (sección 6) y `docs/HANDOFF.md` sección 27.
+
+## La capa de Kenzo y las historias de los guardianes (Fase 15f)
+
+La guardia de Kenzo (jefe 3, fase 2) es ahora una capa de armadura visible sobre su cuerpo que se rompe con UN golpe pesado o tajo de dash. Cada guardián cuenta 4 líneas de su historia antes del combate (la primera vez) y todas las líneas de la introducción esperan a que el jugador pulse Enter (mantener Enter salta la introducción). Ver `docs/HANDOFF.md` sección 28.
+
+## Escenario interactivo del nivel 3 (Fase 15g)
+
+El nivel 3 tiene ahora corrientes de aire (columnas que elevan al jugador), placas eléctricas (peligro de suelo con aviso), una ruta alta, decorado reactivo (charcos, lámparas, cadenas) y corrientes de aire también en la arena del jefe 3. Ver `docs/HANDOFF.md` sección 29.
+
+## Huecos del nivel 3 (Fase 15h-bis)
+
+Los enemigos de suelo ya no se acercan a menos de 250 px del borde de un hueco, y si el jugador cae 4 veces en el mismo hueco en una sesión aparece una plataforma de restos de 140 px en medio de ese hueco (solo en memoria, nunca se guarda). Los números están en `game/backend/progression/default_gap_safety_config.tres`.
+
+## Finales cinematográficos (Fase 15i)
+
+Los dos finales («Estrellas que suben» y «El acantilado») son cinematográficas dibujadas por código a partir de una lista de beats (`default_kept_beats.tres`, `default_released_beats.tres`), con el rostro del abuelo en el cielo. Ver `docs/STORY.md`.
+
+## Jefe 3 rediseñado (Fase 15j)
+
+El Ojo de la Tormenta es ahora el pato poseído: fase 1 en solitario tras su coraza; fase 2 de invocador (plataformas y percha, patitos corruptos con escudo, suelo que tiembla y se derrumba, andanada de proyectiles, ventana de agotamiento); fase 3 con el ojo rojo y su rayo rojo. Todos los números están en `game/backend/bosses/stage/default_stage_config.tres`.
+
+## Finales en un acantilado (Fase 15i-bis)
+
+Los dos finales ocurren ahora en un acantilado, se cortan a blanco antes del acto, llevan arrepentimientos del pato, graznidos y una música propia procesada por código; el mensaje de apoyo sale en los dos. Ver `docs/STORY.md`.
+
+## Sangre en el combate (Fase 15k)
+
+El combate tiene sangre estilizada dibujada por código: salpicaduras al golpear, ráfaga mayor al matar, ráfaga grande al derrotar a un jefe, una salpicadura pequeña cuando el jugador recibe daño y manchas en el suelo que se desvanecen (unos 8 s). Se activa y desactiva con la opción **«Sangre»** (Opciones del menú principal y del menú de pausa; activada por defecto; se guarda en `user://settings.cfg`, nunca en la partida). Es puramente cosmética y **nunca aparece en los finales, el prólogo ni las escenas de historia**. Todos los números están en `frontend/fx/default_blood_config.tres`.
+
+## Venas de corrupción y absorción oscura (Fase 15l)
+
+El pato lleva venas moradas desde el primer fragmento conservado (1 = brazo y cuello, 2 = pecho y borde de la cara, 3 = extendidas), con un pulso suave; en «Efectos de corrupción» desactivado son estáticas y más finas. Conservar un fragmento lanza una secuencia oscura de unos 3,6 s antes de la tarjeta (liberar conserva su animación luminosa). El final «Estrellas que suben» tiene el ojo, el ala y las venas rediseñados y un vigilante de rendimiento para que no se trabe.
+
+## Tutorial reconstruido (Fase 15m)
+
+El tutorial del prólogo ya no se puede bloquear: sus pasos son comprobaciones independientes (cualquier acción cuenta en cuanto se hace, aunque no se haya pedido), el muñeco revive solo a los 1,0 s si lo matan, y se puede saltar manteniendo la tecla de confirmar. Tiene una lista de tareas arriba a la izquierda, carteles de práctica con linterna que se pone verde, indicaciones con las teclas actuales (también las reasignadas) y un muñeco con frases. Se enseña mover, saltar, esquivar, golpe ligero, golpe pesado, el medidor de alma, curarse y (opcional) la pausa.
+
+## Diálogos más cortos, fragmentos azules y más (Fase 15n)
+
+Los guardianes dicen una sola línea corta al verlos y 2–3 líneas al caer (antes del fragmento); los enemigos normales sueltan un fragmento azul de alma que flota y vuela hacia el pato; cada golpe que aterriza en un pato enemigo arranca un graznido (con límites); el prólogo tiene música y efectos; el abuelo aparece en el cielo con su rostro al empezar los niveles; y tras el último jefe no sale tarjeta de habilidad: la absorción oscura o la liberación luminosa van directas al final.
+
+## Absorción roja, nivel 3 sin corrientes, jefe 3 sin armadura y corrupción dentro del pato (Fase 15o)
+
+La absorción al conservar un fragmento vuelve al fondo oscuro con toques rojos y el emblema abajo, con más animación: rayos rojos finos que salen del emblema, del fragmento y de los bordes y entran todos en el pato, partículas rojas y zarcillos; el pato convulsiona y su corrupción avanza a la vista. Se quitan las columnas de viento del nivel 3 y la armadura del jefe 3 (queda el escudo de la fase de los patitos). La corrupción del pato (venas, ojo nublado, plumas y ala) ahora se dibuja dentro de las piezas del propio pato y los finales usan un solo dibujo por pose; hay una ranura opcional para sustituir cualquier etapa o pose por una imagen propia.
+
+## El abuelo desde su figura, siluetas en los finales y el alma de los guardianes (Fase 15r)
+
+El abuelo del cielo (niveles y finales) es ahora su propia figura de cuerpo entero, con el cuerpo oculto en la niebla y solo la cara visible, borrosa y translúcida; no hay cara dibujada ni lágrimas. En los dos finales, sobre el blanco del corte aparecen siluetas planas oscuras del pato (arrodillado con la espada clavada al lado y luego quieto, o de pie en el borde mirando al cielo); el acto no se ve nunca. Al caer un guardián aparece su alma en azul, dice sus últimas palabras, se deshace en partículas y se convierte en el cristal del fragmento.
