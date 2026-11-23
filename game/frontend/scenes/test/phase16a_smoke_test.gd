@@ -560,17 +560,17 @@ func _test_boss_weights() -> void:
 	var boss: BossBase = level.boss
 	var base: Dictionary = _scene_weights(3)
 	var rotation: PackedStringArray = boss.rotation_pattern_ids()
-	_check("weights: boss 3 rotation patterns are the beam, columns, swipe and charge ones (no fallbacks)", rotation.has("beam") and rotation.has("columns") and rotation.has("swipe") and rotation.has("charge")
+	_check("weights: boss 3 rotation patterns are the volley, summoner cycle, swipe and charge ones (Phase 15j) (no fallbacks)", rotation.has("volley") and rotation.has("summon_cycle") and rotation.has("swipe") and rotation.has("charge")
 		and not rotation.has("stomp") and not rotation.has("volley_fallback") and not rotation.has("charge_short"))
-	boss.apply_pattern_weights({"beam": 1.5, "columns": 0.6, "stomp": 1.5, "volley_fallback": 1.5, "charge_short": 0.6, "nothing": 1.2})
+	boss.apply_pattern_weights({"volley": 1.5, "summon_cycle": 0.6, "stomp": 1.5, "volley_fallback": 1.5, "charge_short": 0.6, "nothing": 1.2})
 	var weights: Dictionary = _boss_weights(boss)
-	_check("weights: the rotation patterns are multiplied and the fallback patterns are untouched", is_equal_approx(float(weights["beam"]), float(base["beam"]) * 1.5) and is_equal_approx(float(weights["columns"]), float(base["columns"]) * 0.6)
+	_check("weights: the rotation patterns are multiplied and the fallback patterns are untouched", is_equal_approx(float(weights["volley"]), float(base["volley"]) * 1.5) and is_equal_approx(float(weights["summon_cycle"]), float(base["summon_cycle"]) * 0.6)
 		and weights["stomp"] == base["stomp"] and weights["volley_fallback"] == base["volley_fallback"] and weights["charge_short"] == base["charge_short"] and weights["swipe"] == base["swipe"])
-	boss.apply_pattern_weights({"beam": 1.5})
-	_check("weights: applying twice never compounds (always from the scene weight)", is_equal_approx(float(_boss_weights(boss)["beam"]), float(base["beam"]) * 1.5) and is_equal_approx(float(_boss_weights(boss)["columns"]), float(base["columns"])))
-	boss.apply_pattern_weights({"beam": 9.0, "columns": 0.0, "swipe": -4.0})
+	boss.apply_pattern_weights({"volley": 1.5})
+	_check("weights: applying twice never compounds (always from the scene weight)", is_equal_approx(float(_boss_weights(boss)["volley"]), float(base["volley"]) * 1.5) and is_equal_approx(float(_boss_weights(boss)["summon_cycle"]), float(base["summon_cycle"])))
+	boss.apply_pattern_weights({"volley": 9.0, "summon_cycle": 0.0, "swipe": -4.0})
 	var clamped: Dictionary = _boss_weights(boss)
-	_check("weights: out-of-range multipliers are clamped even if a plan got past the validator (0.6 to 1.5)", is_equal_approx(float(clamped["beam"]), float(base["beam"]) * 1.5) and is_equal_approx(float(clamped["columns"]), float(base["columns"]) * 0.6)
+	_check("weights: out-of-range multipliers are clamped even if a plan got past the validator (0.6 to 1.5)", is_equal_approx(float(clamped["volley"]), float(base["volley"]) * 1.5) and is_equal_approx(float(clamped["summon_cycle"]), float(base["summon_cycle"]) * 0.6)
 		and is_equal_approx(float(clamped["swipe"]), float(base["swipe"]) * 0.6))
 	var untouched: bool = true
 	for pattern in boss.patterns:
@@ -582,10 +582,10 @@ func _test_boss_weights() -> void:
 	# Through a forced plan at load: the validator drops fallback ids, the boss only gets rotation ones.
 	await _free_level(level)
 	_clean_state()
-	GameState.director.set_forced_plan({"theme": "valor", "boss_pattern_weights": {"beam": 1.4, "stomp": 1.5, "swipe": 0.7}})
+	GameState.director.set_forced_plan({"theme": "valor", "boss_pattern_weights": {"volley": 1.4, "stomp": 1.5, "swipe": 0.7}})
 	var forced: LevelBase = await _load_level(3, "neutral")
 	var applied: Dictionary = _boss_weights(forced.boss)
-	_check("weights: a forced plan reaches the boss at load; the fallback id is ignored", is_equal_approx(float(applied["beam"]), float(base["beam"]) * 1.4) and is_equal_approx(float(applied["swipe"]), float(base["swipe"]) * 0.7) and applied["stomp"] == base["stomp"])
+	_check("weights: a forced plan reaches the boss at load; the fallback id is ignored", is_equal_approx(float(applied["volley"]), float(base["volley"]) * 1.4) and is_equal_approx(float(applied["swipe"]), float(base["swipe"]) * 0.7) and applied["stomp"] == base["stomp"])
 	await _free_level(forced)
 
 
