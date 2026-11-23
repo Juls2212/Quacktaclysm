@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="BloodConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://frontend/fx/blood_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+hit_droplets = 6
+kill_droplets = 22
+boss_hit_droplets = 10
+boss_defeat_droplets = 60
+player_hit_droplets = 5
+player_death_droplets = 8
+duckling_scale = 0.5
+reduced_scale = 0.5
+max_droplets = 140
+max_stains = 36
+stain_fade_seconds = 8.0
+stain_opacity = 0.45
+speed_min = 110.0
+speed_max = 330.0
+spread = 0.7
+gravity = 950.0
+life_min = 0.5
+life_max = 0.9
+size_min = 2.0
+size_max = 4.2
+blood_color = Color(0.55, 0.04, 0.06, 0.85)
+outline_color = Color(0.12, 0.02, 0.03, 0.9)
