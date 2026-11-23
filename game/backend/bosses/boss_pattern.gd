@@ -30,6 +30,8 @@ const PHASE_RECOVERY: StringName = &"recovery"
 var base_weight: float = -1.0
 @export_range(1, 99, 1) var min_phase: int = 1
 @export_range(1, 99, 1) var max_phase: int = 2
+## Phases inside [min_phase, max_phase] where the pattern still never runs (boss 3: the summoner stage has its own attack).
+@export var excluded_phases: PackedInt32Array = PackedInt32Array()
 ## 0 = a normal pattern of the rotation. 1, 2, 3... = a FALLBACK: never chosen at random, used (lowest number first)
 ## only when no pattern of the rotation is eligible, so the boss never stands without an attack (Phase 15d-bis).
 @export_range(0, 9, 1) var fallback_priority: int = 0
@@ -64,7 +66,7 @@ func tick_cooldown(delta: float) -> void:
 
 
 func can_start(boss: BossBase) -> bool:
-	if boss.current_phase < min_phase or boss.current_phase > max_phase:
+	if boss.current_phase < min_phase or boss.current_phase > max_phase or excluded_phases.has(boss.current_phase):
 		return false
 	if cooldown_left > 0.0:
 		return false
@@ -79,7 +81,7 @@ func can_start(boss: BossBase) -> bool:
 ## Fallback eligibility: the phase window and (unless `ignore_cooldown`) the cooldown. Patterns with conditions on the
 ## boss position extend it.
 func can_start_fallback(boss: BossBase, ignore_cooldown: bool) -> bool:
-	if boss.current_phase < min_phase or boss.current_phase > max_phase:
+	if boss.current_phase < min_phase or boss.current_phase > max_phase or excluded_phases.has(boss.current_phase):
 		return false
 	return ignore_cooldown or cooldown_left <= 0.0
 
