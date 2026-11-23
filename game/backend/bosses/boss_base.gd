@@ -11,6 +11,9 @@ signal activated
 signal encounter_reset
 signal health_changed(current: int, maximum: int)
 signal phase_changed(phase: int)
+## The boss crossed its phase line and entered the transition state; `next_phase` is the phase that follows (Phase 15d).
+## Presentation (the possession sequence) may hold the transition with `hold_transition` until it is over.
+signal phase_transition_started(next_phase: int)
 signal pattern_started(pattern_id: StringName)
 signal pattern_finished(pattern_id: StringName)
 signal pattern_cancelled(pattern_id: StringName)
@@ -52,9 +55,20 @@ var current_pattern_id: StringName:
 var _rng := RandomNumberGenerator.new()
 var _previous_pattern: BossPattern = null
 var _gap_left: float = 0.0
+var _idle_time: float = 0.0
 var _transition_left: float = 0.0
 var _fade_left: float = 0.0
 var _phase_2_started: bool = false
+## How many phase thresholds the boss has crossed (Phase 15e-1: a boss may have several; bosses 1 and 2 have one).
+var _phases_crossed: int = 0
+var _transition_target: int = 2
+## How much of its gravity pulls the boss (Phase 15j): 0 lets a pattern hold it in the air (the leap before the floor collapses).
+var gravity_scale: float = 1.0
+## The boss is worn out on the floor (the vulnerable window of boss 3): the visual kneels and pants. Set by the pattern that owns it.
+var exhausted: bool = false
+## Owners that keep the phase transition open (the possession sequence). While any holds it the boss stays
+## inactive and invulnerable and its pattern cooldowns do not advance.
+var _transition_holders: Array = []
 var _phase_speed_multiplier: float = 1.0
 var _spawn_position: Vector2 = Vector2.ZERO
 var _ledge_origin: Vector2 = Vector2.ZERO
@@ -94,6 +108,11 @@ func _ready() -> void:
 	refresh_patterns()
 
 
+## A random number in [0, 1) from the boss generator (patterns use it so a seed keeps the fight deterministic).
+func roll() -> float:
+	return _rng.randf()
+
+
 ## Seed 0 randomizes; any other value makes pattern choice deterministic.
 func set_rng_seed(new_seed: int) -> void:
 	if new_seed == 0:
@@ -120,6 +139,30 @@ func get_effective_gap_time() -> float:
 	return _gap_time()
 
 
+## Phase 16a (AI Director): multiplies the weight of the ROTATION patterns (no fallbacks) by the plan multipliers, always from the
+## weight the scene gave, so calling it twice never compounds. Only `weight` changes: never a telegraph, windup, cooldown, HP or
+## damage. An empty dictionary restores every weight.
+func apply_pattern_weights(multipliers: Dictionary, weight_min: float = 0.6, weight_max: float = 1.5) -> void:
+	for pattern in patterns:
+		if pattern.base_weight < 0.0:
+			pattern.base_weight = pattern.weight
+		pattern.weight = pattern.base_weight
+		if pattern.fallback_priority != 0 or pattern.base_weight <= 0.0:
+			continue
+		var key: String = String(pattern.pattern_id)
+		if multipliers.has(key):
+			pattern.weight = pattern.base_weight * clampf(float(multipliers[key]), weight_min, weight_max)
+
+
+## Ids of the rotation patterns (the ones a plan may weight).
+func rotation_pattern_ids() -> PackedStringArray:
+	var ids := PackedStringArray()
+	for pattern in patterns:
+		if pattern.fallback_priority == 0 and pattern.weight > 0.0:
+			ids.append(String(pattern.pattern_id))
+	return ids
+
+
 ## Re-reads the BossPattern children of `Patterns` (call after adding or removing patterns).
 func refresh_patterns() -> void:
 	for pattern in patterns:
@@ -143,6 +186,9 @@ func activate(new_target: Node2D) -> void:
 		return
 	target = new_target
 	_gap_left = _gap_time()
+	if stats.max_idle_time > 0.0:
+		_gap_left = minf(_gap_left, stats.max_idle_time)
+	_idle_time = 0.0
 	_set_state(State.IDLE)
 	activated.emit()
 
@@ -153,6 +199,8 @@ func reset_encounter() -> void:
 		return
 	_cancel_current_pattern()
 	_deactivate_all_hitboxes()
+	gravity_scale = 1.0
+	exhausted = false
 	for pattern in patterns:
 		pattern.cooldown_left = 0.0
 	health.reset()
@@ -160,6 +208,9 @@ func reset_encounter() -> void:
 	_phase_speed_multiplier = 1.0
 	_update_speed_multiplier()
 	_phase_2_started = false
+	_phases_crossed = 0
+	_transition_target = 2
+	_transition_holders.clear()
 	_previous_pattern = null
 	target = null
 	velocity = Vector2.ZERO
@@ -206,7 +257,7 @@ func _physics_process(delta: float) -> void:
 			_update_dead(delta)
 
 	if not is_on_floor():
-		velocity.y = minf(velocity.y + stats.gravity * delta, stats.max_fall_speed)
+		velocity.y = minf(velocity.y + stats.gravity * gravity_scale * delta, stats.max_fall_speed)
 	move_and_slide()
 
 
@@ -216,10 +267,16 @@ func _update_idle(delta: float) -> void:
 	if not is_target_valid():
 		return
 	face_towards(target.global_position.x)
+	_idle_time += delta
 	_gap_left -= delta
 	if _gap_left > 0.0:
 		return
 	var chosen: BossPattern = _choose_pattern()
+	if chosen == null:
+		# Nothing of the rotation fits (a platform, a far tier...): a fallback attack, so the boss is never idle.
+		chosen = _choose_fallback(false)
+		if chosen == null and stats.max_idle_time > 0.0 and _idle_time >= stats.max_idle_time:
+			chosen = _choose_fallback(true)
 	if chosen != null:
 		_start_pattern(chosen)
 
@@ -239,16 +296,39 @@ func _update_pattern(delta: float) -> void:
 		pattern_finished.emit(finished_id)
 
 
+## Keeps the phase transition open until `release_transition(owner)` (Phase 15d). Holding is idempotent.
+func hold_transition(owner: Object) -> void:
+	if not _transition_holders.has(owner):
+		_transition_holders.append(owner)
+
+
+func release_transition(owner: Object) -> void:
+	_transition_holders.erase(owner)
+
+
+func is_transition_held() -> bool:
+	_transition_holders = _transition_holders.filter(func(holder: Variant) -> bool: return is_instance_valid(holder))
+	return not _transition_holders.is_empty()
+
+
 func _update_transition(delta: float) -> void:
 	velocity.x = 0.0
-	_tick_cooldowns(delta)
+	var held: bool = is_transition_held()
+	if not held:
+		_tick_cooldowns(delta)
 	_transition_left -= delta
+	if held:
+		# Nothing can hurt it while the sequence plays, however long it lasts.
+		health.grant_invulnerability(0.25)
+		return
 	if _transition_left <= 0.0:
-		current_phase = 2
-		_phase_speed_multiplier = stats.phase_2_speed_multiplier
+		current_phase = _transition_target
+		_phase_speed_multiplier = stats.speed_multiplier_for(current_phase)
 		_update_speed_multiplier()
-		phase_changed.emit(2)
+		phase_changed.emit(current_phase)
 		_enter_idle()
+		# One heavy hit may have crossed two lines: the next transition starts at once.
+		_check_phase_threshold()
 
 
 func _update_dead(delta: float) -> void:
@@ -260,13 +340,16 @@ func _update_dead(delta: float) -> void:
 
 func _enter_idle() -> void:
 	_gap_left = _gap_time()
+	if stats.max_idle_time > 0.0:
+		_gap_left = minf(_gap_left, stats.max_idle_time)
+	_idle_time = 0.0
 	_set_state(State.IDLE)
 
 
 func _gap_time() -> float:
 	var gap: float = stats.pattern_gap_time
 	if current_phase >= 2:
-		gap *= stats.phase_2_pattern_gap_multiplier
+		gap *= stats.gap_multiplier_for(current_phase)
 	return gap / aggression_multiplier
 
 
@@ -284,7 +367,7 @@ func _tick_cooldowns(delta: float) -> void:
 func _choose_pattern() -> BossPattern:
 	var candidates: Array[BossPattern] = []
 	for pattern in patterns:
-		if pattern.can_start(self):
+		if pattern.fallback_priority == 0 and pattern.can_start(self):
 			candidates.append(pattern)
 	if stats.avoid_immediate_repeat and candidates.size() > 1:
 		candidates.erase(_previous_pattern)
@@ -301,6 +384,16 @@ func _choose_pattern() -> BossPattern:
 		if roll <= 0.0:
 			return pattern
 	return candidates[candidates.size() - 1]
+
+
+## The lowest-numbered fallback pattern that can start now (null if none).
+func _choose_fallback(ignore_cooldown: bool) -> BossPattern:
+	var best: BossPattern = null
+	for pattern in patterns:
+		if pattern.fallback_priority > 0 and pattern.can_start_fallback(self, ignore_cooldown):
+			if best == null or pattern.fallback_priority < best.fallback_priority:
+				best = pattern
+	return best
 
 
 func _start_pattern(pattern: BossPattern) -> void:
@@ -334,31 +427,71 @@ func _on_pattern_phase_changed(phase_name: StringName, pattern: BossPattern) -> 
 	pattern_phase_changed.emit(pattern.pattern_id, phase_name)
 
 
-## Armor: damage never interrupts a pattern. It only can trigger the phase change.
+## Armor: damage never interrupts a pattern. It only can trigger a phase change.
 func _on_damaged(_info: DamageInfo) -> void:
-	if current_phase != 1 or _phase_2_started or health.current_health <= 0:
+	_check_phase_threshold()
+
+
+## Starts the transition to the next phase if the health went under its line (one line at a time, in order). Bosses with a
+## single threshold (1 and 2) go to phase 2 exactly as before. Never when the same hit killed the boss.
+func _check_phase_threshold() -> void:
+	var thresholds: PackedFloat32Array = stats.get_phase_thresholds()
+	if _phases_crossed >= thresholds.size() or health.current_health <= 0:
 		return
 	if state != State.IDLE and state != State.PATTERN:
 		return
-	if health.current_health > health.max_health * stats.phase_2_health_ratio:
+	if health.current_health > health.max_health * thresholds[_phases_crossed]:
 		return
+	_phases_crossed += 1
 	_phase_2_started = true
+	_transition_target = _phases_crossed + 1
 	_cancel_current_pattern()
+	gravity_scale = 1.0
+	exhausted = false
 	_deactivate_all_hitboxes()
 	_transition_left = stats.phase_transition_time
 	health.grant_invulnerability(stats.phase_transition_time)
-	_drop_health_orbs.call_deferred(stats.health_orbs_on_phase_2)
 	_set_state(State.PHASE_TRANSITION)
+	phase_transition_started.emit(_transition_target)
+
+
+## How many phase lines the boss has not crossed yet (0 = it is in its last phase).
+func phase_lines_left() -> int:
+	return maxi(stats.get_phase_thresholds().size() - _phases_crossed, 0)
+
+
+## Sends the boss to its NEXT corruption state: its health goes just under the next phase line and the normal transition runs (the
+## current pattern is cancelled cleanly by `_check_phase_threshold`). Returns false, doing nothing, during a transition, when the boss is
+## not in the fight, or in its last phase (there is no next line).
+func force_next_phase() -> bool:
+	if state != State.IDLE and state != State.PATTERN:
+		return false
+	var thresholds: PackedFloat32Array = stats.get_phase_thresholds()
+	if _phases_crossed >= thresholds.size():
+		return false
+	var line: int = int(floorf(float(health.max_health) * thresholds[_phases_crossed]))
+	health.current_health = clampi(mini(health.current_health, line), 1, health.max_health)
+	health.health_changed.emit(health.current_health, health.max_health)
+	_check_phase_threshold()
+	return state == State.PHASE_TRANSITION
+
+
+## The multiplier of every pattern cooldown in the current phase (boss 3 phase 3 shortens them; the others are 1).
+func cooldown_factor() -> float:
+	return stats.cooldown_factor_for(current_phase)
 
 
 func _on_health_died() -> void:
+	_transition_holders.clear()
 	_cancel_current_pattern()
+	gravity_scale = 1.0
+	exhausted = false
 	_deactivate_all_hitboxes()
 	hurtbox.set_enabled(false)
 	velocity.x = 0.0
 	_fade_left = stats.death_fade_time
 	_set_state(State.DEAD)
-	_drop_health_orbs.call_deferred(stats.health_orbs_on_defeat)
+	_release_soul.call_deferred()
 	defeated.emit(self)
 
 
@@ -386,11 +519,13 @@ func _apply_facing() -> void:
 ## Contact damage only while the boss is fighting (IDLE or PATTERN) against a living target:
 ## never when inactive, in the phase transition, defeated or when the target is dead.
 func _update_contact_active() -> void:
-	var fighting: bool = state == State.IDLE or state == State.PATTERN
+	var fighting: bool = (state == State.IDLE or state == State.PATTERN) and not exhausted
 	contact_hitbox.set_contact_active(fighting and is_target_valid())
 
 
 ## Deferred from the death / phase change: those arrive inside physics callbacks, where new
 ## bodies can't be added. Bound to this node, so it is skipped if the node is gone by then.
-func _drop_health_orbs(count: int) -> void:
-	HealthOrbDrop.burst(get_parent(), global_position, count)
+## The boss's soul leaves as a big wisp the player absorbs (deferred: the death arrives in a physics callback).
+func _release_soul() -> void:
+	if is_inside_tree():
+		SoulPickup.spawn(get_parent(), global_position + Vector2(0.0, -30.0), SoulConfig.get_default().wisp_boss)

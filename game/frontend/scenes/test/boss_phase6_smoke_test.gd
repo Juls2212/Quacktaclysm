@@ -329,7 +329,7 @@ func _test_swipe() -> void:
 
 func _test_charge() -> void:
 	await _reset_player()
-	var spec: Dictionary = {"telegraph_time": 0.3, "charge_speed": 400.0, "charge_duration": 0.5, "recovery_time": 0.3}
+	var spec: Dictionary = {"telegraph_time": 0.3, "charge_speed": 400.0, "charge_duration": 0.5, "recovery_time": 0.3, "min_useful_lane": 0.0}
 	var boss := _make_boss([_charge(&"charge", spec)], {}, PLAYER_START.x + 150.0)
 	var hitbox: Hitbox = boss.get_node("AttackPivot/Hitbox")
 	var start_x: float = boss.global_position.x
@@ -510,9 +510,8 @@ func _test_death() -> void:
 		var starts_at_death: int = log["started"].size()
 		await _frames(int(ceil(boss.stats.death_fade_time * 60.0)) + 10)
 		_check("death (%s): boss freed after the fade" % moment, not is_instance_valid(boss))
-		# Health may only go up afterwards: the defeat drops health orbs that heal the player.
 		_check("death (%s): dead boss never attacks again" % moment, log["started"].size() == starts_at_death
-			and log["defeated"] == 1 and player.health.current_health >= hp_at_kill and hp_at_kill <= max_hp)
+			and log["defeated"] == 1 and player.health.current_health == hp_at_kill and hp_at_kill <= max_hp)
 
 
 func _test_reset() -> void:

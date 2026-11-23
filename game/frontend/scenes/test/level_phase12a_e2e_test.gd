@@ -57,6 +57,16 @@ func _scene_is(path: String) -> bool:
 	return scene != null and scene.scene_file_path == path and not SceneManager.is_transitioning()
 
 
+## Phase 15q: since Phase 15n the guardian's last words come before the fragment; nobody presses Enter in this test, so they are skipped. Always returns true.
+func _skip_last_words() -> bool:
+	var scene: Node = get_tree().current_scene
+	if scene != null:
+		for node in scene.find_children("*", "BossDialogue", true, false):
+			if (node as BossDialogue).is_speaking():
+				(node as BossDialogue).skip()
+	return true
+
+
 func _find_fragment() -> SoulFragment:
 	for child in get_tree().current_scene.get_children():
 		if child is SoulFragment:
@@ -78,7 +88,7 @@ func _drive() -> void:
 	level.refine_wait_timeout = 1.0
 	level.boss.hurtbox.receive_hit(DamageInfo.create(999, Vector2.ZERO, level.player, CombatLayers.Team.PLAYER))
 	_check("boss killed with a lethal DamageInfo", level.boss.state == BossBase.State.DEAD)
-	var spawned: bool = await _wait_for(func() -> bool: return _find_fragment() != null)
+	var spawned: bool = await _wait_for(func() -> bool: return _skip_last_words() and _find_fragment() != null)
 	_check("fragment spawned", spawned)
 	level.player.global_position = _find_fragment().global_position
 	var panel := level.get_node("DecisionPanel") as DecisionPanel

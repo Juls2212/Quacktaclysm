@@ -9,6 +9,8 @@ extends Node
 ## hides the tutorial prompt and the grandfather's speech label; at the end or on skip it unlocks
 ## the player, shows them again and frees itself. Only calls public functions of the level, the
 ## player and SceneManager; never writes game state.
+## Sound (Phase 15n): an existing music track processed by code and effects for the key beats, all from `PrologueAudio`; it obeys the music and
+## sfx settings, ducks while the game is paused and stops cleanly on skip and exit.
 ## Input: Esc skips (and never opens the pause menu meanwhile), Enter / Space / click advance the
 ## current line, the "Saltar" sign skips. Not played in headless runs (automated tests).
 
@@ -85,13 +87,23 @@ var _subtitle: Label
 var _skip: Button
 var _fade: ColorRect
 var _wipe: UiFx
+## The sound resource (a default one when null), whether its music plays and the effects already played in this shot.
+@export var audio: PrologueAudio = null
+var music_playing: bool = false
+var effects_played: int = 0
+var _fired: Dictionary = {}
+var _pause_token := RefCounted.new()
 
 
 func _ready() -> void:
 	if skip_when_headless and DisplayServer.get_name() == "headless":
+		# _process must not run before the node is freed: nothing below was built.
+		set_process(false)
 		queue_free()
 		return
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	if audio == null:
+		audio = PrologueAudio.get_default()
 	_level = get_parent()
 	if _level != null:
 		var value: Variant = _level.get(&"player")
@@ -116,11 +128,14 @@ func _process(delta: float) -> void:
 		if SceneManager.is_transitioning():
 			return
 		_started = true
+		_start_music()
 		_show_shot(0)
 		_fade_to(0.0, 0.6)
 	if _ending:
 		return
+	_update_pause_duck()
 	_time += delta
+	_play_effects()
 	_shots.t = _time
 	_shots.advance(delta)
 	_update_lines()
@@ -246,6 +261,7 @@ func _show_shot(index: int) -> void:
 	_line = -1
 	_switch_left = -1.0
 	_subtitle.text = ""
+	_fired.clear()
 	# The shot learns how long it really lasts and when its lines come, then builds itself.
 	_shots.length = _shot_length(index)
 	var starts := PackedFloat32Array()
@@ -381,6 +397,8 @@ func _update_cave(_delta: float) -> void:
 
 func _finish() -> void:
 	_ending = true
+	if music_playing:
+		AudioDirector.set_music_duck(self, -60.0)
 	_fade_to(1.0, 0.35)
 	get_tree().create_timer(0.4, true).timeout.connect(_reveal)
 
@@ -402,7 +420,52 @@ func _reveal() -> void:
 		queue_free())
 
 
+## Starts the prologue's music: its own track, processed (lower pitch, low-pass) and ducked under the cinematic.
+func _start_music() -> void:
+	if audio == null or audio.music_file.is_empty() or music_playing:
+		return
+	music_playing = true
+	AudioDirector.play_music(audio.music_file, true, audio.music_pitch)
+	AudioDirector.set_music_profile(1.0, audio.music_cutoff_hz, 1.0, self)
+	AudioDirector.set_music_duck(self, audio.music_duck_db)
+
+
+## Silences the prologue's sound and gives the level its own music back (idempotent).
+func _stop_audio() -> void:
+	AudioDirector.release_music_duck(_pause_token)
+	AudioDirector.release_music_duck(self)
+	if music_playing:
+		music_playing = false
+		AudioDirector.release_music_profile(self)
+		var level_track: String = String(AudioDirector.get_music_state().get("level_track", ""))
+		if not level_track.is_empty():
+			AudioDirector.play_music(level_track)
+
+
+## While the game is paused the music goes quiet with it.
+func _update_pause_duck() -> void:
+	if not music_playing:
+		return
+	if get_tree().paused:
+		AudioDirector.set_music_duck(_pause_token, -60.0)
+	else:
+		AudioDirector.release_music_duck(_pause_token)
+
+
+## The effects of the shot on screen, each once, at its moment (none while paused).
+func _play_effects() -> void:
+	if audio == null or get_tree().paused:
+		return
+	var list: Array[Dictionary] = audio.effects_of(_index)
+	for i in list.size():
+		if not _fired.has(i) and _time >= float(list[i]["at"]):
+			_fired[i] = true
+			effects_played += 1
+			AudioDirector.play_event(StringName(list[i]["event"]), null, float(list[i].get("db", 0.0)), float(list[i].get("pitch", 1.0)))
+
+
 func _release() -> void:
+	_stop_audio()
 	if _player != null and is_instance_valid(_player):
 		_player.set_input_locked(false)
 	if _prompt_layer != null and is_instance_valid(_prompt_layer):
@@ -429,6 +492,7 @@ func _fade_to(alpha: float, seconds: float) -> void:
 
 
 func _exit_tree() -> void:
+	_stop_audio()
 	# Never leave the player locked, whatever ends the cinematic.
 	if _player != null and is_instance_valid(_player):
 		_player.set_input_locked(false)

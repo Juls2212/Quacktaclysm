@@ -143,6 +143,77 @@ func _drive() -> void:
 		all_ok = all_ok and _healthy()
 	_check("full loops: every scene change finished, tree unpaused, manager idle, no pause holders", all_ok)
 	_verdict("menu -> level 1 -> 2 -> 3 -> ending -> menu (x%d)" % FULL_LOOPS, full_rows)
+	# Phase 14c: with the corrupt profile every level applies its music filter; leaving for the menu
+	# or the ending must always give the bus and the pitch back.
+	var fx_ok: bool = true
+	var corrupt_rows: Array[Dictionary] = []
+	var music_bus: int = AudioServer.get_bus_index(GameSettings.MUSIC_BUS)
+	var baseline_effects: int = AudioServer.get_bus_effect_count(music_bus)
+	var baseline_buses: int = AudioServer.bus_count
+	for loop in 8:
+		GameState.start_new_game()
+		GameState.adaptive_profile = AdaptiveIds.PROFILE_CORRUPT
+		fx_ok = fx_ok and await _go("level_1") and _healthy()
+		fx_ok = fx_ok and bool(AudioDirector.get_music_profile()["filter_on_bus"])
+		# Phase 15a: leave the level in the middle of a focus heal, with soul wisps flying.
+		var focus_level := get_tree().current_scene as LevelBase
+		if focus_level != null:
+			focus_level.player.soul.add_soul(60)
+			focus_level.player.health.apply_damage(DamageInfo.create(2, Vector2.ZERO, null, CombatLayers.Team.ENEMY))
+			SoulPickup.spawn(focus_level, focus_level.player.global_position + Vector2(200, 0), 11)
+			for i in 240:
+				if focus_level.player.is_on_floor() and not focus_level.player.health.is_invulnerable():
+					break
+				await get_tree().physics_frame
+			Input.action_press(&"heal")
+			await get_tree().physics_frame
+			focus_level.player._try_start_focus()
+			fx_ok = fx_ok and focus_level.player.state == Player.State.FOCUS
+		Input.action_release(&"heal")
+		# Phase 15b: leave the level in the middle of the boss intro (the guardian is talking, the player is locked)
+		# with a presentation-queue step that never ends.
+		var intro_level := get_tree().current_scene as LevelBase
+		if intro_level != null and intro_level.encounter != null:
+			var boss_intro := intro_level.get_node("BossIntro") as BossIntro
+			boss_intro.play_when_headless = true
+			BossDialogue.forget_all()
+			intro_level.player.global_position = intro_level.encounter.global_position
+			for i in 12:
+				await get_tree().physics_frame
+			fx_ok = fx_ok and boss_intro.active and intro_level.player.is_input_locked()
+			var never := Node.new()
+			never.add_user_signal("never")
+			intro_level.add_child(never)
+			(intro_level.get_node("PresentationQueue") as PresentationQueue).enqueue("never", func() -> Variant: return Signal(never, &"never"), 60.0)
+		fx_ok = fx_ok and await _go("level_2") and _healthy()
+		BossDialogue.forget_all()
+		fx_ok = fx_ok and bool(AudioDirector.get_music_profile()["filter_on_bus"])
+		# Phase 15c: leave level 2 in the middle of boss 2's phase 2 (floor spikes running, the guardian leaping).
+		var swamp_level := get_tree().current_scene as LevelBase
+		if swamp_level != null and swamp_level.boss != null and swamp_level.has_node("Content/FloorHazard"):
+			swamp_level.player.story_invulnerable = true
+			swamp_level.player.global_position = swamp_level.encounter.global_position
+			for i in 12:
+				await get_tree().physics_frame
+			# Phase 15d: the possession sequence is played for real (it is cancelled or ends with the level).
+			var possession := swamp_level.get_node("PossessionDirector") as PossessionDirector
+			possession.play_when_headless = true
+			swamp_level.boss.health.apply_damage(DamageInfo.create(30, Vector2.ZERO, swamp_level.player, CombatLayers.Team.PLAYER))
+			for i in 90:
+				await get_tree().physics_frame
+			var swamp_hazard := swamp_level.get_node("Content/FloorHazard") as FloorHazard
+			fx_ok = fx_ok and (possession.active or swamp_hazard.running or possession.persistent)
+		fx_ok = fx_ok and await _go("main_menu") and _healthy()
+		await _settle()
+		var state: Dictionary = AudioDirector.get_music_profile()
+		fx_ok = fx_ok and not bool(state["filter_on_bus"]) and is_equal_approx(float(state["pitch"]), 1.0)
+		# Phase 14f: no effect, bus, boss track or duck is left behind either (15a: nor a soul wisp).
+		var music_state: Dictionary = AudioDirector.get_music_state()
+		fx_ok = fx_ok and get_tree().root.find_children("SoulPickup*", "Node2D", true, false).is_empty() and get_tree().root.find_children("SoulWisp*", "Node2D", true, false).is_empty()
+		fx_ok = fx_ok and AudioServer.get_bus_effect_count(music_bus) == baseline_effects and AudioServer.bus_count == baseline_buses 				and music_state["boss_music"] == false and is_equal_approx(float(music_state["duck_db"]), 0.0)
+		corrupt_rows.append(await _settle())
+	_check("corrupt loops: music filter on in levels; in the menu it is gone, pitch 1.0, no extra bus effect or bus, no boss track, no duck, every time", fx_ok)
+	_verdict("menu -> level 1 -> 2 -> menu with the corrupt profile (x8)", corrupt_rows)
 	SaveSystem.purge()
 	GameState.start_new_game()
 	var real_save_after: String = FileAccess.get_file_as_string(SaveSystem.DEFAULT_PATH) if FileAccess.file_exists(SaveSystem.DEFAULT_PATH) else "<missing>"

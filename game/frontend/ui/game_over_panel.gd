@@ -8,6 +8,7 @@ extends CanvasLayer
 ## lean in from the edges; a small line says where it happened ("Nivel X · zona", read only).
 ## The animation is visual only (1.5 s at most): the buttons are focused and usable from the start.
 
+signal opened
 signal retry_requested
 signal menu_requested
 
@@ -87,6 +88,7 @@ func open() -> void:
 		quip_label.text = quips[_rng.randi_range(0, quips.size() - 1)]
 	context_label.text = _context_text()
 	_animate_open()
+	opened.emit()
 
 
 func close() -> void:

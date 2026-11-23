@@ -24,10 +24,10 @@ const SAVE_KEYS: Array[String] = ["save_version", "current_level", "checkpoint",
 const FLOOR_Y: float = 300.0
 const PLAYER_HALF_HEIGHT: float = 26.0
 const ACTIONS: Array[String] = ["move_left", "move_right", "jump", "dash", "attack", "wave", "heavy_attack"]
-const DEBUG_KEYCODES: Array[int] = [KEY_K, KEY_H, KEY_F2, KEY_F3, KEY_G, KEY_R, KEY_L, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7]
+const DEBUG_KEYCODES: Array[int] = [KEY_F4, KEY_H, KEY_F2, KEY_F3, KEY_G, KEY_R, KEY_L, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7]
 const EXPECTED_KEYS: Dictionary = {
 	"move_left": [KEY_A, KEY_LEFT], "move_right": [KEY_D, KEY_RIGHT], "jump": [KEY_SPACE, KEY_UP], "dash": [KEY_SHIFT, KEY_K],
-	"attack": [KEY_J, KEY_X], "wave": [KEY_U], "pause": [KEY_ESCAPE, KEY_P], "heavy_attack": [KEY_I],
+	"attack": [KEY_J], "wave": [KEY_U], "pause": [KEY_ESCAPE, KEY_P], "heavy_attack": [KEY_I],
 }
 const EXPECTED_MOUSE: Dictionary = {"attack": [MOUSE_BUTTON_LEFT], "wave": [MOUSE_BUTTON_RIGHT], "heavy_attack": [MOUSE_BUTTON_MIDDLE]}
 
@@ -214,7 +214,7 @@ func _test_input_map() -> void:
 		if not String(action).begins_with("ui_") and not String(action).begins_with("spatial_editor"):
 			custom.append(String(action))
 	custom.sort()
-	_check("input map: only one action was added", custom == ["attack", "dash", "heavy_attack", "jump", "move_left", "move_right", "pause", "wave"], str(custom))
+	_check("input map: only the known actions exist (heal was added in Phase 15a)", custom == ["attack", "dash", "heal", "heavy_attack", "jump", "move_left", "move_right", "pause", "wave"], str(custom))
 	var collides: bool = false
 	for event in InputMap.action_get_events("heavy_attack"):
 		var key := event as InputEventKey
@@ -241,10 +241,12 @@ func _test_balance() -> void:
 		light, heavy, heavy / light, dash_slash, dash_slash / light, " | ".join(rows)])
 	_check("balance: heavy slash between 1.0x and 1.5x the light sword", heavy >= light and heavy <= light * 1.5, "%.2fx" % (heavy / light))
 	_check("balance: dash slash at most 1.5x the light sword", dash_slash <= light * 1.5, "%.2fx" % (dash_slash / light))
-	var below: bool = true
+	# Phase 15d-ter: tier 0 stays below the light sword; the stronger tiers are the reward for keeping fragments and may
+	# match or pass it, but never beat the heavy slash or the dash slash by more than 15%.
+	var below: bool = waves[0] < light
 	for value in waves:
-		below = below and value < light
-	_check("balance: every sword wave tier stays below the light sword", below)
+		below = below and value <= 1.15 * minf(heavy, dash_slash)
+	_check("balance: sword wave tier 0 stays below the light sword and no tier beats the heavy slash or the dash slash by more than 15%", below)
 	_check("stats: the new moves have their own defaults", s.heavy_damage == 3 and s.heavy_knockback == Vector2(420.0, -180.0) and s.heavy_width_multiplier == 1.6
 		and s.dash_slash_damage == 2 and s.dash_slash_knockback == Vector2(360.0, -140.0) and s.dash_slash_width_multiplier == 1.3 and s.dash_slash_extra_recovery_time == 0.12)
 
@@ -488,6 +490,14 @@ func _isolated_boss(scene: PackedScene, extra: Dictionary = {}) -> BossBase:
 		stats.set(key, extra[key])
 	boss.stats = stats
 	boss.rng_seed = 5
+	# Phase 15q: boss 3 needs the level's BossStage for its summon cycle; in this bare scene nothing of its rotation fits, so it falls back to its
+	# volley / charge / stomp at once and those attacks add hits that are not the contact. The contact test wants a boss that only touches.
+	var patterns_node: Node = boss.get_node_or_null("Patterns")
+	if patterns_node != null and patterns_node.get_node_or_null("SummonCycle") != null:
+		for pattern_node in patterns_node.get_children():
+			if pattern_node.name != "Swipe":
+				patterns_node.remove_child(pattern_node)
+				pattern_node.free()
 	return boss
 
 
@@ -868,9 +878,8 @@ func _test_dash_slash() -> void:
 			invulnerable_frames[0] += 1
 		await get_tree().physics_frame
 	Input.parse_input_event(_key_event(KEY_D, false))
-	var expected_invulnerable: int = int(round(default_stats.dash_invulnerability_time * Engine.physics_ticks_per_second))
-	_check("dash slash: the dash keeps its duration and invulnerability window (%d of %d frames)" % [invulnerable_frames[0], dash_frames[0]],
-		absi(invulnerable_frames[0] - maxi(expected_invulnerable - 3, 0)) <= 3 and absi(dash_frames[0] + 3 - int(round(default_stats.dash_duration * Engine.physics_ticks_per_second))) <= 3)
+	_check("dash slash: the dash keeps its duration and is invulnerable for all of it (Phase 15b) (%d of %d frames)" % [invulnerable_frames[0], dash_frames[0]],
+		invulnerable_frames[0] == dash_frames[0] and absi(dash_frames[0] + 3 - int(round(default_stats.dash_duration * Engine.physics_ticks_per_second))) <= 3)
 	await _physics(8)
 	Input.parse_input_event(_key_event(KEY_SHIFT, true))
 	await get_tree().physics_frame
@@ -1022,54 +1031,25 @@ func _test_tutorial() -> void:
 	var ids: Array[String] = []
 	for step in controller.steps:
 		ids.append(String(step["id"]))
-	_check("tutorial: eight steps ending with heavy and dash_slash", ids == ["move", "jump", "dash", "attack", "hit_dummy", "wave", "heavy", "dash_slash"], str(ids))
-	var heavy_text: String = controller.build_text(String(controller.steps[6]["text"]))
-	var slash_text: String = controller.build_text(String(controller.steps[7]["text"]))
-	_check("tutorial: the new prompts resolve their keys from the InputMap", heavy_text.contains("I") and not heavy_text.contains("{") and slash_text.contains("J") and slash_text.contains("Shift")
-		and not slash_text.contains("{"), heavy_text + " | " + slash_text)
-	# Real moves before their step do not count.
-	await _tap_heavy(false)
-	await _physics(80)
-	_check("tutorial: a real heavy attack before its step completes nothing", controller.current_index == 0)
-	player.heavy_attack_started.emit()
-	player.dash_slash_started.emit()
-	_check("tutorial: the new signals before their step are ignored", controller.current_index == 0)
-	# Move the controller to the wave step with the usual signals.
-	controller._moved = 999.0
-	await _physics(2)
-	player.state_changed.emit(Player.State.IDLE, Player.State.JUMP)
-	player.dash_started.emit()
-	player.attack_started.emit()
-	controller.dummy.hurtbox.receive_hit(DamageInfo.create(1, Vector2.ZERO, player, CombatLayers.Team.PLAYER))
-	_check("tutorial: reaches the wave step", controller.get_current_step_id() == "wave")
-	player.heavy_attack_started.emit()
-	_check("tutorial: heavy does not skip the wave step", controller.get_current_step_id() == "wave")
-	player.wave_cast.emit(0)
-	_check("tutorial: wave completes, then the heavy step", controller.get_current_step_id() == "heavy")
-	controller.exit_area.body_entered.emit(player)
-	_check("tutorial: the exit is locked before the heavy step", SceneManager.last_requested_scene_id == "" and not controller.is_completed)
-	player.dash_slash_started.emit()
-	_check("tutorial: dash slash does not skip the heavy step", controller.get_current_step_id() == "heavy")
-	await _wait_until(func() -> bool: return controller._feedback_left <= 0.0, 120)
+	_check("tutorial: independent steps ending with heavy, soul, heal and pause (Phase 15m)", ids == ["move", "jump", "dash", "attack", "heavy", "soul", "heal", "pause"], str(ids))
+	var heavy_text: String = controller.build_text(String(controller.steps[4]["text"]))
+	_check("tutorial: the heavy prompt resolves its key from the InputMap", heavy_text.contains("C") and not heavy_text.contains("{"), heavy_text)
 	await _wait_until(func() -> bool: return player.state == Player.State.IDLE and not player.health.is_invulnerable(), 120)
 	await _tap_heavy(true)
-	var heavy_done: bool = await _wait_until(func() -> bool: return controller.get_current_step_id() == "dash_slash", 20)
-	_check("tutorial: a real heavy attack (middle mouse) completes the heavy step", heavy_done)
+	var heavy_done: bool = await _wait_until(func() -> bool: return controller.is_step_done("heavy"), 20)
+	_check("tutorial: a real heavy attack (middle mouse) completes the heavy step even before it is asked (Phase 15m)", heavy_done)
 	controller.exit_area.body_entered.emit(player)
-	_check("tutorial: the exit stays locked before the dash slash step", SceneManager.last_requested_scene_id == "" and not controller.is_completed)
-	await _wait_until(func() -> bool: return player.state == Player.State.IDLE, 150)
-	await _physics(40)
-	# A plain dash and a plain attack do not complete it; the combination does.
-	Input.parse_input_event(_key_event(KEY_SHIFT, true))
-	await get_tree().physics_frame
-	Input.parse_input_event(_key_event(KEY_SHIFT, false))
-	await _physics(30)
-	_check("tutorial: a plain dash does not complete the dash slash step", controller.get_current_step_id() == "dash_slash")
-	await _physics(40)
-	await _hold_dash_slash(player, 2)
-	Input.parse_input_event(_key_event(KEY_D, false))
-	var all_done: bool = await _wait_until(func() -> bool: return controller.is_completed, 30)
-	_check("tutorial: a real dash slash completes the tutorial", all_done and controller.current_index == 8)
+	_check("tutorial: the exit stays locked while required steps are missing", SceneManager.last_requested_scene_id == "" and not controller.is_completed)
+	for kind in ["move", "jump", "dash", "attack", "soul"]:
+		controller._on_action(kind)
+	await _wait_until(func() -> bool: return player.state == Player.State.IDLE or player.state == Player.State.RUN, 150)
+	player.soul.add_soul(60)
+	var soul_before: int = player.soul.soul
+	Input.parse_input_event(_key_event(KEY_E, true))
+	var all_done: bool = await _wait_until(func() -> bool: return controller.is_completed, 150)
+	Input.parse_input_event(_key_event(KEY_E, false))
+	_check("tutorial: a real held heal key completes the last required step; at full health nothing heals but the soul is spent",
+		all_done and player.health.current_health == player.health.max_health and player.soul.soul == soul_before - player.soul.heal_cost())
 	controller.exit_area.body_entered.emit(player)
 	_check("tutorial: the exit opens only now", SceneManager.last_requested_scene_id == "level_1")
 	tutorial.free()

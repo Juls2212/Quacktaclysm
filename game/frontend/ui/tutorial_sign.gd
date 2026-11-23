@@ -31,13 +31,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label = get_node_or_null(source) as Label
 	_font = GameFonts.BODY
-	# Every key name bound in the input map, to draw them as keys inside the text.
-	for action in InputMap.get_actions():
-		for ev in InputMap.action_get_events(action):
-			var key := ev as InputEventKey
-			if key != null:
-				var code: Key = key.physical_keycode if key.keycode == KEY_NONE else key.keycode
-				_keys[OS.get_keycode_string(code)] = true
+	_refresh_keys()
 
 
 func _process(delta: float) -> void:
@@ -49,7 +43,14 @@ func _process(delta: float) -> void:
 	if _label.text != _text:
 		_text = _label.text
 		_age = 0.0
+		_refresh_keys()
 	queue_redraw()
+
+
+## The names of every input bound to a rebindable action, to draw them as keys inside the text
+## (names are one word: spaces inside a name are non-breaking, see ControlsConfig).
+func _refresh_keys() -> void:
+	_keys = ControlsConfig.input_map_hint_words()
 
 
 func _draw() -> void:

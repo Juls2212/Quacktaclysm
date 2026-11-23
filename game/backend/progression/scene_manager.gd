@@ -38,6 +38,8 @@ var _overlay: ColorRect = null
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# The player's key and mouse bindings (user://controls.cfg) go into the InputMap before any scene.
+	ControlsConfig.apply_saved()
 	var layer := CanvasLayer.new()
 	layer.layer = OVERLAY_LAYER
 	add_child(layer)

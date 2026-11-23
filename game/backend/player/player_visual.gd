@@ -3,11 +3,15 @@ extends Node2D
 ## moves, the wave cast and hurt, the hurt flicker, and a ragdoll while the player is dead.
 ## Visual only; it reads state and never changes gameplay.
 
+signal footstep
+
 @export var health: HealthComponent
 @export var attack_hitbox: Hitbox
 ## The drawn duck (kimono, loose hair, katana). Every frame it gets the pose for the current state.
 @export var rig: DuckRig
 @export_range(0.0, 1.0, 0.05) var blink_alpha: float = 0.3
+## Pixels of floor covered per footstep (the audio hooks `footstep`; the sound itself lives in the audio table).
+@export_range(10.0, 200.0, 1.0, "suffix:px") var step_distance: float = 44.0
 
 var _blinking: bool = false
 var _blink_timer: float = 0.0
@@ -18,6 +22,11 @@ var _state_time: float = 0.0
 var _slash_time: float = -1.0
 var _last_knockback: Vector2 = Vector2.ZERO
 var _ragdoll: DuckRagdoll
+var _step_progress: float = 0.0
+## Seconds since the last extra jump, or -1 (the ring under the feet lasts DOUBLE_JUMP_RING seconds).
+var _double_jump_time: float = -1.0
+var _corruption_clock: float = 0.0
+const DOUBLE_JUMP_RING: float = 0.4
 
 
 func _ready() -> void:
@@ -29,6 +38,7 @@ func _ready() -> void:
 	if _player:
 		_player.state_changed.connect(_on_state_changed)
 		_player.dash_slash_started.connect(func() -> void: _slash_time = 0.0)
+		_player.double_jumped.connect(func() -> void: _double_jump_time = 0.0)
 		_player.died.connect(_on_died)
 		_player.respawned.connect(_on_respawned)
 
@@ -37,16 +47,57 @@ func _process(delta: float) -> void:
 	_state_time += delta
 	if _slash_time >= 0.0:
 		_slash_time += delta
+	if _double_jump_time >= 0.0:
+		_double_jump_time += delta
+		if _double_jump_time > DOUBLE_JUMP_RING:
+			_double_jump_time = -1.0
 	# revive() brings the player back without `respawned`; drop the ragdoll either way.
 	if _ragdoll != null and _player != null and not _player.is_dead:
 		_on_respawned()
+	_refresh_corruption(delta)
 	_update_rig()
+	_update_footsteps(delta)
 	if not _blinking:
 		return
 	_blink_timer -= delta
 	if _blink_timer <= 0.0:
 		_blink_timer = _player.stats.hurt_blink_interval
 		modulate.a = 1.0 if is_equal_approx(modulate.a, blink_alpha) else blink_alpha
+
+
+## The corruption stage of the duck is part of the rig itself (Phase 15o): the fragments kept (already in the save: no new key) and the
+## «Efectos de corrupcion» option (static and thin when off), read again about once a second.
+func _refresh_corruption(delta: float) -> void:
+	_corruption_clock -= delta
+	if rig == null or (_corruption_clock > 0.0 and rig.corruption_stage == clampi(GameState.souls_kept, 0, 3)):
+		return
+	_corruption_clock = 1.0
+	rig.corruption_stage = clampi(GameState.souls_kept, 0, 3)
+	rig.corruption_growth = 1.0
+	rig.corruption_reduced = not GameSettings.is_corruption_effects_enabled()
+
+
+## Footsteps are paced by the distance walked on the floor, so they match the run cycle.
+func _update_footsteps(delta: float) -> void:
+	if _player == null:
+		return
+	var running: bool = _player.state == Player.State.RUN and _player.is_on_floor() and not _player.is_dead
+	advance_steps(absf(_player.velocity.x) * delta, running)
+
+
+## Adds `distance` pixels walked and emits `footstep` for every `step_distance` covered. Nothing counts
+## (and the count starts again, half a step in) while not running on the floor. Returns the steps emitted.
+func advance_steps(distance: float, running_on_floor: bool) -> int:
+	if not running_on_floor:
+		_step_progress = step_distance * 0.5
+		return 0
+	_step_progress += distance
+	var steps: int = 0
+	while _step_progress >= step_distance:
+		_step_progress -= step_distance
+		steps += 1
+		footstep.emit()
+	return steps
 
 
 func _set_blinking(value: bool) -> void:
@@ -69,8 +120,11 @@ func _update_rig() -> void:
 	rig.grounded = _player.is_on_floor()
 	rig.vertical_speed = _player.velocity.y
 	rig.dashing = state == Player.State.DASH
+	rig.dash_shield = _player.is_dash_invulnerable
+	rig.double_jump_t = _double_jump_time / DOUBLE_JUMP_RING if _double_jump_time >= 0.0 else -1.0
 	rig.hurt = state == Player.State.HURT
 	rig.dead = state == Player.State.DEAD
+	rig.focus_t = _player.get_focus_progress() if state == Player.State.FOCUS else -1.0
 	rig.action = DuckRig.Action.NONE
 	match state:
 		Player.State.ATTACK:

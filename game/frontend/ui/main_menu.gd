@@ -80,8 +80,14 @@ extends Control
 @onready var sfx_label: Label = $OptionsPanel/Margin/Box/SfxRow/SfxLabel
 @onready var sfx_slider: HSlider = $OptionsPanel/Margin/Box/SfxRow/SfxSlider
 @onready var shake_check: CheckButton = $OptionsPanel/Margin/Box/ShakeCheck
-@onready var controls_title: Label = $OptionsPanel/Margin/Box/ControlsTitle
-@onready var controls_grid: GridContainer = $OptionsPanel/Margin/Box/ControlsGrid
+## "Efectos de corrupción" toggle; built in code next to the camera shake one.
+var corruption_check: CheckButton
+var ai_check: CheckButton
+var blood_check: CheckButton
+@onready var controls_button: Button = $OptionsPanel/Margin/Box/ControlsButton
+@onready var options_box: VBoxContainer = $OptionsPanel/Margin/Box
+## The editable controls page; it takes the place of the options while it is open.
+var controls_editor: ControlsEditor = null
 @onready var credits_scroll: Control = $CreditsPanel/Margin/Box/CreditsScroll
 @onready var credits_roll: VBoxContainer = $CreditsPanel/Margin/Box/CreditsScroll/CreditsRoll
 @onready var ink_wipe: UiFx = $InkWipe
@@ -122,13 +128,29 @@ func _ready() -> void:
 	volume_label.text = volume_text
 	options_back_button.text = back_text
 	credits_back_button.text = back_text
-	credits_label.text = credits_body
+	# Phase 15h: the content notice goes with the credits (never a pop-up, never in the way of play).
+	credits_label.text = credits_body + "\n\n" + StoryTexts.get_default().content_notice
 	version_label.text = version_text
 	music_label.text = music_text
 	sfx_label.text = sfx_text
 	shake_check.text = shake_text
-	controls_title.text = controls_text
-	OptionsBoard.fill_controls(controls_grid)
+	corruption_check = CheckButton.new()
+	corruption_check.text = (load(OptionsBoard.PRESENTATION_PATH) as ProfilePresentation).toggle_text
+	shake_check.get_parent().add_child(corruption_check)
+	shake_check.get_parent().move_child(corruption_check, shake_check.get_index() + 1)
+	blood_check = CheckButton.new()
+	blood_check.text = (load(OptionsBoard.PRESENTATION_PATH) as ProfilePresentation).blood_toggle_text
+	corruption_check.get_parent().add_child(blood_check)
+	corruption_check.get_parent().move_child(blood_check, corruption_check.get_index() + 1)
+	ai_check = CheckButton.new()
+	ai_check.text = (load(OptionsBoard.PRESENTATION_PATH) as ProfilePresentation).ai_toggle_text
+	corruption_check.get_parent().add_child(ai_check)
+	corruption_check.get_parent().move_child(ai_check, corruption_check.get_index() + 1)
+	controls_button.text = (load(ControlsConfig.CATALOG_PATH) as ControlsCatalog).open_button_text
+	controls_editor = ControlsEditor.new()
+	$OptionsPanel/Margin.add_child(controls_editor)
+	controls_button.pressed.connect(_open_controls)
+	controls_editor.closed.connect(_close_controls)
 	_build_credits()
 	_header = [title_board, title_label, title_crack, tagline_label]
 	for piece in _header:
@@ -148,11 +170,17 @@ func _ready() -> void:
 	music_slider.value = _settings["music_volume"]
 	sfx_slider.value = _settings["sfx_volume"]
 	shake_check.button_pressed = _settings["camera_shake"]
+	corruption_check.button_pressed = _settings["corruption_effects"]
+	blood_check.button_pressed = _settings["blood"]
+	ai_check.button_pressed = _settings["ai_adaptation"]
 	fullscreen_check.toggled.connect(_on_fullscreen_toggled)
 	volume_slider.value_changed.connect(_on_volume_changed)
 	music_slider.value_changed.connect(_on_setting_changed.bind("music_volume"))
 	sfx_slider.value_changed.connect(_on_setting_changed.bind("sfx_volume"))
 	shake_check.toggled.connect(_on_setting_changed.bind("camera_shake"))
+	corruption_check.toggled.connect(_on_setting_changed.bind("corruption_effects"))
+	blood_check.toggled.connect(_on_setting_changed.bind("blood"))
+	ai_check.toggled.connect(_on_setting_changed.bind("ai_adaptation"))
 	GameSettings.apply(_settings)
 	_show_main_buttons()
 	message_label.text = ""
@@ -189,8 +217,10 @@ func _input(event: InputEvent) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	# Esc / back closes an open panel.
+	# Esc / back closes an open panel (the controls page handles its own Esc).
 	if event.is_action_pressed("ui_cancel"):
+		if controls_editor != null and controls_editor.is_open():
+			return
 		if options_panel.visible:
 			_on_back_pressed(options_button)
 		elif credits_panel.visible:
@@ -202,7 +232,19 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+func _open_controls() -> void:
+	options_box.visible = false
+	controls_editor.open()
+
+
+func _close_controls() -> void:
+	options_box.visible = true
+	controls_button.grab_focus()
+
+
 func _show_main_buttons() -> void:
+	if controls_editor != null and controls_editor.is_open():
+		controls_editor.close()
 	for panel: Control in [confirm_panel, options_panel, credits_panel]:
 		if panel.visible:
 			_splash(panel)

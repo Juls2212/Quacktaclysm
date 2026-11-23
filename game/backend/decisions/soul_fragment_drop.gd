@@ -10,11 +10,37 @@ signal fragment_spawned(fragment: SoulFragment)
 @export var fragment_scene: PackedScene
 @export var spawn_delay: float = 0.8
 @export var spawn_offset: Vector2 = Vector2(0.0, -40.0)
+## The fragment condenses over this long when it appears (0 = at once; reduced mode never animates it).
+@export var condense_seconds: float = 0.5
 
 var _pending: bool = false
 var _spawned: bool = false
 var _time_left: float = 0.0
 var _spawn_position: Vector2 = Vector2.ZERO
+## Owners that keep the fragment from appearing (the guardian's last words): it spawns once every hold is released.
+var _holders: Dictionary = {}
+
+
+## The fragment waits (the defeat dialogue holds it). Idempotent per owner.
+func hold(owner_object: Object) -> void:
+	_holders[owner_object.get_instance_id()] = true
+
+
+func release(owner_object: Object) -> void:
+	_holders.erase(owner_object.get_instance_id())
+
+
+## The last words and the spirit are over: the fragment appears now (without the rest of the spawn delay).
+func expedite() -> void:
+	if _pending:
+		_time_left = 0.0
+
+
+func is_held() -> bool:
+	for id in _holders.keys():
+		if not is_instance_valid(instance_from_id(int(id))):
+			_holders.erase(id)
+	return not _holders.is_empty()
 
 
 func _ready() -> void:
@@ -24,6 +50,8 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if is_held():
+		return
 	_time_left -= delta
 	if _time_left <= 0.0:
 		_spawn()
@@ -52,4 +80,6 @@ func _spawn() -> void:
 	fragment.data = fragment_data
 	scene.add_child(fragment)
 	fragment.global_position = _spawn_position
+	if condense_seconds > 0.0 and GameSettings.is_corruption_effects_enabled():
+		fragment.appear(condense_seconds)
 	fragment_spawned.emit(fragment)

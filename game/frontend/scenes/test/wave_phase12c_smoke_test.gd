@@ -24,7 +24,7 @@ const PLAYER_HALF_HEIGHT: float = 26.0
 const PLAYER_HALF_WIDTH: float = 14.0
 const ACTIONS: Array[String] = ["move_left", "move_right", "jump", "dash", "attack", "wave"]
 const SAVE_KEYS: Array[String] = ["save_version", "current_level", "checkpoint", "souls_released", "souls_kept", "decisions", "adaptive_profile"]
-const EXPECTED_ACTIONS: Array[String] = ["attack", "dash", "heavy_attack", "jump", "move_left", "move_right", "pause", "wave"]
+const EXPECTED_ACTIONS: Array[String] = ["attack", "dash", "heal", "heavy_attack", "jump", "move_left", "move_right", "pause", "wave"]
 const DASH_DELAY: float = 0.3
 
 var failures: int = 0
@@ -156,6 +156,7 @@ func _hit(player: Player, amount: int = 1) -> void:
 func _run() -> void:
 	_check("AI service disabled for the whole test", not ai_config.enabled)
 	_test_config()
+	await _test_damage_per_tier()
 	_test_input_map_and_scans()
 	await _test_cast_flow()
 	await _test_blocking()
@@ -187,8 +188,8 @@ func _test_config() -> void:
 	var t1: SwordWaveTier = CONFIG.get_tier(1)
 	var t2: SwordWaveTier = CONFIG.get_tier(2)
 	_check("config: tier table", t0.damage == 1 and t0.speed == 520.0 and t0.lifetime == 0.9 and t0.size_scale == 1.0 and t0.pierce_count == 0 and t0.cooldown == 1.0
-		and t1.damage == 1 and t1.speed == 580.0 and t1.lifetime == 1.1 and t1.size_scale == 1.35 and t1.pierce_count == 1 and t1.cooldown == 0.9
-		and t2.damage == 2 and t2.speed == 640.0 and t2.lifetime == 1.3 and t2.size_scale == 1.7 and t2.pierce_count == 2 and t2.cooldown == 1.2)
+		and t1.damage == 2 and t1.speed == 580.0 and t1.lifetime == 1.1 and t1.size_scale == 1.35 and t1.pierce_count == 1 and t1.cooldown == 0.9
+		and t2.damage == 3 and t2.speed == 640.0 and t2.lifetime == 1.3 and t2.size_scale == 1.7 and t2.pierce_count == 2 and t2.cooldown == 1.2)
 	_check("config: timings", CONFIG.startup_time == 0.12 and CONFIG.recovery_time == 0.2 and CONFIG.horizontal_speed_multiplier == 0.4 and CONFIG.can_cast_in_air
 		and CONFIG.input_buffer_time == 0.12 and CONFIG.spawn_offset == Vector2(28.0, -4.0))
 	_check("tier: no decisions -> 0", CONFIG.resolve_tier([]) == 0)
@@ -222,15 +223,19 @@ func _test_config() -> void:
 	# Sustained damage per second must stay below the sword's.
 	var player_stats: PlayerStats = load("res://backend/player/default_player_stats.tres") as PlayerStats
 	var sword_dps: float = float(player_stats.attack_damage) / (player_stats.attack_startup_time + player_stats.attack_active_time + player_stats.attack_recovery_time + player_stats.attack_cooldown)
+	var heavy_dps: float = float(player_stats.heavy_damage) / (player_stats.heavy_startup_time + player_stats.heavy_active_time + player_stats.heavy_recovery_time + player_stats.heavy_cooldown)
+	var slash_dps: float = float(player_stats.dash_slash_damage) / (player_stats.dash_duration + player_stats.dash_cooldown + player_stats.dash_slash_extra_recovery_time)
 	var all_below: bool = true
 	var report: PackedStringArray = PackedStringArray()
 	for index in CONFIG.tiers.size():
 		var tier: SwordWaveTier = CONFIG.get_tier(index)
 		var dps: float = float(tier.damage) / maxf(tier.cooldown, CONFIG.startup_time + CONFIG.recovery_time)
 		report.append("tier %d = %.2f" % [index, dps])
-		all_below = all_below and dps < sword_dps
+		# Phase 15d-ter: tier 0 stays below the light sword; the stronger tiers are the reward for keeping fragments and may
+		# match or pass it, but never beat the heavy slash or the dash slash by more than 15%.
+		all_below = all_below and (dps < sword_dps if index == 0 else dps <= 1.15 * minf(heavy_dps, slash_dps))
 	print("SUSTAINED DPS: sword %.2f | %s" % [sword_dps, " | ".join(report)])
-	_check("sanity: every tier's sustained damage is below the sword's", all_below)
+	_check("sanity: tier 0 stays below the light sword and no tier beats the heavy slash or the dash slash by more than 15%", all_below)
 
 
 func _test_input_map_and_scans() -> void:
@@ -250,7 +255,7 @@ func _test_input_map_and_scans() -> void:
 		if not String(action).begins_with("ui_") and not String(action).begins_with("spatial_editor"):
 			custom.append(String(action))
 	custom.sort()
-	_check("input: no action other than wave and heavy_attack (Phase 13c) was added", custom == EXPECTED_ACTIONS, str(custom))
+	_check("input: no action other than wave, heavy_attack (Phase 13c) and heal (Phase 15a) was added", custom == EXPECTED_ACTIONS, str(custom))
 	var key_regex: RegEx = RegEx.create_from_string("KEY_[A-Z0-9_]+")
 	var seen_level: Array[String] = _keys_in("res://backend/progression/level_debug.gd", key_regex)
 	var seen_boss: Array[String] = _keys_in("res://frontend/scenes/test/boss_test.gd", key_regex)
@@ -849,6 +854,7 @@ func _test_hud() -> void:
 # --- Tutorial ---
 
 func _test_tutorial() -> void:
+	# Phase 15m: the tutorial no longer teaches the sword wave (it comes later with the fragments) and its steps are independent.
 	_clean_state()
 	SceneManager.dry_run = true
 	var registry := SceneRegistry.new()
@@ -860,41 +866,13 @@ func _test_tutorial() -> void:
 	add_child(tutorial)
 	await _physics(5)
 	var controller: TutorialController = tutorial.get_node("TutorialController")
-	var player: Player = tutorial.player
 	var ids: Array[String] = []
 	for step in controller.steps:
 		ids.append(String(step["id"]))
-	_check("tutorial: the wave step is followed by the Phase 13c steps", ids == ["move", "jump", "dash", "attack", "hit_dummy", "wave", "heavy", "dash_slash"], str(ids))
-	_check("tutorial: the wave prompt resolves its key from the InputMap", controller.build_text(String(controller.steps[5]["text"])).contains("U") and not controller.build_text(String(controller.steps[5]["text"])).contains("{"))
-	# A real cast before its step does not count.
+	_check("tutorial: no wave step any more (Phase 15m)", not ids.has("wave") and ids.has("heavy") and ids.has("heal"), str(ids))
 	await _tap_wave(true)
 	await _physics(15)
-	_check("tutorial: a real cast before the wave step does not complete anything", controller.current_index == 0)
-	await _wait_until(func() -> bool: return player.wave_caster.get_cooldown_remaining() <= 0.0 and player.state == Player.State.IDLE, 120)
-	_free_projectiles()
-	player.dash_started.emit()
-	player.attack_started.emit()
-	player.state_changed.emit(Player.State.IDLE, Player.State.JUMP)
-	controller.current_index = 0
-	controller._moved = 999.0
-	await _physics(2)
-	_check("tutorial: move completes", controller.get_current_step_id() == "jump")
-	player.state_changed.emit(Player.State.IDLE, Player.State.JUMP)
-	player.dash_started.emit()
-	player.attack_started.emit()
-	_check("tutorial: jump, dash and attack complete in order", controller.get_current_step_id() == "hit_dummy")
-	controller.exit_area.body_entered.emit(player)
-	_check("tutorial: the exit stays closed", SceneManager.last_requested_scene_id == "" and not controller.is_completed)
-	controller.dummy.hurtbox.receive_hit(DamageInfo.create(1, Vector2.ZERO, player, CombatLayers.Team.PLAYER))
-	_check("tutorial: the dummy hit leads to the wave step", controller.get_current_step_id() == "wave" and not controller.is_completed)
-	controller.exit_area.body_entered.emit(player)
-	_check("tutorial: the exit still requires the wave step", SceneManager.last_requested_scene_id == "" and not controller.is_completed)
-	await _wait_until(func() -> bool: return controller._feedback_left <= 0.0, 120)
-	await _tap_wave(false)
-	var completed: bool = await _wait_until(func() -> bool: return controller.current_index == 6, 40)
-	_check("tutorial: a real cast completes the wave step (the heavy and dash slash steps follow)", completed and controller.get_current_step_id() == "heavy" and not controller.is_completed)
-	controller.exit_area.body_entered.emit(player)
-	_check("tutorial: the exit stays locked until the last step", SceneManager.last_requested_scene_id == "" and not controller.is_completed)
+	_check("tutorial: a real wave cast completes nothing", controller.done.is_empty() or not controller.done.has("wave"))
 	tutorial.free()
 	_free_projectiles()
 	await get_tree().process_frame
@@ -943,7 +921,7 @@ func _test_level_1_gap() -> void:
 	var zone_left: float = kill_zone.position.x - kill_zone.size.x * 0.5
 	var zone_right: float = kill_zone.position.x + kill_zone.size.x * 0.5
 	_check("level 1: the gap is 285 px", is_equal_approx(gap, 285.0), "%.1f" % gap)
-	_check("level 1: the landing platform keeps its right edge (5400) and top (600)", is_equal_approx(end_floor.position.x + end_floor.size.x * 0.5, 5400.0)
+	_check("level 1: the landing platform keeps its right edge (5490, the right wall; was 5400 before the Phase 15b hole fix) and top (600)", is_equal_approx(end_floor.position.x + end_floor.size.x * 0.5, 5490.0)
 		and is_equal_approx(end_floor.position.y - end_floor.size.y * 0.5, 600.0) and is_equal_approx(gap_left, 2400.0))
 	_check("level 1: the KillZone still covers the gap from below", zone_left <= gap_left and zone_right >= gap_right and kill_zone.position.y - kill_zone.size.y * 0.5 > 600.0)
 	level.free()
@@ -982,3 +960,71 @@ func _test_level_1_gap() -> void:
 		world.free()
 	_check("level 1 gap: every dash delay from 0.2 to 0.5 s crosses", early_ok)
 	_clean_state()
+
+
+# --- Phase 15d-ter: the damage grows with each upgrade ---
+
+func _test_damage_per_tier() -> void:
+	var tiers: Array[SwordWaveTier] = [CONFIG.get_tier(0), CONFIG.get_tier(1), CONFIG.get_tier(2)]
+	_check("damage: it grows strictly with the tier (%d < %d < %d) and tier 0 is unchanged at 1" % [tiers[0].damage, tiers[1].damage, tiers[2].damage],
+		tiers[0].damage == 1 and tiers[0].damage < tiers[1].damage and tiers[1].damage < tiers[2].damage)
+	# Nothing but the damage changed: cooldown, speed, reach and the soul gain.
+	_check("damage: cooldown, speed, lifetime, size and piercing of the tiers are unchanged", tiers[0].cooldown == 1.0 and tiers[1].cooldown == 0.9 and tiers[2].cooldown == 1.2
+		and tiers[0].speed == 520.0 and tiers[1].speed == 580.0 and tiers[2].speed == 640.0 and tiers[0].lifetime == 0.9 and tiers[1].lifetime == 1.1 and tiers[2].lifetime == 1.3
+		and tiers[1].size_scale == 1.35 and tiers[2].size_scale == 1.7 and tiers[1].pierce_count == 1 and tiers[2].pierce_count == 2)
+	var soul := load("res://backend/player/default_soul_config.tres") as SoulConfig
+	_check("damage: the soul gain of a wave hit is still 8", soul.gain_wave == 8)
+	var probe := WAVE_SCENE.instantiate() as Projectile
+	add_child(probe)
+	await _physics(2)
+	var shape := (probe.get_node("Hitbox/CollisionShape2D") as CollisionShape2D).shape as RectangleShape2D
+	_check("damage: the hitbox of the wave scene is unchanged (16 x 44)", shape != null and shape.size == Vector2(16.0, 44.0))
+	probe.free()
+	# The audit: damage, cooldown, speed, hitbox, sustained dps, kill times and hits to kill (printed for the report).
+	var cycle_floor: float = CONFIG.startup_time + CONFIG.recovery_time
+	var boss_health: Dictionary = {"boss 1": 40, "boss 2": 50, "boss 3": 80}
+	var enemy_health: Dictionary = {"melee": 3, "fast": 2, "ranged": 2, "melee_tough": 8}
+	for index in 3:
+		var tier: SwordWaveTier = tiers[index]
+		var cycle: float = maxf(tier.cooldown, cycle_floor)
+		var dps: float = float(tier.damage) / cycle
+		var line: PackedStringArray = PackedStringArray()
+		for boss_name in boss_health:
+			line.append("%s %.1f s (%d hits)" % [boss_name, float(boss_health[boss_name]) / dps, ceili(float(boss_health[boss_name]) / float(tier.damage))])
+		var hits: PackedStringArray = PackedStringArray()
+		for enemy_name in enemy_health:
+			hits.append("%s %d" % [enemy_name, ceili(float(enemy_health[enemy_name]) / float(tier.damage))])
+		print("AUDIT|wave tier %d|damage %d|cooldown %.1f s|speed %.0f px/s|hitbox %.0f x %.0f px|%.2f dps|%s|hits per enemy: %s" % [index, tier.damage, tier.cooldown, tier.speed, 16.0 * tier.size_scale, 44.0 * tier.size_scale, dps, " | ".join(line), ", ".join(hits)])
+	# Boss 2 (50 HP): the hits to kill follow the damage, and the ideal times match the targets of this phase.
+	var boss_two_stats := load("res://backend/bosses/stats/boss_two_stats.tres") as BossStats
+	var hits_to_kill: Array[int] = []
+	var times: Array[float] = []
+	for index in 3:
+		hits_to_kill.append(ceili(float(boss_two_stats.max_health) / float(tiers[index].damage)))
+		times.append(float(boss_two_stats.max_health) / (float(tiers[index].damage) / maxf(tiers[index].cooldown, cycle_floor)))
+	_check("damage: boss 2 (50 HP) needs %s wave hits per tier and the ideal wave-only kill takes %.1f / %.1f / %.1f s" % [str(hits_to_kill), times[0], times[1], times[2]],
+		hits_to_kill == [50, 25, 17] and absf(times[0] - 50.0) < 0.1 and absf(times[1] - 22.5) < 0.1 and absf(times[2] - 20.0) < 0.1)
+	var dps_two: float = float(tiers[2].damage) / maxf(tiers[2].cooldown, cycle_floor)
+	_check("damage: tier 2 does not trivialize boss 1 or boss 3 (wave-only ideal %.1f s and %.1f s, sword-only ideal 18 s and 36 s)" % [40.0 / dps_two, 80.0 / dps_two],
+		40.0 / dps_two >= 15.0 and 80.0 / dps_two >= 30.0)
+	# Regular enemies: tier 0 needs the same hits as always; the stronger tiers may need fewer.
+	var melee := load("res://backend/enemies/stats/melee_basic_stats.tres") as EnemyStats
+	var fast := load("res://backend/enemies/stats/fast_basic_stats.tres") as EnemyStats
+	var ranged := load("res://backend/enemies/stats/ranged_basic_stats.tres") as EnemyStats
+	var tough := load("res://backend/enemies/stats/melee_tough_stats.tres") as EnemyStats
+	_check("damage: tier 0 needs the same hits on every regular enemy as before (3 / 2 / 2 / 8)", ceili(float(melee.max_health) / float(tiers[0].damage)) == 3 and ceili(float(fast.max_health) / float(tiers[0].damage)) == 2
+		and ceili(float(ranged.max_health) / float(tiers[0].damage)) == 2 and ceili(float(tough.max_health) / float(tiers[0].damage)) == 8)
+	# The card: the multiplier comes from the resource.
+	var line_one: String = AbilityIntro.wave_damage_text(CONFIG, 1)
+	var line_two: String = AbilityIntro.wave_damage_text(CONFIG, 2)
+	_check("card: the damage line is computed from the resource (tier 1: %s / tier 2: %s)" % [line_one, line_two], line_one.contains("×2.0") and line_two.contains("×3.0") and line_two.contains("de 1 a 3"))
+	var host := Node.new()
+	add_child(host)
+	var card: AbilityCard = AbilityCard.present(host, "wave_damage_probe", "Onda de espada: nivel 2", "Texto.\n" + line_two, PackedStringArray(["wave"]), CONFIG.get_tier(2))
+	await _physics(2)
+	_check("card: the wave upgrade card shows the damage multiplier", card != null and card.description.contains("×3.0"))
+	if card != null:
+		card.dismiss()
+	await _physics(3)
+	host.free()
+	_check("burst: the impact burst grows with the tier (visual only: x1.0 / x1.25 / x1.5)", tiers[0].impact_scale == 1.0 and tiers[1].impact_scale > tiers[0].impact_scale and tiers[2].impact_scale > tiers[1].impact_scale)

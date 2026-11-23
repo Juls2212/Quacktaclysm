@@ -15,15 +15,41 @@ const RED_SHINE := Color(1.0, 0.78, 0.72, 0.8)
 const WAVE_LIGHT := Color("c8f4ff")
 const WAVE_MID := Color("74d2f2")
 const WAVE_DARK := Color("2e8cb6")
+const INDICATOR_COLORS := {
+	"compassionate": Color("74d2f2"),
+	"neutral": Color("b9b4a6"),
+	"corrupt": Color("c2331f"),
+}
+const CREAM := Color(0.98, 0.93, 0.8)
 const SHAKE_TIME: float = 0.2
 const FILL_TIME: float = 0.3
 
 @export var pip_size: Vector2 = Vector2(22.0, 18.0)
+## Width of the whole bar (the Pips container): segments get narrower so it never grows beyond it,
+## whatever the maximum health is (22 px each up to 8 points, 16 px at 11).
+@export var bar_width: float = 176.0
+## Wording of the corruption indicator (profile name and score).
+@export var texts: DecisionTexts = preload("res://backend/decisions/default_decision_texts.tres")
 @export var full_color: Color = Color(0.9, 0.2, 0.25, 1.0)
 @export var empty_color: Color = Color(0.2, 0.2, 0.25, 0.7)
 
 var current_health: int = 0
 var max_health: int = 0
+## Corruption indicator: the adaptive profile and the weighted score it comes from.
+var profile: String = AdaptiveIds.PROFILE_NEUTRAL
+var score: float = 0.0
+## Presentation of the plaque, set by the level's ProfilePresenter: a tint over it (alpha = strength,
+## 0 = none) and a short flash when a decision changes the profile.
+var plaque_tint: Color = Color(1, 1, 1, 0)
+var _pulse_color: Color = Color(1, 1, 1, 0)
+var _pulse_left: float = 0.0
+var _pulse_total: float = 0.0
+## Soul meter (Phase 15a): current soul, its maximum and the heal cost (a tick mark on the bar).
+var soul: int = 0
+var soul_max: int = 99
+var heal_cost: int = 33
+var _soul_component: SoulComponent = null
+var _soul_flash: float = 0.0
 
 var _health: HealthComponent
 var _caster: SwordWaveCaster = null
@@ -60,6 +86,75 @@ func _ready() -> void:
 	# The cooldown bar keeps its value and tint; the stone drawing replaces its own look.
 	wave_bar.add_theme_stylebox_override(&"background", StyleBoxEmpty.new())
 	wave_bar.add_theme_stylebox_override(&"fill", StyleBoxEmpty.new())
+	GameState.state_changed.connect(_on_game_state_changed)
+	_on_game_state_changed()
+
+
+func _exit_tree() -> void:
+	if GameState.state_changed.is_connected(_on_game_state_changed):
+		GameState.state_changed.disconnect(_on_game_state_changed)
+
+
+## Profile and score for the corruption indicator; redrawn whenever the game state changes.
+func _on_game_state_changed() -> void:
+	profile = GameState.adaptive_profile
+	score = GameState.get_adaptive_score()
+	if _soul_component != null:
+		heal_cost = _soul_component.heal_cost()
+	if _drawer != null:
+		_drawer.queue_redraw()
+
+
+## Follows the player's Soul meter (the cost mark moves when a fragment is kept).
+func _bind_soul(component: SoulComponent) -> void:
+	if _soul_component != null and _soul_component.soul_changed.is_connected(_on_soul_changed):
+		_soul_component.soul_changed.disconnect(_on_soul_changed)
+	_soul_component = component
+	if component == null:
+		return
+	component.soul_changed.connect(_on_soul_changed)
+	soul = component.soul
+	soul_max = component.get_max()
+	heal_cost = component.heal_cost()
+
+
+func _on_soul_changed(current: int, maximum: int) -> void:
+	if current > soul:
+		_soul_flash = 1.0
+	soul = current
+	soul_max = maximum
+
+
+## Where the corruption plaque and the soul meter are drawn (right column, under the health bar and the
+## wave bar). The soul meter sits under the plaque so nothing overlaps, even with 11 hearts.
+func get_plaque_rect() -> Rect2:
+	return Rect2(Vector2(_drawer.size.x - 204.0, 82.0), Vector2(bar_width, 22.0))
+
+
+func get_soul_rect() -> Rect2:
+	return Rect2(Vector2(_drawer.size.x - 204.0, 112.0), Vector2(bar_width, 14.0))
+
+
+## True while the soul meter glows: enough soul to pay the heal cost.
+func is_heal_affordable() -> bool:
+	return soul >= heal_cost
+
+
+## Flashes the corruption plaque in `color` (its alpha is the peak) for `duration` seconds.
+func pulse_plaque(color: Color, duration: float) -> void:
+	_pulse_color = color
+	_pulse_total = maxf(duration, 0.05)
+	_pulse_left = _pulse_total
+
+
+## Seconds of plaque flash left (0 when none is playing).
+func get_plaque_pulse_left() -> float:
+	return _pulse_left
+
+
+## Name and score shown by the indicator, e.g. "Corrupto −2".
+func get_indicator_text() -> String:
+	return "%s %s" % [texts.get_profile_name(profile), DecisionTexts.format_score(score)]
 
 
 func bind(player: Player) -> void:
@@ -70,6 +165,7 @@ func bind(player: Player) -> void:
 	_on_health_changed(_health.current_health, _health.max_health)
 	_caster = player.wave_caster
 	wave_bar.visible = _caster != null
+	_bind_soul(player.soul)
 	_update_wave_bar()
 
 
@@ -77,6 +173,8 @@ func _process(delta: float) -> void:
 	_update_wave_bar()
 	_time += delta
 	_shake = maxf(_shake - delta, 0.0)
+	_pulse_left = maxf(_pulse_left - delta, 0.0)
+	_soul_flash = maxf(_soul_flash - delta * 4.0, 0.0)
 	for i in _fill.size():
 		if _delay[i] > 0.0:
 			_delay[i] -= delta
@@ -138,6 +236,9 @@ func _on_health_changed(current: int, maximum: int) -> void:
 		var extra: Node = pips.get_child(pips.get_child_count() - 1)
 		pips.remove_child(extra)
 		extra.queue_free()
+	var segment := Vector2(minf(pip_size.x, bar_width / float(maxi(maximum, 1))), pip_size.y)
+	for child in pips.get_children():
+		(child as Control).custom_minimum_size = segment
 	var count: int = pips.get_child_count()
 	_fill.resize(count)
 	_delay.resize(count)
@@ -212,6 +313,8 @@ func _draw_hud() -> void:
 		var tint: Color = wave_bar.modulate
 		StoneUi.fill(_drawer, Rect2(wr.position, Vector2(wr.size.x * clampf(float(wave_bar.value), 0.0, 1.0), wr.size.y)),
 				WAVE_LIGHT * tint, WAVE_MID * tint, WAVE_DARK * tint, Color(1, 1, 1, 0.6))
+	_draw_indicator(off)
+	_draw_soul_meter(off)
 	for s in _shards:
 		var a: float = clampf(float(s["life"]) / float(s["max"]), 0.0, 1.0)
 		var p: Vector2 = s["p"]
@@ -223,6 +326,48 @@ func _draw_hud() -> void:
 		var ring := PackedVector2Array(quad)
 		ring.append(quad[0])
 		_drawer.draw_polyline(ring, Color(StoneUi.INK, a), 1.4, true)
+
+
+## The Soul meter: a stone bar with a pale blue fill, a tick mark at the heal cost (it moves right when
+## fragments are kept: healing costs more) and a glow while the cost can be paid.
+func _draw_soul_meter(off: Vector2) -> void:
+	var rect: Rect2 = get_soul_rect()
+	rect.position += off * 0.5
+	StoneUi.frame(_drawer, rect, 4.0, 41)
+	StoneUi.well(_drawer, rect)
+	var ratio: float = clampf(float(soul) / float(maxi(soul_max, 1)), 0.0, 1.0)
+	if ratio > 0.0:
+		StoneUi.fill(_drawer, Rect2(rect.position, Vector2(rect.size.x * ratio, rect.size.y)), WAVE_LIGHT, WAVE_MID, WAVE_DARK, Color(1, 1, 1, 0.6))
+	if _soul_flash > 0.0:
+		_drawer.draw_rect(rect.grow(-1.0), Color(1.0, 1.0, 1.0, 0.35 * _soul_flash))
+	if is_heal_affordable():
+		var glow: float = 0.5 + 0.5 * sin(_time * 5.0)
+		_drawer.draw_rect(rect.grow(2.0), Color(0.8, 0.95, 1.0, 0.3 + 0.4 * glow), false, 2.5)
+	var tick_x: float = rect.position.x + rect.size.x * clampf(float(heal_cost) / float(maxi(soul_max, 1)), 0.0, 1.0)
+	_drawer.draw_line(Vector2(tick_x, rect.position.y - 3.0), Vector2(tick_x, rect.end.y + 3.0), StoneUi.INK, 5.0, true)
+	_drawer.draw_line(Vector2(tick_x, rect.position.y - 3.0), Vector2(tick_x, rect.end.y + 3.0), CREAM, 2.5, true)
+
+
+## Compact corruption indicator under the wave bar: a stone plaque with a colored gem for the
+## profile and its name and score.
+func _draw_indicator(off: Vector2) -> void:
+	var rect: Rect2 = get_plaque_rect()
+	rect.position += off * 0.5
+	StoneUi.frame(_drawer, rect, 4.0, 31)
+	StoneUi.well(_drawer, rect)
+	var gem: Color = INDICATOR_COLORS.get(profile, INDICATOR_COLORS["neutral"])
+	_drawer.draw_circle(rect.position + Vector2(13.0, 11.0), 6.0, StoneUi.INK)
+	_drawer.draw_circle(rect.position + Vector2(13.0, 11.0), 4.2, gem)
+	_drawer.draw_circle(rect.position + Vector2(11.6, 9.4), 1.3, Color(1, 1, 1, 0.7))
+	if plaque_tint.a > 0.001:
+		_drawer.draw_rect(rect.grow(-2.0), Color(plaque_tint, plaque_tint.a * 0.6))
+	if _pulse_left > 0.0:
+		var k: float = _pulse_left / _pulse_total
+		_drawer.draw_rect(rect.grow(-1.0), Color(_pulse_color, _pulse_color.a * sin(k * PI)))
+	var at: Vector2 = rect.position + Vector2(26.0, 16.0)
+	var text: String = get_indicator_text()
+	_drawer.draw_string_outline(GameFonts.BODY, at, text, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 30.0, 16, 4, Color(StoneUi.INK, 0.9))
+	_drawer.draw_string(GameFonts.BODY, at, text, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 30.0, 16, CREAM)
 
 
 ## Over an empty segment the frame crumbles (black bites) and moss sprouts from it.

@@ -36,6 +36,8 @@ var decisions: Array = []
 var adaptive_profile: String = DEFAULT_ADAPTIVE_PROFILE
 ## In-memory only (never saved): narrative variant chosen by the remote AI for the current profile.
 var adaptive_narrative_variant: String = ""
+## The local AI Director (Phase 16a): in-memory telemetry, cached plans, debug override. Never saved (the save keeps its seven keys).
+var director: Director = Director.new()
 
 ## Automatic triggers (autosave()) respect this; an explicit save_to_disk() does not.
 var autosave_enabled: bool = true
@@ -48,6 +50,19 @@ var last_io_message: String = ""
 
 var _last_rejection_unsupported: bool = false
 var _adaptive_config: AdaptiveConfig = null
+
+
+var _director_client: DirectorClient = null
+
+
+## The client that asks the AI service for the plan of the NEXT level. A child of this (existing) autoload, so a request
+## survives the scene change. Created on first use; there is no autoload for it.
+func get_director_client() -> DirectorClient:
+	if _director_client == null or not is_instance_valid(_director_client):
+		_director_client = DirectorClient.new()
+		_director_client.name = "DirectorClient"
+		add_child(_director_client)
+	return _director_client
 
 
 static func is_valid_profile(profile: String) -> bool:
@@ -148,6 +163,12 @@ func refresh_adaptive_profile(point: String = AdaptiveInput.POINT_AFTER_DECISION
 	return result
 
 
+## Weighted released/kept score the local rule uses (released +1, kept -1, times the level weight).
+func get_adaptive_score() -> float:
+	var input: AdaptiveInput = AdaptiveInput.from_state_dict(to_dict(), AdaptiveInput.POINT_AFTER_DECISION)
+	return LocalProfileClassifier.score(input, get_adaptive_config())
+
+
 ## Stored as is; get_adaptive_result() only honors it if the current profile allows it.
 func set_adaptive_narrative_variant(variant: String) -> void:
 	adaptive_narrative_variant = variant
@@ -173,6 +194,7 @@ func reset_run() -> void:
 	decisions = []
 	adaptive_profile = DEFAULT_ADAPTIVE_PROFILE
 	adaptive_narrative_variant = ""
+	director.reset()
 	state_changed.emit()
 
 
@@ -274,6 +296,7 @@ func load_from_dict(data: Variant) -> Dictionary:
 	decisions = clean_decisions
 	adaptive_profile = profile_value
 	adaptive_narrative_variant = ""
+	director.reset()
 	last_migrated_from = migrated_from
 	state_changed.emit()
 	return {"ok": true, "warnings": warnings, "error": ""}

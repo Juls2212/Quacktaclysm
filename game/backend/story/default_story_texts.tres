@@ -1,0 +1,97 @@
+[gd_resource type="Resource" script_class="StoryTexts" load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://backend/story/story_texts.gd" id="1_texts"]
+[ext_resource type="Script" path="res://backend/story/soul_story.gd" id="2_soul"]
+[ext_resource type="Script" path="res://backend/story/boss_story.gd" id="3_boss"]
+[ext_resource type="Script" path="res://backend/story/ending_story.gd" id="4_ending"]
+[ext_resource type="Resource" path="res://frontend/story/default_kept_beats.tres" id="5_kept_beats"]
+[ext_resource type="Resource" path="res://frontend/story/default_released_beats.tres" id="6_released_beats"]
+
+[sub_resource type="Resource" id="Soul_fragment_level_1"]
+script = ExtResource("2_soul")
+fragment_id = "fragment_level_1"
+soul_name = "Daigo, el Leñador"
+short_name = "Daigo"
+memory = "Daigo cortaba la leña del dojo y silbaba al amanecer. Nadie lo oyó caer."
+released_line = "Daigo suelta el hacha y sube. Su silbido se apaga entre las estrellas."
+kept_line = "El filo de Daigo se queda en tu hoja. Su silbido suena lejos."
+
+[sub_resource type="Resource" id="Soul_fragment_level_2"]
+script = ExtResource("2_soul")
+fragment_id = "fragment_level_2"
+soul_name = "Hana, la Herbolaria"
+short_name = "Hana"
+memory = "Hana curaba con hierbas del pantano. Cuando se hundió, nadie fue a buscarla."
+released_line = "Hana sonríe, limpia de lodo, y el pantano guarda silencio."
+kept_line = "La marea de Hana corre por tu espada. El lodo no se ha ido."
+
+[sub_resource type="Resource" id="Soul_fragment_level_3"]
+script = ExtResource("2_soul")
+fragment_id = "fragment_level_3"
+soul_name = "Kenzo, hermano de espada"
+short_name = "Kenzo"
+memory = "Kenzo fue el hermano de espada de tu abuelo. Él no llegó a tiempo para salvarlo."
+released_line = "Kenzo inclina la cabeza. Por fin alguien llegó a tiempo."
+kept_line = "Kenzo arde en tu katana. Tu abuelo no podrá mirar esa hoja."
+
+[sub_resource type="Resource" id="Boss_1"]
+script = ExtResource("3_boss")
+level = 1
+pre_lines = Array[String](["«¿Quién viene a mi bosque? Hay que cortar. Hay que cortar.»"])
+duck_lines = Array[String](["«El filo no es rabia. Es respeto por aquello que cortas.»"])
+variant_lines = {}
+defeat_lines = Array[String](["«Aquí hubo un dojo y leña para todos. Yo silbaba al amanecer, pequeño.»", "«Cuando cayó la estrella nadie vino a buscarme. Por eso corté: para que alguien volviera a casa.»", "«El hacha pesa tanto... ¿Ya amanece?»"])
+spirit_speaker = "Alma del Leñador"
+
+[sub_resource type="Resource" id="Boss_2"]
+script = ExtResource("3_boss")
+level = 2
+pre_lines = Array[String](["«Shhh... el agua duerme. No la despiertes.»"])
+duck_lines = Array[String](["Creí que la katana mataba. Solo separa el alma de la ruina."])
+variant_lines = {}
+defeat_lines = Array[String](["«Curaba al barrio con hierbas y paciencia. Cuando subió el agua, sostuve a todos... menos a mí.»", "«A mí no me curó nadie. Por eso me quedé: alguien debía velar a los que el agua se llevó.»", "«Gracias por sacarme del agua.»"])
+spirit_speaker = "Alma de la Cosa del Pantano"
+
+[sub_resource type="Resource" id="Boss_3"]
+script = ExtResource("3_boss")
+level = 3
+pre_lines = Array[String](["«Tienes sus ojos. Él también llegó tarde.»"])
+duck_lines = Array[String](["Podría soltar la hoja. Pero las estrellas siguen cayendo."])
+variant_lines = {}
+defeat_lines = Array[String](["«Juramos guardar la última torre juntos. Yo me quedé al pie del relámpago y la tormenta creció con mi espera.»", "«Mi hoja ya no distinguía entre guardar y castigar. La profecía lo dijo: quien la empuñe decidirá cada alma.»", "«Dile que no fue su culpa... o que sí. Ya no importa.»"])
+spirit_speaker = "Alma del Ojo de la Tormenta"
+
+[sub_resource type="Resource" id="End_ending_kept"]
+script = ExtResource("4_ending")
+ending_id = "ending_kept"
+title = "ESTRELLAS QUE SUBEN"
+lines = Array[String](["La ciudad se encendió ventana a ventana, y las almas subieron como ríos de luz sobre ella.", "Pato: Las guardé a todas. Creí que podría cargar con ellas y seguir en pie.", "Pato: Me arden las venas. Cada respiración pesa más que la anterior.", "Pato: Tengo miedo, abuelo. Duele, y no quiero estar solo en esto.", "Pato: Mira cuántas estrellas suben... y a mí se me va apagando todo.", "Pato: No es mi mano. ¡Suéltame! No quiero... no quiero.", "Pato: Me arrepiento de haberlas guardado, y de no decirte que tenía miedo, abuelo.", "Pato: Me arrepiento de que nadie en la ciudad sepa quién la salvó. Debí pedir ayuda.", "Abuelo: Perdóname, nieto."])
+style = "kept"
+summary_line = "Guardaste las almas. La ciudad volvió a la luz; el pato no pudo con el peso."
+epilogues = Array[String](["La ciudad amaneció entre luces sin saber quién la salvó. Alguien debió quedarse a escucharlo.", "Todo parecía ir bien y nadie preguntó cómo estaba quien cargaba con todo. Siempre vale la pena preguntar.", "Fue un camino durísimo y nadie lo acompañó. Nadie debería recorrerlo solo."])
+beats = ExtResource("5_kept_beats")
+support_line = "Si tú o alguien que conoces está pasando por algo así, habla con alguien de confianza o con un servicio de salud mental de tu país. No estás solo."
+
+[sub_resource type="Resource" id="End_ending_released"]
+script = ExtResource("4_ending")
+ending_id = "ending_released"
+title = "EL ACANTILADO"
+lines = Array[String](["Cuando la última alma subió, la ciudad se encendió allá abajo y las estrellas ascendieron sobre ella.", "Abuelo: Bien hecho, nieto.", "Pato: Bien hecho. Eso era todo lo que me pedían. Para eso me criaste, para eso empuñé la hoja.", "Pato: Ya no queda nadie a quien salvar. Estoy tan solo, y tan cansado de estar solo.", "Pato: Se acabó la misión. No sé quién soy sin ella, y no sé cómo seguir.", "Pato: Nunca te dije que tenía miedo, abuelo. Nunca vi el mar que me prometiste.", "Pato: Me arrepiento de no haber pedido ayuda. Habría bastado una sola palabra.", "Abuelo: Se ha sellado la profecía."])
+style = "released"
+summary_line = "La ciudad volvió a la luz. El pato se quedó solo con el cielo."
+epilogues = Array[String](["La ciudad despertó con todas las luces encendidas y nadie supo a quién agradecérselo.", "Las calles se llenaron de voces nuevas; en lo alto de la roca solo quedó el viento.", "Todo salió bien para la ciudad. Lo que había costado, nadie lo vio."])
+beats = ExtResource("6_released_beats")
+support_line = "Si tú o alguien que conoces está pasando por algo así, habla con alguien de confianza o con un servicio de salud mental de tu país. No estás solo."
+
+[resource]
+script = ExtResource("1_texts")
+souls = [SubResource("Soul_fragment_level_1"), SubResource("Soul_fragment_level_2"), SubResource("Soul_fragment_level_3")]
+bosses = [SubResource("Boss_1"), SubResource("Boss_2"), SubResource("Boss_3")]
+endings = [SubResource("End_ending_kept"), SubResource("End_ending_released")]
+content_notice = "Este juego trata temas de pérdida, duelo y muerte, incluido el suicidio de forma implícita en sus dos finales. También hay violencia estilizada con sangre en el combate (se puede desactivar en Opciones: «Sangre»)."
+ending_banned_terms = PackedStringArray("saltar", "salto", "caer", "caida", "cae", "caigo", "colgar", "cuelga", "ahorcar", "soga", "cuerda", "arma", "armas", "pastilla", "pastillas", "veneno", "disparo", "pistola", "cuchillo", "navaja", "cortarme", "me corto", "ahogar", "ahogarme", "abismo", "precipicio", "vacio total", "sangre", "sangrar", "herida", "herirme", "clavar", "clavarme", "apunalar", "atravesar", "vientre", "degollar", "tajo", "matarme", "suicidarme", "quitarme la vida")
+ending_romanticizing_terms = PackedStringArray("descansar", "descanso", "descansa", "paz", "al fin", "por fin", "reunirme", "reunirse", "reencontrar", "reencuentro", "juntos otra vez", "convertirse en estrella", "convertido en estrella", "ser una estrella", "libre", "liberado", "hermoso", "hermosa", "bello", "bella", "heroe", "heroico", "heroica", "redencion", "sacrificio", "merecido", "dulce", "sereno", "serena", "honor", "honra", "deshonra", "ritual", "dignidad", "unica salida", "unico camino", "liberacion")
+elder_speaker = "Abuelo"
+elder_lines = Array[String](["Antes de la tormenta, termino la profecía que borré, nieto.", "«Quien la empuñe decidirá cada alma: liberarla o cargarla.»", "La hoja no mata: separa el alma de la ruina. El resto es tuyo.", "En la tormenta está Kenzo, mi hermano. No llegué a tiempo. Ve."])
+elder_mood_index = 3
+elder_mood_lines = Array[String](["Guardaste todas. Tu hoja pesa. Yo también cargué; no te juzgo.", "Una liberada, una guardada. Dudas. Es lo único honesto.", "Liberaste a Daigo y a Hana. Hay luz en tu hoja. Cuídala."])

@@ -4,14 +4,19 @@
 
 [resource]
 script = ExtResource("1_stats")
-; Final guardian (placeholder name). Reasoning: 80 HP (2x the first boss) for the longest fight;
-; phase 2 at 50% with a short transition (1.2 s), 1.45x speed and half the usual gap between
-; patterns, so the heavy volley arrives often. The base gap (0.9 s) is the shortest of the three.
+; Final guardian (name shown by BossNames), redesigned in Phase 15j: the possessed duck alone behind its shell (1), the summoner stage with
+; platforms, ducklings, the collapsing floor and the vulnerable window (2) and the red eye with the duck without its shell (3). 102 HP (Phase 15p: phase 1 = 56 HP, phases 2 and 3 = 23 HP each), lines at
+; 45.1% and 22.55%. Telegraphs never shrink (the speed multipliers are 1.0; the harder phases come from shorter gaps and cooldowns instead).
 boss_id = &"boss_three"
-display_name = "Guardian de la Tormenta (placeholder)"
-max_health = 80
-phase_2_health_ratio = 0.5
+display_name = "El Ojo de la Tormenta"
+max_health = 102
+phase_2_health_ratio = 0.451
+phase_thresholds = PackedFloat32Array(0.451, 0.2255)
 phase_transition_time = 1.2
-phase_2_speed_multiplier = 1.45
-phase_2_pattern_gap_multiplier = 0.5
+phase_2_speed_multiplier = 1.0
+phase_2_pattern_gap_multiplier = 0.7
+phase_3_speed_multiplier = 1.0
+phase_3_pattern_gap_multiplier = 0.4
+phase_3_cooldown_factor = 0.75
 pattern_gap_time = 0.9
+max_idle_time = 1.5

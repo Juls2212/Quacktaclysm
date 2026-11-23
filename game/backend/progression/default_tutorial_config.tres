@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="TutorialConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://backend/progression/tutorial_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+respawn_seconds = 1.0
+skip_hold_seconds = 2.0
+move_distance = 150.0
+feedback_time = 0.8
+speech_seconds = 2.6
+hit_line_interval = 2.5
+idle_line_after = 14.0
+max_step_px = 60.0

@@ -1,7 +1,9 @@
 class_name BossEncounter
 extends Area2D
 ## Starts the boss fight when the player enters, resets it when the player dies and
-## stays disarmed once the boss is defeated. No arena locking or cutscenes.
+## stays disarmed once the boss is defeated. Phase 15b: the first time, an optional BossIntro (registered in
+## `intro`) plays BEFORE the boss wakes up: `encounter_started` is emitted at once (the arena closes, the VS
+## presentation starts) but the boss stays inactive until the intro emits `finished`.
 
 signal encounter_started
 signal encounter_won
@@ -11,6 +13,9 @@ signal encounter_won
 var _armed: bool = true
 var _won: bool = false
 var _player: Node2D = null
+## Set by the level's BossIntro (any node with `begin(player) -> bool` and a `finished` signal).
+var intro: Node = null
+var _pending_intro: Callable = Callable()
 
 
 func _ready() -> void:
@@ -31,6 +36,7 @@ func _physics_process(_delta: float) -> void:
 
 ## Debug helper: resets the boss and re-arms the trigger.
 func reset() -> void:
+	_drop_pending_intro()
 	if is_instance_valid(boss):
 		boss.reset_encounter()
 	_disconnect_player()
@@ -53,6 +59,11 @@ func _try_start(body: Node2D) -> void:
 	_armed = false
 	_player = body
 	body.connect("died", _on_player_died)
+	if intro != null and intro.has_method(&"begin") and bool(intro.call(&"begin", body)):
+		_pending_intro = _on_intro_finished.bind(body)
+		intro.connect(&"finished", _pending_intro, CONNECT_ONE_SHOT)
+		encounter_started.emit()
+		return
 	boss.activate(body)
 	encounter_started.emit()
 
@@ -67,7 +78,20 @@ func _is_inside(body: Node2D) -> bool:
 	return false
 
 
+func _on_intro_finished(_skipped: bool, body: Node2D) -> void:
+	_pending_intro = Callable()
+	if is_instance_valid(boss) and is_instance_valid(body) and body.get("is_dead") != true:
+		boss.activate(body)
+
+
+func _drop_pending_intro() -> void:
+	if is_instance_valid(intro) and _pending_intro.is_valid() and intro.is_connected(&"finished", _pending_intro):
+		intro.disconnect(&"finished", _pending_intro)
+	_pending_intro = Callable()
+
+
 func _on_player_died() -> void:
+	_drop_pending_intro()
 	if is_instance_valid(boss):
 		boss.reset_encounter()
 	_disconnect_player()

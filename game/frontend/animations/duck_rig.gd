@@ -42,6 +42,9 @@ const WOOD := Color(0.5, 0.34, 0.2)
 const INK_W := 2.6
 const HERO_KIMONO := Color(0.6, 0.21, 0.2)
 const BOSS_SCALE: float = 1.7
+## The hero's neck (the head bows about it) and the head's center at rest, in rig space (feet at the origin).
+const HERO_NECK := Vector2(3.0, -28.0)
+const HERO_HEAD_REST := Vector2(7.0, -37.0)
 ## Survivor palette: nothing is clean white or chick yellow any more.
 const FEATHER_HERO := Color(0.85, 0.81, 0.66)
 const FEATHER_ELDER := Color(0.89, 0.86, 0.73)
@@ -96,6 +99,23 @@ const TOOTH := Color(0.93, 0.9, 0.76)
 		_refresh_level_style()
 
 # --- Pose inputs (written by the controller each frame) ---
+## Adaptive-profile presentation, set by the level's ProfilePresenter. The alpha is the intensity
+## (0 = off, the default), so a rig nobody dresses draws exactly as before.
+var aura_color: Color = Color(1, 1, 1, 0)
+## Focus heal progress 0..1 while the hero focuses, -1 otherwise (set by PlayerVisual).
+var focus_t: float = -1.0
+## True while the hero is invulnerable in a dash (Phase 15b): a pale halo for the whole window.
+var dash_shield: bool = false
+## 0..1 through the ring of the extra jump under the feet, or -1 when none (Phase 15c).
+var double_jump_t: float = -1.0
+## 0..1: how possessed the guardian looks (Phase 15d): a red aura, a glowing outline and red eyes that pulse.
+var possession: float = 0.0
+var possession_color: Color = Color(0.95, 0.12, 0.08)
+var possession_hz: float = 1.5
+## 0..1: how far the body has straightened up into the possessed pose (upright, limbs hanging, no shudder).
+var possession_pose: float = 0.0
+var eye_tint: Color = Color(1, 1, 1, 0)
+var glow_color: Color = Color(1, 1, 1, 0)
 var ground_speed: float = 0.0
 var grounded: bool = true
 var vertical_speed: float = 0.0
@@ -112,6 +132,25 @@ var enraged: bool = false
 var ragdoll: bool = false
 ## Tint of the sword glow while casting the wave (comes from the wave tier).
 var cast_color: Color = Color(0.6, 0.9, 1.0, 1.0)
+
+# --- Corruption (Phase 15o): drawn INSIDE the rig's own parts, never as extra nodes on top ---
+## Corruption stage of the hero (0 clean .. 3, the fragments kept): veins clipped to the body, neck and head, a clouded iris in the eye, darker
+## feathers with purple edges on the tail, the sleeve and the wing. `corruption_growth` (0..1) grows the veins of the CURRENT stage (earlier ones are
+## whole). `corruption_reduced` draws them static and thin ("Efectos de corrupcion" off).
+var corruption_stage: int = 0
+var corruption_growth: float = 1.0
+var corruption_reduced: bool = false
+## 0..1 opacity of the veins (a fading silhouette in the endings).
+var corruption_strength: float = 1.0
+## The head bows about the neck by this angle (radians; the endings' poses). Zero for the normal rig.
+var head_bow: float = 0.0
+## The wing the hero stretches out (a pose of the endings), as an angle in radians; NAN = no wing, the sleeve and the katana as usual.
+var wing_angle: float = NAN
+## Name of the pose being drawn (the optional CorruptionSpriteSet looks it up). Empty in gameplay.
+var pose_name: StringName = &""
+## Optional hand-made sprites (every slot empty by default: the code drawing is used).
+var sprite_set: CorruptionSpriteSet = null
+var _marks: CorruptionMarks = null
 
 # --- Animation state ---
 var _time: float = 0.0
@@ -175,6 +214,9 @@ func copy_style_from(source: DuckRig) -> void:
 	enraged = source.enraged
 	style_seed = source.style_seed
 	level_style = source.level_style
+	corruption_stage = source.corruption_stage
+	corruption_growth = source.corruption_growth
+	corruption_reduced = source.corruption_reduced
 
 
 ## Mutations drawn this frame: the look's own mix (or the custom one), grown in a boss's phase 2.
@@ -334,6 +376,10 @@ func _advance_body(delta: float) -> void:
 		target_lean = -0.28
 		if is_boss():
 			target_lean = -0.12 + sin(_time * 40.0) * 0.04
+	if possession_pose > 0.0:
+		# Possessed: the body straightens up and stretches a little instead of shuddering or leaning.
+		target_lean = lerpf(target_lean, 0.0, possession_pose)
+		target_squash = target_squash.lerp(Vector2(0.96, 1.06), possession_pose)
 	target_lean += _action_lean()
 	target_squash *= _action_squash()
 	if dead:
@@ -395,7 +441,9 @@ func _look_scale() -> float:
 func _head_center() -> Vector2:
 	match look:
 		Look.HERO:
-			return Vector2(7, -37)
+			if head_bow != 0.0:
+				return HERO_NECK + (HERO_HEAD_REST - HERO_NECK).rotated(head_bow)
+			return HERO_HEAD_REST
 		Look.BANDIT:
 			return Vector2(5, -33)
 		Look.SLINGER:
@@ -583,6 +631,8 @@ func _advance_strands(delta: float) -> void:
 # =====================================================================================
 
 func _draw() -> void:
+	if _draw_sprite_override():
+		return
 	_root = _build_root()
 	_mx = _mutations()
 	_cur = Part.FX
@@ -593,6 +643,13 @@ func _draw() -> void:
 	if look != Look.HERO and look != Look.GRANDFATHER:
 		_draw_strands()
 	draw_set_transform_matrix(_root)
+	var dressed: bool = part == Part.ALL and not ragdoll and not dead
+	if dressed:
+		_draw_profile_aura()
+		_draw_focus_effect()
+		_draw_dash_shield()
+		_draw_double_jump_ring()
+		_draw_possession_aura()
 	match look:
 		Look.HERO:
 			_draw_hero()
@@ -606,7 +663,113 @@ func _draw() -> void:
 			_draw_boss()
 		Look.GRANDFATHER:
 			_draw_grandfather()
+	if dressed:
+		draw_set_transform_matrix(_root)
+		_draw_profile_glow()
+		_draw_possession_eyes()
 	draw_set_transform_matrix(Transform2D.IDENTITY)
+
+
+## The focus heal of the hero: rings of pale light that close in on the body while it charges, motes that
+## rise, and a bright halo that grows with the progress. Nothing is drawn when `focus_t` is negative.
+func _draw_focus_effect() -> void:
+	if look != Look.HERO or focus_t < 0.0:
+		return
+	var c := Vector2(-1, -18)
+	var k: float = clampf(focus_t, 0.0, 1.0)
+	var soft := Color(0.72, 0.9, 1.0)
+	draw_circle(c, 14.0 + 16.0 * k, Color(soft, 0.12 + 0.2 * k))
+	for i in 3:
+		var phase: float = fposmod(_time * 1.6 + float(i) / 3.0, 1.0)
+		draw_arc(c, 44.0 - 30.0 * phase, 0.0, TAU, 28, Color(soft, 0.65 * (1.0 - phase)), 2.0, true)
+	for i in 6:
+		var rise: float = fposmod(_time * 0.9 + float(i) * 0.17, 1.0)
+		var x: float = sin(float(i) * 2.3 + _time * 3.0) * 12.0
+		draw_circle(c + Vector2(x, 18.0 - 46.0 * rise), 1.6 + 1.2 * k, Color(1.0, 1.0, 1.0, 0.8 * (1.0 - rise)))
+
+
+## The red aura of a possessed guardian: soft discs behind the body and a pulsing glowing outline. Visual only.
+func _draw_possession_aura() -> void:
+	if possession <= 0.001:
+		return
+	var pulse: float = 0.5 + 0.5 * sin(_time * TAU * possession_hz)
+	var strength: float = clampf(possession, 0.0, 1.0)
+	var center := Vector2(-1.0, -16.0)
+	var scale_factor: float = _look_scale()
+	for i in 4:
+		var radius: float = (46.0 - 7.0 * float(i)) * scale_factor * (1.0 + 0.05 * pulse)
+		draw_circle(center, radius, Color(possession_color, strength * (0.07 + 0.04 * float(i)) * (0.7 + 0.3 * pulse)))
+	draw_arc(center, 34.0 * scale_factor, 0.0, TAU, 40, Color(possession_color, strength * (0.35 + 0.35 * pulse)), 3.0, true)
+
+
+## Red eyes that glow: a bright core with a halo, on every guardian that is possessed. Visual only.
+func _draw_possession_eyes() -> void:
+	if possession <= 0.001:
+		return
+	var pulse: float = 0.5 + 0.5 * sin(_time * TAU * possession_hz)
+	var strength: float = clampf(possession, 0.0, 1.0)
+	var head: Vector2 = _head_center()
+	var eye: Vector2 = head + Vector2(5.0, -3.0)
+	draw_circle(eye, 7.0, Color(possession_color, strength * 0.28 * (0.6 + 0.4 * pulse)))
+	draw_circle(eye, 4.0, Color(possession_color, strength * 0.7))
+	draw_circle(eye, 2.0, Color(1.0, 0.82, 0.7, strength * (0.7 + 0.3 * pulse)))
+
+
+## A ring that spreads from the feet when the extra jump is made. Visual only.
+func _draw_double_jump_ring() -> void:
+	if look != Look.HERO or double_jump_t < 0.0:
+		return
+	var k: float = clampf(double_jump_t, 0.0, 1.0)
+	var feet := Vector2(-1.0, foot_y)
+	var alpha: float = 1.0 - k
+	for i in 2:
+		var spread: float = clampf(k * 1.3 - float(i) * 0.22, 0.0, 1.0)
+		if spread <= 0.0:
+			continue
+		draw_set_transform(feet, 0.0, Vector2(1.0, 0.3))
+		draw_arc(Vector2.ZERO, 8.0 + 30.0 * spread, 0.0, TAU, 28, Color(0.85, 0.97, 1.0, alpha * (1.0 - 0.4 * float(i))), 2.5, true)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## A pale halo round the hero for the whole invulnerable window of the dash. Visual only.
+func _draw_dash_shield() -> void:
+	if look != Look.HERO or not dash_shield:
+		return
+	var c := Vector2(-1, -18)
+	var pulse: float = 0.5 + 0.5 * sin(_time * 40.0)
+	draw_circle(c, 30.0, Color(0.7, 0.92, 1.0, 0.14 + 0.06 * pulse))
+	draw_arc(c, 31.0, 0.0, TAU, 32, Color(0.85, 0.97, 1.0, 0.55 + 0.2 * pulse), 2.0, true)
+
+
+## Soft light behind the hero, from the adaptive profile (aura_color; nothing when its alpha is 0).
+func _draw_profile_aura() -> void:
+	if look != Look.HERO or aura_color.a <= 0.001:
+		return
+	var breath: float = 1.0 + 0.07 * sin(_time * 2.2)
+	for i in 4:
+		var radius: float = (31.0 - 5.0 * float(i)) * breath
+		draw_circle(Vector2(-1, -18), radius, Color(aura_color, aura_color.a * 0.2))
+
+
+## Eye tint on the hero, or a glowing eye and a ring round the head of an enemy or boss, from the
+## adaptive profile (nothing when the alpha is 0). Visual only: no hitbox or stat reads this.
+func _draw_profile_glow() -> void:
+	if look == Look.GRANDFATHER:
+		return
+	var head: Vector2 = _head_center()
+	if look == Look.HERO:
+		if eye_tint.a > 0.001:
+			var eye: Vector2 = head + Vector2(4.5, -3.0)
+			draw_circle(eye, 4.0, Color(eye_tint, eye_tint.a * 0.22))
+			draw_circle(eye, 2.2, Color(eye_tint, eye_tint.a * 0.7))
+		return
+	if glow_color.a <= 0.001:
+		return
+	var throb: float = 0.75 + 0.25 * sin(_time * 3.0)
+	draw_arc(head, _head_radius() + 2.5, 0.0, TAU, 28, Color(glow_color, glow_color.a * 0.45 * throb), 2.0, true)
+	var eye_at: Vector2 = head + Vector2(5.0, -3.0)
+	draw_circle(eye_at, 5.5, Color(glow_color, glow_color.a * 0.25 * throb))
+	draw_circle(eye_at, 2.6, Color(glow_color, glow_color.a * 0.9))
 
 
 func _draw_shadow() -> void:
@@ -674,12 +837,16 @@ func _draw_hero() -> void:
 	var arm: Vector2 = _weapon_pose()
 	var kimono := HERO_KIMONO
 	var obi := Color(0.2, 0.22, 0.32)
-	var feather := FEATHER_HERO
+	var corr: float = _corr_k()
+	var feather := _corrupt_feather(FEATHER_HERO, corr * 0.35)
+	var tail_feather := _corrupt_feather(FEATHER_HERO, corr)
+	if corr > 0.0:
+		kimono = kimono.lerp(Color(0.34, 0.14, 0.3), 0.28 * corr)
 	# The only healthy duck gets a soft light rim so it reads over the dark ruins.
 	_draw_rim(Vector2(-1, -15), Vector2(15.5, 12.5), _head_center(), 14.5)
 	_cur = Part.BODY
 	_draw_feet(Color(BEAK))
-	_draw_tail(Vector2(-13, -15), feather)
+	_draw_tail(Vector2(-13, -15), tail_feather)
 	# Robe: the top of the body egg flaring into a short skirt that leaves the legs visible.
 	var robe := PackedVector2Array()
 	for i in 13:
@@ -703,6 +870,7 @@ func _draw_hero() -> void:
 	_shape(PackedVector2Array([Vector2(-3, -26), Vector2(3, -26), Vector2(10, -15), Vector2(5.5, -13)]),
 			Color(0.84, 0.8, 0.68), 2.0)
 	_dot(Vector2(6, -18), 1.3, Color(DIRT, 0.4))
+	_corrupt_body(robe, Vector2(2, -24))
 	# Obi with its knot and tails at the back.
 	_shape(PackedVector2Array([Vector2(-14.5, -17), Vector2(12.5, -17), Vector2(13.6, -12.5), Vector2(-15.2, -12.5)]),
 			obi, 2.2)
@@ -719,13 +887,20 @@ func _draw_hero() -> void:
 	draw_set_transform_matrix(_root)
 	var head: Vector2 = _head_center()
 	_cur = Part.HEAD
+	# The head bows about the neck: everything of the head is drawn under one rotation about its own center.
+	draw_set_transform_matrix(_root * Transform2D(head_bow, head - head.rotated(head_bow)))
 	_draw_head(head, 12.5, feather)
 	_grime(head + Vector2(2, 3), Vector2(7.0, 5.0), 3, 31)
+	_corrupt_head(head)
 	_draw_hero_hair_cap(head, 12.5)
 	_draw_face_hero(head)
+	draw_set_transform_matrix(_root)
 	_cur = Part.FX
 	_draw_smear(Vector2(4, -24))
-	_draw_sleeve_and_katana(_shoulder(), arm)
+	if is_nan(wing_angle):
+		_draw_sleeve_and_katana(_shoulder(), arm)
+	else:
+		_draw_reach_wing(corr)
 
 
 func _draw_hero_hair_cap(c: Vector2, r: float) -> void:
@@ -783,13 +958,18 @@ func _draw_sleeve_and_katana(shoulder: Vector2, arm: Vector2) -> void:
 	if behind:
 		_draw_katana(hand, arm.y, 34.0)
 	_cur = Part.BODY
-	_shape(sleeve, HERO_KIMONO)
+	var corr_k: float = _corr_k() if look == Look.HERO else 0.0
+	_shape(sleeve, HERO_KIMONO.lerp(Color(0.34, 0.14, 0.3), 0.28 * corr_k))
+	if corr_k > 0.0:
+		_purple_edge(sleeve, corr_k)
 	_grime(shoulder.lerp(hand, 0.5) + Vector2(0, 4), Vector2(3.0, 3.0), 2, 77)
 	_line(hand - side * 4.5, hand + side * 5.5, Color(0.84, 0.8, 0.68), 2.0, true)
 	if not behind:
 		_draw_katana(hand, arm.y, 34.0)
 	_cur = Part.BODY
-	_shape(_ellipse(hand, 3.4, 3.0), FEATHER_HERO, 2.2)
+	_shape(_ellipse(hand, 3.4, 3.0), _corrupt_feather(FEATHER_HERO, corr_k), 2.2)
+	if corr_k > 0.0:
+		_purple_edge(_ellipse(hand, 3.4, 3.0), corr_k)
 	# Dirty bandage wrapped round the wrist, one loose end.
 	_draw_bandage(hand - dir * 2.6, hand + dir * 0.4, 3.4)
 	_line(hand - dir * 2.0 + side * 2.0, hand - dir * 4.5 + side * 4.5 + Vector2(0, sin(_time * 4.0) * 0.6), BANDAGE.darkened(0.1), 1.4, true)
@@ -1761,6 +1941,9 @@ func _draw_tired_eye(at: Vector2, r: float, iris: Color, lid: Color, glow: bool,
 	else:
 		_dot(pupil, r * (0.17 if toon else 0.27), iris)
 		_dot(pupil + Vector2(0.3, -0.4), 0.35, PAPER)
+		if look == Look.HERO and corruption_stage > 0 and _ok():
+			# The iris clouds over INSIDE the eye (the lid is drawn on top, so it stays one eye).
+			CorruptionMarks.draw_iris(self, pupil, r * 0.95, _corr_k(), 0.0 if corruption_reduced else 0.5 + 0.5 * sin(_time * 3.0))
 	_draw_lid(at, r, droop if droop >= 0.0 else 0.3 + 0.12 * k, lid)
 
 
@@ -2326,6 +2509,137 @@ func _action_squash() -> Vector2:
 				return Vector2(1.16, 0.9)
 			return Vector2(0.95, 1.05)
 	return Vector2.ONE
+
+
+# =====================================================================================
+# Corruption, integrated in the parts (Phase 15o)
+# =====================================================================================
+
+## 0 for a clean duck, then 1/3 (first kept fragment, fully grown) up to 1 (three kept, fully grown); it grows with `corruption_growth`.
+func _corr_k() -> float:
+	if corruption_stage <= 0:
+		return 0.0
+	return clampf((float(corruption_stage - 1) + clampf(corruption_growth, 0.0, 1.0)) / 3.0, 0.0, 1.0)
+
+
+## A feather color gone darker and greyer-violet by `k` (0..1).
+func _corrupt_feather(color: Color, k: float) -> Color:
+	if k <= 0.0:
+		return color
+	return color.darkened(0.22 * k).lerp(Color(0.5, 0.4, 0.62), 0.28 * k)
+
+
+## A purple edge along the inside of a part's outline (the corrupted feathers and cloth), inside the part by construction.
+func _purple_edge(points: PackedVector2Array, k: float) -> void:
+	if not _ok() or k <= 0.0:
+		return
+	for inner: Variant in Geometry2D.offset_polygon(points, -1.15):
+		var ring := PackedVector2Array(inner as PackedVector2Array)
+		ring.append(ring[0])
+		draw_polyline(ring, Color(0.62, 0.3, 0.88, 0.75 * k * corruption_strength), 1.0, true)
+
+
+func _corruption_marks() -> CorruptionMarks:
+	if _marks == null:
+		_marks = CorruptionMarks.new()
+	return _marks
+
+
+func _vein_alpha() -> float:
+	if corruption_reduced:
+		return corruption_strength
+	var style: CorruptionVeinsStyle = _corruption_marks().style
+	return corruption_strength * (1.0 - style.pulse_depth * (0.5 + 0.5 * sin(_time * TAU * style.pulse_hz)))
+
+
+## The veins of the body and the neck, clipped to the robe and to the neck.
+func _corrupt_body(robe: PackedVector2Array, neck_base: Vector2) -> void:
+	if corruption_stage <= 0 or not _ok():
+		return
+	var neck := PackedVector2Array([neck_base + Vector2(-4, 0), neck_base + Vector2(7, 0), neck_base + Vector2(10, -11), neck_base + Vector2(-1, -13)])
+	var marks: CorruptionMarks = _corruption_marks()
+	marks.draw_pieces(self, marks.clipped_pieces(CorruptionMarks.Region.BODY, [robe, neck], corruption_stage, corruption_growth), _vein_alpha(), corruption_reduced)
+
+
+## The veins of the head, clipped to the head's own ellipse (drawn under the head's transform, so they bow with it).
+func _corrupt_head(head: Vector2) -> void:
+	if corruption_stage <= 0 or not _ok():
+		return
+	var marks: CorruptionMarks = _corruption_marks()
+	var delta: Vector2 = head - HERO_HEAD_REST
+	var pieces: Array[Dictionary] = marks.clipped_pieces(CorruptionMarks.Region.HEAD, [_ellipse(HERO_HEAD_REST, 12.5, 12.25, 22)], corruption_stage, corruption_growth)
+	var moved: Array[Dictionary] = []
+	for piece in pieces:
+		var pts := PackedVector2Array()
+		for point in piece["pts"] as PackedVector2Array:
+			pts.append(point + delta)
+		moved.append({"pts": pts, "width": piece["width"], "tier": piece["tier"]})
+	marks.draw_pieces(self, moved, _vein_alpha(), corruption_reduced)
+
+
+## The wing the hero stretches out (the endings' reach and resist poses): the rig's own feathered quad with the ink outline, covert feathers on its
+## trailing edge, flight feathers that fan out and shiver, joined to the shoulder by the kimono sleeve. Darker with purple edges as it corrupts.
+func _draw_reach_wing(corr: float) -> void:
+	_cur = Part.BODY
+	var shoulder := Vector2(2.0, -19.0)
+	var tremble: float = 0.0 if corruption_reduced else sin(_time * 17.0) * 0.05 + sin(_time * 9.0) * 0.03
+	var reach: Vector2 = Vector2.from_angle(wing_angle + tremble)
+	var hand: Vector2 = shoulder + reach * 25.0
+	var n: Vector2 = reach.orthogonal()
+	var feather: Color = _corrupt_feather(FEATHER_HERO, corr)
+	var edge: Color = feather.darkened(0.18)
+	var sleeve: Color = HERO_KIMONO.lerp(Color(0.34, 0.14, 0.3), 0.28 * corr)
+	for i in 5:
+		var k: float = float(i) / 4.0 - 0.5
+		var shiver: float = 0.0 if corruption_reduced else sin(_time * 21.0 + float(i) * 1.7) * 0.05
+		var fdir: Vector2 = Vector2.from_angle(wing_angle + tremble + k * 0.9 + shiver)
+		var root: Vector2 = hand - reach * 3.0 + n * k * 5.0
+		var tip: Vector2 = root + fdir * (9.0 - absf(k) * 3.5)
+		var side: Vector2 = fdir.orthogonal() * 1.9
+		var blade := PackedVector2Array([root - side, tip - side * 0.45, tip + fdir * 1.6, tip + side * 0.45, root + side])
+		_shape(blade, feather, 1.5)
+		_line(root, tip, edge, 0.7, true)
+		if corr > 0.0:
+			_line(tip - fdir * 3.0, tip + fdir * 1.2, Color(0.62, 0.3, 0.88, 0.8 * corr), 0.9, true)
+	var wing := PackedVector2Array([shoulder - n * 5.5, hand - n * 4.0, hand + reach * 5.0, hand + n * 4.5, shoulder + n * 7.0 + Vector2(0.0, 3.0)])
+	var near: Vector2 = shoulder + n * 7.0 + Vector2(0.0, 3.0)
+	var far: Vector2 = hand + n * 4.5
+	for j in 5:
+		var at: Vector2 = far.lerp(near, (float(j) + 0.5) / 5.0)
+		_shape(PackedVector2Array([at - (far - near).normalized() * 3.0, at + reach * 3.4, at + (far - near).normalized() * 3.0]), feather, 1.4)
+	_shape(wing, feather, 2.4)
+	# Shading so the wing never reads as one flat bar: a darker lower half and the lines between the long feathers, all inside the wing.
+	_poly(PackedVector2Array([shoulder + n * 1.0, hand + n * 0.5, hand + n * 4.2, near]), feather.darkened(0.16))
+	for j in 3:
+		var f: float = (float(j) + 1.0) / 4.0
+		_line(shoulder.lerp(near, f * 0.9) + reach * 3.0, hand.lerp(far, f) - reach * 0.5, Color(INK, 0.55), 0.8, true)
+	if corr > 0.0:
+		_purple_edge(wing, corr)
+	_line(shoulder.lerp(hand, 0.2) - n * 2.0, hand - n * 1.5, edge, 1.0, true)
+	_line(hand - n * 1.0, hand + reach * 3.0 - n * 0.5, Color(INK, 0.6), 1.2, true)
+	_dot(shoulder, 3.6, INK)
+	_dot(shoulder, 2.6, sleeve)
+	_line(shoulder + n * 3.2, shoulder + reach * 7.5 + n * 2.4, sleeve, 3.2, true)
+
+
+## The hand-made texture of this stage or pose, or null when the code drawing is used (a pure query: it draws nothing).
+func override_texture() -> Texture2D:
+	if look != Look.HERO or part != Part.ALL or dead or ragdoll:
+		return null
+	if sprite_set == null:
+		sprite_set = CorruptionSpriteSet.get_default()
+	return sprite_set.texture_for(pose_name, corruption_stage)
+
+
+## Draws that texture instead of the code drawing when a slot is set (only from _draw). Returns true when it drew.
+func _draw_sprite_override() -> bool:
+	var texture: Texture2D = override_texture()
+	if texture == null:
+		return false
+	var size: Vector2 = texture.get_size() * sprite_set.texture_scale
+	var feet := Vector2(0.0, 0.0)
+	draw_texture_rect(texture, Rect2(feet - Vector2(size.x * sprite_set.feet_anchor.x, size.y * sprite_set.feet_anchor.y), size), false)
+	return true
 
 
 # =====================================================================================

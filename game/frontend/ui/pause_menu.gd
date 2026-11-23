@@ -60,8 +60,18 @@ func _exit_tree() -> void:
 		PauseLock.release(self, get_tree())
 
 
+## The `pause` action, or Esc: Esc is reserved and keeps pausing whatever the player rebinds.
+static func is_pause_event(event: InputEvent) -> bool:
+	if event.is_echo():
+		return false
+	if event.is_action_pressed("pause"):
+		return true
+	var key := event as InputEventKey
+	return key != null and key.pressed and (key.physical_keycode == KEY_ESCAPE or key.keycode == KEY_ESCAPE)
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if not event.is_action_pressed("pause") or event.is_echo():
+	if not is_pause_event(event):
 		return
 	if _holds_lock and options.is_open():
 		options.close()

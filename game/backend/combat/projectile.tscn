@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://backend/combat/projectile.gd" id="1_projectile"]
 [ext_resource type="Script" path="res://backend/combat/hitbox.gd" id="2_hitbox"]
+[ext_resource type="Script" path="res://frontend/fx/danger_outline.gd" id="3_outline"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_world"]
 radius = 6.0
@@ -25,3 +26,6 @@ shape = SubResource("CircleShape2D_hit")
 [node name="Visual" type="Polygon2D" parent="."]
 color = Color(1, 0.55, 0.15, 1)
 polygon = PackedVector2Array(-6, 0, 0, -6, 6, 0, 0, 6)
+
+[node name="DangerOutline" type="Node2D" parent="."]
+script = ExtResource("3_outline")

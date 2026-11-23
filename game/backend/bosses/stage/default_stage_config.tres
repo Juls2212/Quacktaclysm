@@ -1,0 +1,66 @@
+[gd_resource type="Resource" script_class="StageConfig" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://backend/bosses/stage/stage_config.gd" id="1_cfg"]
+[ext_resource type="PackedScene" path="res://backend/combat/projectile.tscn" id="2_projectile"]
+[ext_resource type="Resource" path="res://backend/bosses/stage/barrage_projectile_stats.tres" id="3_stats"]
+
+[resource]
+script = ExtResource("1_cfg")
+platform_heights = PackedFloat32Array(62, 124, 186, 248)
+platform_offsets = PackedFloat32Array(-225, -75, 75, 225)
+platform_width = 150.0
+platform_thickness = 24.0
+perch_height = 310.0
+perch_width = 170.0
+perch_offset = 0.0
+rise_time = 1.2
+sink_time = 1.0
+rise_depth = 150.0
+platform_color = Color(0.3, 0.3, 0.3, 1)
+platform_skin = 14
+batch_size = 2
+batch_interval = 2.5
+first_batch_delay = 0.8
+wave_size = 6
+max_alive = 6
+duckling_soul_gain = 5
+duckling_fall_limit = 200.0
+spawn_edge_margin = 70.0
+spawn_clear_of_player = 140.0
+spawn_puff_time = 0.5
+tremble_time = 1.5
+crumble_time = 0.7
+barrage_time = 5.0
+shimmer_time = 1.0
+leap_up_time = 0.6
+aloft_height = 280.0
+aloft_offset = 400.0
+land_time = 0.5
+perch_leap_time = 0.9
+perch_leap_arc = 140.0
+void_damage = 1
+void_invulnerability = 1.5
+void_depth = 90.0
+window_seconds = 6.0
+window_min = 4.0
+window_max = 8.0
+lane_telegraph = 0.8
+lane_gap = 0.9
+lane_events = 5
+safe_margin = 0.3
+lane_torso = 28.0
+barrage_projectile_scene = ExtResource("2_projectile")
+barrage_projectile_stats = ExtResource("3_stats")
+eye_height = 340.0
+eye_radius = 120.0
+eye_appear_time = 1.5
+bolt_telegraph = 1.0
+bolt_active = 0.4
+bolt_rest = 1.2
+vertical_bolts = 2
+radial_bolts = 2
+bolt_width = 44.0
+min_lane_width = 130.0
+max_lane_offset = 110.0
+bolt_damage = 1
+bolt_knockback = Vector2(220, -300)

@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="GrandfatherPresentation" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://frontend/presentation/grandfather_presentation.gd" id="1_pres"]
+
+[resource]
+script = ExtResource("1_pres")
+memory_format = "Recuerdas su voz… «%s»"
+direct_format = "Abuelo: «%s»"
+show_time = 6.5
+panel_fade_time = 0.4
+start_delay = 0.6
+max_input_lock = 0.0
+queue_timeout_margin = 5.0
+panel_color = Color(0.05, 0.05, 0.09, 0.84)
+text_color = Color(0.98, 0.93, 0.8, 1)
+outline_color = Color(0.106, 0.098, 0.122, 1)
+font_size = 22
+panel_width = 760.0
+panel_top_ratio = 0.2
+panel_layer = 56
+reflection_layer = -5
+fade_in_time = 1.0
+fade_out_time = 1.5
+max_alpha = 0.55
+sharp_levels = PackedInt32Array(3)
+face_memory_alpha = 0.4
+face_solid_alpha = 0.6
+face_scale = 1.4
+anchor_x_ratio = 0.8
+face_anchor_y = 0.3
+sky_bottom_ratio = 0.62
+face_glow_radius_memory = 240.0
+face_glow_radius_solid = 150.0
+face_glow_color = Color(0.86, 0.93, 1, 1)
+sound_event = &"grandfather_voice"

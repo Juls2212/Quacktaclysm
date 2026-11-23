@@ -2,7 +2,7 @@ extends Node
 ## Full simulated playthroughs for Phase 12b with REAL scene changes (no dry_run, fades 0, AI service
 ## disabled, redirected save path): level 1 -> boss -> fragment -> real DecisionPanel -> level 2 ->
 ## level 3 -> ending -> main menu "Continuar" -> ending again. Three runs: always released
-## (compassionate), always kept (corrupt) and released/kept/released (neutral). Development only.
+## (compassionate), always kept (corrupt) and released/kept/released (neutral at level 3, compassionate after the last decision: score +1). Development only.
 ## Run: <godot> --headless --path game res://frontend/scenes/test/level_phase12b_playthrough_test.tscn
 ## The entry scene is replaced by the first transition, so a copy of this script parented to the
 ## root (it survives scene changes) drives the checks.
@@ -22,9 +22,9 @@ const AGGRESSION: Dictionary = {"compassionate": 0.9, "neutral": 1.0, "corrupt":
 const EXTRAS_IN_CORRUPT: Dictionary = {2: 2, 3: 3}
 const BASELINE_ENEMIES: Dictionary = {1: 6, 2: 8, 3: 9}
 const RUNS: Array[Dictionary] = [
-	{"name": "(a) always released", "choices": ["released", "released", "released"], "tiers": [0, 0, 0], "after_second": "compassionate", "final": "compassionate", "ending": "ending_compassionate"},
-	{"name": "(b) always kept", "choices": ["kept", "kept", "kept"], "tiers": [0, 1, 2], "after_second": "corrupt", "final": "corrupt", "ending": "ending_corrupt"},
-	{"name": "(c) released, kept, released", "choices": ["released", "kept", "released"], "tiers": [0, 0, 1], "after_second": "neutral", "final": "neutral", "ending": "ending_neutral"},
+	{"name": "(a) always released", "choices": ["released", "released", "released"], "tiers": [0, 0, 0], "after_second": "compassionate", "final": "compassionate", "ending": "ending_released"},
+	{"name": "(b) always kept", "choices": ["kept", "kept", "kept"], "tiers": [0, 1, 2], "after_second": "corrupt", "final": "corrupt", "ending": "ending_kept"},
+	{"name": "(c) released, kept, released", "choices": ["released", "kept", "released"], "tiers": [0, 0, 1], "after_second": "neutral", "final": "compassionate", "ending": "ending_released"},
 ]
 
 var failures: int = 0
@@ -71,6 +71,15 @@ func _wait_for(condition: Callable) -> bool:
 func _scene_is(path: String) -> bool:
 	var scene: Node = get_tree().current_scene
 	return scene != null and scene.scene_file_path == path and not SceneManager.is_transitioning()
+
+
+## Phase 15q: since Phase 15n the guardian's last words come before the fragment; nobody presses Enter in this test, so they are skipped. Always true.
+func _skip_last_words() -> bool:
+	var scene: Node = get_tree().current_scene if get_tree().current_scene != null else self
+	for node in scene.find_children("*", "BossDialogue", true, false):
+		if (node as BossDialogue).is_speaking():
+			(node as BossDialogue).skip()
+	return true
 
 
 func _find_fragment() -> SoulFragment:
@@ -163,7 +172,7 @@ func _play(run: Dictionary) -> void:
 		level.refine_wait_timeout = 1.0
 		level.boss.hurtbox.receive_hit(DamageInfo.create(9999, Vector2.ZERO, level.player, CombatLayers.Team.PLAYER))
 		_check("%s: boss killed with a lethal DamageInfo" % step, level.boss.state == BossBase.State.DEAD)
-		var spawned: bool = await _wait_for(func() -> bool: return _find_fragment() != null)
+		var spawned: bool = await _wait_for(func() -> bool: return _skip_last_words() and _find_fragment() != null)
 		_check("%s: fragment spawned" % step, spawned)
 		if not spawned:
 			return
@@ -200,10 +209,10 @@ func _play(run: Dictionary) -> void:
 		and profile_at_level_3 == run["after_second"])
 	var snapshot: Dictionary = GameState.to_dict()
 	var ending := get_tree().current_scene as EndingController
-	_check("%s: shows %s" % [ending_step, run["ending"]], ending != null and ending.shown_variant == run["ending"] and ending.ending_label.text == String(ending.ending_texts[run["ending"]]))
-	_check("%s: soul counts shown" % ending_step, ending.released_label.text == ending.souls_released_format % final_released
-		and ending.kept_label.text == ending.souls_kept_format % (3 - final_released))
-	print("ENDING TEXT: %s | %s | %s | %s" % [ending.ending_label.text, ending.released_label.text, ending.kept_label.text, ending.narrative_label.text])
+	_check("%s: shows %s" % [ending_step, run["ending"]], ending != null and ending.shown_variant == run["ending"] and ending.ending_label.text == ending.texts.get_ending(run["ending"]).summary_line)
+	_check("%s: soul counts shown" % ending_step, ending.released_label.text == ending.texts.summary_released_format % final_released
+		and ending.kept_label.text == ending.texts.summary_kept_format % (3 - final_released))
+	print("ENDING TEXT: %s | %s | %s | %s" % [ending.ending_label.text, ending.released_label.text, ending.kept_label.text, ending.released_names_label.text])
 	# "Continuar": a fresh process would start with an empty GameState and load the save from disk.
 	GameState.start_new_game()
 	_check("%s: back to the main menu" % ending_step, SceneManager.go_to_main_menu())

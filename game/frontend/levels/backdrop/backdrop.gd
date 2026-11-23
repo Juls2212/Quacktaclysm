@@ -34,6 +34,11 @@ var _current: Dictionary = {}
 var _leaving: Array[Dictionary] = []
 var _fade_time: float = 0.0
 var _fade_left: float = 0.0
+## Color multiplied over the whole backdrop (white = unchanged). Set by the level's ProfilePresenter.
+var grade: Color = Color.WHITE
+## A second multiplier on top of `grade` (white = unchanged), set by the possession sequence (Phase 15d) so the
+## red of a boss phase composes with the profile look instead of replacing it.
+var possession_grade: Color = Color.WHITE
 
 
 func _ready() -> void:
@@ -54,6 +59,27 @@ func _process(delta: float) -> void:
 		_drop_leaving()
 
 
+## Tints the sky and every layer behind the play field (never the play field). The alpha is ignored.
+## The color actually multiplied over the backdrop: the profile grade times the possession grade.
+func get_effective_grade() -> Color:
+	return Color(grade.r * possession_grade.r, grade.g * possession_grade.g, grade.b * possession_grade.b, 1.0)
+
+
+func set_possession_grade(color: Color) -> void:
+	possession_grade = Color(color.r, color.g, color.b, 1.0)
+	modulate = get_effective_grade()
+	for biome_set in [_current] + _leaving:
+		_set_sky_grade(biome_set)
+
+
+func set_grade(color: Color) -> void:
+	grade = Color(color.r, color.g, color.b, 1.0)
+	# Node2D children inherit this; the sky sits under a CanvasLayer, so it is tinted by hand.
+	modulate = get_effective_grade()
+	for biome_set in [_current] + _leaving:
+		_set_sky_grade(biome_set)
+
+
 ## The biome currently on screen (the target while a fade runs).
 func get_shown_biome() -> Biome:
 	return _shown
@@ -69,6 +95,7 @@ func show_biome(b: Biome, duration: float = 0.0) -> void:
 		_current = _make_set(b)
 		_shown = b
 		_fade_left = 0.0
+		_set_sky_grade(_current)
 		return
 	# A fade already running: whatever was coming in leaves too, from where it is.
 	_leaving.append(_current)
@@ -96,6 +123,7 @@ func _build() -> void:
 		return
 	_current = _make_set(b)
 	_shown = b
+	_set_sky_grade(_current)
 
 
 ## Builds every node that draws `b` under one root, so a whole biome can fade as a block.
@@ -193,7 +221,17 @@ func _set_alpha(biome_set: Dictionary, alpha: float, with_sky: bool = true) -> v
 		root.modulate.a = alpha
 	# The sky sits under a CanvasLayer, which does not pass the root's modulate down.
 	if with_sky and is_instance_valid(sky):
-		sky.modulate.a = alpha
+		var effective: Color = get_effective_grade()
+		sky.modulate = Color(effective.r, effective.g, effective.b, alpha)
+
+
+func _set_sky_grade(biome_set: Dictionary) -> void:
+	if biome_set.is_empty():
+		return
+	var sky: SkyPainter = biome_set["sky"]
+	if is_instance_valid(sky):
+		var effective: Color = get_effective_grade()
+		sky.modulate = Color(effective.r, effective.g, effective.b, sky.modulate.a)
 
 
 func _free_set(biome_set: Dictionary) -> void:

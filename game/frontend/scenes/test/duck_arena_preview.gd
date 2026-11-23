@@ -1,7 +1,7 @@
 extends Node2D
 ## The real player and enemy scenes on a flat floor, with an autopilot that runs, dashes,
 ## slashes, dash-slashes and heavy-attacks, then knocks out the enemies, a boss and the player
-## so the ragdolls and the health orbs can be seen in game.
+## so the ragdolls and the soul wisps can be seen in game.
 ## F6 to watch. `-- --shots=<dir>` saves a frame at each scripted beat and quits.
 
 const PLAYER_SCENE := preload("res://backend/player/player.tscn")
@@ -36,8 +36,8 @@ const BEATS: Array = [
 	[5.5, "hurt_player", ""],
 	[5.6, "kill_enemies", ""],
 	[5.75, "", "ragdolls"],
-	[6.25, "", "orbs"],
-	[7.2, "", "orbs_collected"],
+	[6.25, "", "soul_wisps"],
+	[7.2, "", "soul_absorbed"],
 	[7.3, "spawn_boss", ""],
 	[7.9, "", "boss"],
 	[8.0, "kill_boss", ""],

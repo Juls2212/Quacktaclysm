@@ -19,6 +19,10 @@ const RX: float = 130.0
 const RY: float = 35.0
 const BEAM_HEIGHT: float = 900.0
 
+## The portal lit up, and a player stepped into it while lit (the audio hooks these).
+signal portal_lit
+signal portal_entered
+
 ## Starts lit (preview); in the tutorial it follows the controller.
 @export var lit_at_start: bool = false
 
@@ -69,12 +73,14 @@ func _light_up() -> void:
 	if _target < 1.0:
 		_target = 1.0
 		_flash = 1.0
+		portal_lit.emit()
 
 
 func _on_body_entered(body: Node2D) -> void:
 	if _lit > 0.5 and body is Player:
 		_flash = 1.0
 		_swell = 1.0
+		portal_entered.emit()
 
 
 func _find_controller() -> Node:

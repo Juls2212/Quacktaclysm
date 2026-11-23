@@ -66,6 +66,18 @@ func resolve(choice: String) -> void:
 	_tween.chain().tween_callback(queue_free)
 
 
+## The fragment condenses out of the spirit particles: it grows and brightens over `seconds` (presentation of its own Visual only).
+func appear(seconds: float) -> void:
+	if visual == null or seconds <= 0.0:
+		return
+	visual.scale = Vector2.ONE * 0.2
+	visual.modulate.a = 0.0
+	var tween: Tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(visual, "scale", Vector2.ONE, seconds).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(visual, "modulate:a", 1.0, seconds * 0.7)
+
+
 ## Removes the fragment without any effect.
 func dismiss() -> void:
 	_resolved = true

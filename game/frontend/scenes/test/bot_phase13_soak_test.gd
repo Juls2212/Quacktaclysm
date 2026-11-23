@@ -170,6 +170,9 @@ class Bot extends RefCounted:
 	var walk_dir: int = 1
 	var walk_left: int = 0
 	var pause_open_frames: int = 0
+	## Gap crossing (Phase 15e-2): frames since the jump at a floor edge; -1 = not crossing. The widest gaps of level 3 need the
+	## jump, the double jump (about 0.6 s later) and the dash (about 1.15 s after the jump); only the test bot knows this.
+	var cross_frame: int = -1
 
 	func _init(seed_value: int) -> void:
 		rng.seed = seed_value
@@ -186,6 +189,8 @@ func _drive(bot: Bot, player: Player, boss: BossBase, frame: int) -> void:
 			_release(action)
 			bot.held.erase(action)
 	if get_tree().paused:
+		return
+	if _cross_gap(bot, player):
 		return
 	# Movement: mostly right, sometimes idle or back; biased toward an active boss.
 	bot.walk_left -= 1
@@ -220,6 +225,35 @@ func _drive(bot: Bot, player: Player, boss: BossBase, frame: int) -> void:
 	if bot.chance(0.003) and not bot.held.has(&"pause"):
 		_press(&"pause")
 		bot.held[&"pause"] = 2
+
+
+## The test bot crosses a floor gap the way a player does: run, jump at the edge, double jump when falling (if unlocked), dash.
+## Returns true while it is crossing (the random driver is skipped, so the sequence is not broken).
+func _cross_gap(bot: Bot, player: Player) -> bool:
+	if bot.cross_frame >= 0:
+		bot.cross_frame += 1
+		if bot.cross_frame == 36 and player.has_double_jump():
+			_press(&"jump")
+			bot.held[&"jump"] = 20
+		elif bot.cross_frame == 69:
+			_press(&"dash")
+			bot.held[&"dash"] = 2
+		if bot.cross_frame > 110 or (player.is_on_floor() and bot.cross_frame > 12):
+			bot.cross_frame = -1
+			return false
+		return true
+	if not player.is_on_floor() or player.state == Player.State.DEAD:
+		return false
+	var space: PhysicsDirectSpaceState2D = player.get_world_2d().direct_space_state
+	var world_mask: int = CombatLayers.layer_bit(CombatLayers.LAYER_WORLD)
+	var below := PhysicsRayQueryParameters2D.create(player.global_position + Vector2(14.0, 0.0), player.global_position + Vector2(14.0, 90.0), world_mask)
+	if space.intersect_ray(below).is_empty() and player.velocity.x > 60.0:
+		bot.cross_frame = 0
+		_press(&"move_right")
+		_press(&"jump")
+		bot.held[&"jump"] = 26
+		return true
+	return false
 
 
 # --- Invariants ---

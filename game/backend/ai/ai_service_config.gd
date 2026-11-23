@@ -5,6 +5,9 @@ extends Resource
 @export var enabled: bool = true
 @export var base_url: String = "http://127.0.0.1:8000"
 @export var profile_path: String = "/v1/adaptive/profile"
+## The AI Director plan endpoint (Phase 16b) and its budget: the plan is optional, so the answer is never waited for.
+@export var director_path: String = "/v1/director/plan"
+@export_range(0.5, 10.0, 0.5) var director_timeout_seconds: float = 3.0
 @export_range(1.0, 60.0, 0.5) var request_timeout_seconds: float = 10.0
 @export var max_response_bytes: int = 4096
 ## Name of the environment variable that overrides `base_url` when it is not empty.
@@ -29,6 +32,14 @@ func resolve_base_url() -> String:
 		if lower.begins_with(scheme) and lower.length() > scheme.length():
 			return url
 	return ""
+
+
+## Full URL of the Director plan endpoint, or "" if the base URL is invalid.
+func resolve_director_url() -> String:
+	var base: String = resolve_base_url()
+	if base.is_empty():
+		return ""
+	return base + (director_path if director_path.begins_with("/") else "/" + director_path)
 
 
 ## Full endpoint URL, or "" if the base URL is invalid.

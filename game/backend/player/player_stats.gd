@@ -20,12 +20,22 @@ extends Resource
 @export_range(0.0, 1.0, 0.05) var jump_cut_multiplier: float = 0.4
 @export_range(0.0, 0.5, 0.01, "suffix:s") var coyote_time: float = 0.1
 @export_range(0.0, 0.5, 0.01, "suffix:s") var jump_buffer_time: float = 0.12
+@export_group("Double jump (Phase 15c)")
+## Extra jumps in the air, per airtime (reset on landing, on a bounce pad). The jump action is the same.
+@export_range(0, 3, 1) var max_air_jumps: int = 1
+## Velocity of the extra jump: about 85% of the first jump (negative is up).
+@export_range(-2000.0, 0.0, 1.0, "suffix:px/s") var double_jump_velocity: float = -527.0
+## The ability is unlocked once GameState.decisions has this many entries (boss 2's decision): it is derived,
+## so nothing is saved and it also holds after continuing a game.
+@export_range(1, 3, 1) var double_jump_unlock_decisions: int = 2
 
 @export_group("Dash")
 @export_range(0.0, 3000.0, 1.0, "suffix:px/s") var dash_speed: float = 700.0
 @export_range(0.0, 1.0, 0.01, "suffix:s") var dash_duration: float = 0.18
 @export_range(0.0, 3.0, 0.01, "suffix:s") var dash_cooldown: float = 0.4
-@export_range(0.0, 1.0, 0.01, "suffix:s") var dash_invulnerability_time: float = 0.12
+## Phase 15b: the dash is invulnerable for its WHOLE duration (it ends with the dash state). This is only an
+## optional extra grace after the dash ends; 0 means none.
+@export_range(0.0, 0.5, 0.01, "suffix:s") var dash_invulnerability_grace: float = 0.0
 @export_range(0, 5, 1) var max_air_dashes: int = 1
 @export var dash_disables_gravity: bool = true
 
@@ -77,6 +87,11 @@ extends Resource
 
 @export_group("Health")
 @export_range(1, 99, 1) var max_health: int = 8
+## Reward for releasing a soul fragment: extra maximum health per released fragment, derived from
+## GameState.souls_released when the player spawns or respawns (nothing is saved for it).
+@export_range(0, 5, 1) var health_per_released_soul: int = 1
+## How many released fragments count (3 fragments in the game, so max_health + 3 at most).
+@export_range(0, 10, 1) var released_souls_cap: int = 3
 ## Invulnerability after taking damage.
 @export_range(0.0, 5.0, 0.05, "suffix:s") var hurt_invulnerability_time: float = 1.0
 ## Time the player cannot act after being hit.

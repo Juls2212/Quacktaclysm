@@ -17,3 +17,11 @@ extends Resource
 @export_range(0.25, 4.0, 0.05) var size_scale: float = 1.0
 ## Visual tint. Transparent (default) keeps the scene's own color.
 @export var tint: Color = Color(1.0, 1.0, 1.0, 0.0)
+## How the projectile is DRAWN beyond its body tint (Phase 15d-bis, used by the sword wave; a transparent color or 0 draws
+## nothing, so enemy projectiles are unaffected). They never change the hitbox, the speed or the damage.
+@export var rim_color: Color = Color(1.0, 1.0, 1.0, 0.0)
+@export var core_color: Color = Color(0.0, 0.0, 0.0, 0.0)
+@export var glow_color: Color = Color(1.0, 1.0, 1.0, 0.0)
+@export_range(0.0, 1.0, 0.05) var glow_strength: float = 0.0
+@export_range(0.0, 400.0, 1.0, "suffix:px") var trail_length: float = 0.0
+@export_range(0.5, 3.0, 0.05) var impact_scale: float = 1.0

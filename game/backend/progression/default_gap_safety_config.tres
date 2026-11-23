@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="GapSafetyConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://backend/progression/gap_safety_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+enemy_edge_keepout = 250.0
+ground_enemy_min_y = 560.0
+target_timing_seconds = PackedFloat32Array(0.15, 0.1, 0.06)
+target_offset_px = PackedFloat32Array(20, 0, 0)
+gap_one_min_width = 290.0
+assist_falls = 4
+assist_width = 140.0
+assist_thickness = 24.0
+assist_top_y = 600.0
+assist_color = Color(0.3, 0.3, 0.3, 1)
+assist_skin = 15
+fall_y = 800.0

@@ -55,6 +55,8 @@ func _on_choice_selected(choice: String) -> void:
 			decision_made.emit(data.fragment_id, choice)
 			if refiner != null:
 				refiner.request_refinement(refinement_point)
+			# Prefetch the AI Director plan of the NEXT level at the same moment (never waited for; the local plan is the fallback).
+			GameState.get_director_client().request_plan(data.level)
 		else:
 			fragment.dismiss()
 	_resolving = false

@@ -1,0 +1,82 @@
+[gd_resource type="Resource" script_class="TutorialTexts" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://backend/progression/tutorial_texts.gd" id="1_texts"]
+
+[resource]
+script = ExtResource("1_texts")
+steps = Array[Dictionary]([{
+"id": "move",
+"kind": "move",
+"required": true,
+"short": "Moverte",
+"station": "MOVER",
+"text": "Muévete con {move_left} / {move_right}"
+}, {
+"id": "jump",
+"kind": "jump",
+"required": true,
+"short": "Saltar",
+"station": "SALTAR",
+"text": "Salta con {jump}"
+}, {
+"id": "dash",
+"kind": "dash",
+"required": true,
+"short": "Esquivar (invulnerable)",
+"station": "ESQUIVA",
+"text": "Esquiva con {dash}: mientras dura eres invulnerable"
+}, {
+"id": "attack",
+"kind": "attack",
+"required": true,
+"short": "Golpe ligero",
+"station": "ATACAR",
+"text": "Ataca con {attack}: golpea al muñeco"
+}, {
+"id": "heavy",
+"kind": "heavy",
+"required": true,
+"short": "Golpe pesado",
+"station": "GOLPE PESADO",
+"text": "Golpe pesado con {heavy_attack}: tarda más y pega más"
+}, {
+"id": "soul",
+"kind": "soul",
+"required": true,
+"short": "Llenar el alma",
+"station": "ALMA",
+"text": "Cada golpe llena tu medidor de alma: sigue con el muñeco"
+}, {
+"id": "heal",
+"kind": "heal",
+"required": true,
+"short": "Curarte",
+"station": "CURAR",
+"text": "Con alma suficiente, mantén {heal} para curarte"
+}, {
+"id": "pause",
+"kind": "pause",
+"required": false,
+"short": "Pausa (opcional)",
+"station": "PAUSA",
+"text": "Pausa con {pause} cuando quieras"
+}])
+greeting = "Abuelo: Ven, te enseñaré lo básico."
+feedback_text = "¡Bien!"
+final_text = "Muy bien. Sigue a la derecha para salir."
+exit_hint_format = "Te falta: %s"
+checklist_title = "ENTRENAMIENTO"
+abilities_note = "Más habilidades llegan con los fragmentos de alma."
+skip_hint = "Mantén {ui_accept} para saltar el tutorial"
+dummy_lines = {
+"all_done": PackedStringArray("¡Eso es todo! La salida está abierta.", "¡Listo! Ya puedes irte."),
+"done": PackedStringArray("¡Bien hecho!", "¡Anotado!", "¡Eso es!"),
+"early": PackedStringArray("¡Te adelantas! Eso ya cuenta.", "¡Sin que te lo pida! Anotado.", "¡Vaya, qué prisa! Ya está."),
+"greet": PackedStringArray("¡Hola! Soy el muñeco. Pégame, no me quejo."),
+"heavy_hit": PackedStringArray("¡Cuidado, ese dolió!", "¡Menudo golpe!"),
+"hit": PackedStringArray("¡Ay! Qué bien pegas.", "¡Eso hizo cosquillas!", "¡Paja va, paja viene!"),
+"idle": PackedStringArray("¿Te animas a pegarme?", "Pista: mira la lista de arriba."),
+"killed": PackedStringArray("¡Me rompiste! Dame un segundo...", "¡Ya me hacía a la idea!"),
+"respawn": PackedStringArray("¡Vuelvo como nuevo!", "¡Otra vez! Me encanta."),
+"skipped": PackedStringArray("¿Ya lo sabes todo? Pasa, pasa.")
+}

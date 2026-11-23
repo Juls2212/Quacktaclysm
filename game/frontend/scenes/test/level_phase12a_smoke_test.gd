@@ -304,7 +304,8 @@ func _test_level_wiring() -> void:
 	await _physics(2)
 	_check("wiring: safety unlock after the transition", not level.player.is_input_locked())
 	level.free()
-	_check("wiring: signals disconnected on exit", SceneManager.transition_started.get_connections().size() <= 1)
+	# Phase 14f: AudioDirector keeps one permanent connection (the transition sound), so up to two remain.
+	_check("wiring: the level's own signals are disconnected on exit", SceneManager.transition_started.get_connections().size() <= 2)
 
 
 # --- Continue / restore ---
@@ -400,6 +401,15 @@ func _test_arena() -> void:
 
 # --- Completion / advance ---
 
+## Phase 15q: since Phase 15n the guardian's last words come before the fragment; nobody presses Enter in this test, so they are skipped. Always true.
+func _skip_last_words() -> bool:
+	var scene: Node = get_tree().current_scene if get_tree().current_scene != null else self
+	for node in scene.find_children("*", "BossDialogue", true, false):
+		if (node as BossDialogue).is_speaking():
+			(node as BossDialogue).skip()
+	return true
+
+
 func _find_fragment() -> SoulFragment:
 	for child in get_children():
 		if child is SoulFragment:
@@ -426,7 +436,7 @@ func _test_completion() -> void:
 	var completed: Array[int] = []
 	level.level_completed.connect(func(number: int) -> void: completed.append(number))
 	_kill_boss(level)
-	var spawned: bool = await _wait_until(func() -> bool: return _find_fragment() != null, 120)
+	var spawned: bool = await _wait_until(func() -> bool: return _skip_last_words() and _find_fragment() != null, 120)
 	_check("complete: killing the boss spawns the fragment", spawned)
 	var fragment: SoulFragment = _find_fragment()
 	level.player.global_position = fragment.global_position
@@ -482,6 +492,10 @@ func _test_completion() -> void:
 	GameState.record_decision("fragment_level_1", "placeholder_boss", 1, GameState.CHOICE_RELEASED)
 	_kill_boss(level)
 	await _wait_until(func() -> bool: return level.is_completed, 120)
+	# Phase 15q: the guardian's last words (Phase 15n) hold the player until they are confirmed or skipped; skipping them is what a player does.
+	for i in 90:
+		await get_tree().physics_frame
+		_skip_last_words()
 	await _physics(5)
 	_check("complete: rejected go_to keeps the player in control", level.is_completed and not level.player.is_input_locked()
 		and not SceneManager.is_transitioning() and SceneManager.last_requested_scene_id == "" and GameState.current_level == 1)
@@ -505,39 +519,31 @@ func _test_tutorial() -> void:
 	_check("tutorial: loading never changes GameState or saves", GameState.to_dict() == state_before and not SaveSystem.has_save())
 	_check("tutorial: autosave suspended while it is alive", not GameState.autosave_enabled)
 	_check("tutorial: no game over, auto respawn on", not tutorial.game_over_controller.show_game_over and player.is_auto_respawn_enabled())
-	_check("tutorial: eight ordered steps (wave added in Phase 12c, heavy and dash slash in 13c)", controller.steps.size() == 8 and controller.get_current_step_id() == "move")
+	_check("tutorial: eight independent steps (seven required, the pause is optional), the first one on screen is move (Phase 15m)", controller.steps.size() == 8 and controller.get_current_step_id() == "move")
 	_check("tutorial: key hints resolved from the input map", controller.build_text("{jump}") != "{jump}" and not controller.prompt_label.text.contains("{"),
 		controller.prompt_label.text)
 	player.dash_started.emit()
 	player.attack_started.emit()
-	player.wave_cast.emit(0)
-	_check("tutorial: early actions do not count", controller.current_index == 0)
+	_check("tutorial: early actions COUNT now (Phase 15m): the dash and the attack are done before they are asked", controller.is_step_done("dash") and controller.is_step_done("attack") and controller.current_index == 0)
 	Input.action_press("move_right")
 	await _wait_until(func() -> bool: return controller.current_index >= 1, 120)
 	Input.action_release("move_right")
-	_check("tutorial: moving completes the move step", controller.current_index == 1 and controller.get_current_step_id() == "jump")
-	player.dash_started.emit()
-	_check("tutorial: a dash before its step does not count", controller.current_index == 1)
+	_check("tutorial: moving completes the move step and the next missing one is the jump", controller.is_step_done("move") and controller.get_current_step_id() == "jump")
 	player.state_changed.emit(Player.State.IDLE, Player.State.JUMP)
-	_check("tutorial: jump completes", controller.get_current_step_id() == "dash")
-	player.dash_started.emit()
-	_check("tutorial: dash completes", controller.get_current_step_id() == "attack")
-	player.attack_started.emit()
-	_check("tutorial: attack completes", controller.get_current_step_id() == "hit_dummy")
+	_check("tutorial: jump completes; the dash and the attack were already done, so heavy is next", controller.get_current_step_id() == "heavy")
 	_check("tutorial: exit does nothing before completion", not controller.is_completed)
 	controller.exit_area.body_entered.emit(player)
-	_check("tutorial: early exit does not request a scene", SceneManager.last_requested_scene_id == "" and GameState.to_dict() == state_before
-		and controller.prompt_label.text == controller.exit_hint_text)
+	_check("tutorial: early exit does not request a scene and lists what is missing", SceneManager.last_requested_scene_id == "" and GameState.to_dict() == state_before
+		and controller.prompt_label.text == controller.exit_hint_text and controller.exit_hint_text.contains("Golpe pesado"),
+		"scene [%s] same_state %s prompt [%s] hint [%s]" % [SceneManager.last_requested_scene_id, str(GameState.to_dict() == state_before), controller.prompt_label.text, controller.exit_hint_text])
 	var dummy: TrainingDummy = controller.dummy
-	dummy.hurtbox.receive_hit(DamageInfo.create(1, Vector2.ZERO, player, CombatLayers.Team.PLAYER))
-	_check("tutorial: hitting the dummy leaves the wave step", not controller.is_completed and controller.get_current_step_id() == "wave")
+	dummy.hurtbox.receive_hit(DamageInfo.create(1, Vector2.ZERO, player, CombatLayers.Team.PLAYER, &"heavy"))
+	player.soul.add_soul(60)
+	_check("tutorial: a heavy hit on the dummy and the soul it gives complete the heavy and soul steps", controller.is_step_done("heavy") and controller.is_step_done("soul") and controller.get_current_step_id() == "heal")
 	controller.exit_area.body_entered.emit(player)
-	_check("tutorial: exit still blocked before the wave step", SceneManager.last_requested_scene_id == "" and not controller.is_completed)
-	player.wave_cast.emit(0)
-	_check("tutorial: the wave cast leaves the heavy step", not controller.is_completed and controller.get_current_step_id() == "heavy")
-	player.heavy_attack_started.emit()
-	player.dash_slash_started.emit()
-	_check("tutorial: heavy and dash slash complete the tutorial", controller.is_completed and controller.current_index == 8)
+	_check("tutorial: exit still blocked before the heal step", SceneManager.last_requested_scene_id == "" and not controller.is_completed)
+	player.focus_completed.emit(0)
+	_check("tutorial: the heal step completes the tutorial (the optional pause is not needed)", controller.is_completed)
 	_check("tutorial: final line shown", controller.prompt_label.text == controller.final_text)
 	controller.exit_area.body_entered.emit(player)
 	controller.exit_area.body_entered.emit(player)

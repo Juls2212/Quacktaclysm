@@ -1,20 +1,28 @@
-# Normalize line endings across Windows and macOS
-* text=auto
+# Line endings: every text file is stored with LF. Before, only .gd, .tscn, .tres, .godot and .md were
+# forced to LF, so the .import and .uid files Godot rewrites showed up as CRLF/LF-only changes.
+* text=auto eol=lf
 
-# Godot text formats
+# Godot text formats (already covered by the rule above; kept explicit)
 *.gd text eol=lf
 *.tscn text eol=lf
 *.tres text eol=lf
 *.godot text eol=lf
+*.import text eol=lf
+*.uid text eol=lf
+*.cfg text eol=lf
+*.gdshader text eol=lf
 *.md text eol=lf
+*.py text eol=lf
+*.svg text
 
-# Binary assets
+# Binary assets: never touched by line-ending conversion or diffs.
 *.png binary
 *.jpg binary
 *.jpeg binary
 *.gif binary
 *.webp binary
-*.svg text
+*.ico binary
+*.icns binary
 *.ogg binary
 *.wav binary
 *.mp3 binary
@@ -25,3 +33,8 @@
 *.glb binary
 *.res binary
 *.scn binary
+*.exe binary
+*.dll binary
+*.pck binary
+*.zip binary
+*.pyc binary

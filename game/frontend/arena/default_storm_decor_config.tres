@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="StormDecorConfig" format=3]
+
+[ext_resource type="Script" path="res://frontend/arena/storm_decor_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+max_particles = 40
+max_nodes = 8
+puddle_width = 90.0
+splash_particles = 8
+splash_life = 0.5
+splash_speed = 150.0
+splash_gap = 0.15
+lamp_range = 220.0
+flash_hz = 2.5
+max_flash_alpha = 0.3
+lamp_base_alpha = 0.12
+lamp_glow_radius = 70.0
+chain_range = 200.0
+sway_amount = 0.35
+sway_decay = 1.2
+sway_hz = 2.2
+water = Color(0.45, 0.6, 0.8, 0.55)
+lamp = Color(1, 0.97, 0.7, 1)
+metal = Color(0.2, 0.22, 0.3, 0.9)
+debris = Color(0.1, 0.09, 0.14, 0.4)

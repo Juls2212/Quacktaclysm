@@ -6,6 +6,8 @@ extends Node
 
 signal tier_changed(tier: int)
 signal wave_cooldown_changed(remaining: float, total: float)
+## A wave fired by this caster hurt something (the Soul meter listens).
+signal wave_hit(hurtbox: Hurtbox, info: DamageInfo)
 
 const DEFAULT_CONFIG_PATH: String = "res://backend/player/default_sword_wave_config.tres"
 const GAME_STATE_PATH: NodePath = ^"/root/GameState"
@@ -97,6 +99,9 @@ func fire(caster_body: Node2D, facing: int) -> Projectile:
 	projectile.launch(Vector2(facing, 0.0), CombatLayers.Team.PLAYER, config.build_projectile_stats(tier_index), caster_body)
 	if facing < 0 and projectile.visual != null:
 		projectile.visual.scale.x = -projectile.visual.scale.x
+	var wave_hitbox := projectile.get_node_or_null(^"Hitbox") as Hitbox
+	if wave_hitbox != null:
+		wave_hitbox.hit_landed.connect(func(hurtbox: Hurtbox, info: DamageInfo) -> void: wave_hit.emit(hurtbox, info))
 	_cooldown_total = tier.cooldown
 	_cooldown_left = tier.cooldown
 	wave_cooldown_changed.emit(_cooldown_left, _cooldown_total)

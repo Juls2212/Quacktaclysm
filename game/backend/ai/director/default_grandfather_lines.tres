@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="GrandfatherLines" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://backend/ai/director/grandfather_lines.gd" id="1_lines"]
+
+[resource]
+script = ExtResource("1_lines")
+min_words = 8
+max_words = 18
+max_chars = 110
+banned_words = PackedStringArray("moriste", "murio", "fallaste", "fallo", "fallos", "errores", "fracaso", "fracasos", "fracasaste", "culpa", "culpas", "error", "torpe", "debil", "debilidad", "inutil", "perdiste", "derrota", "esquivaste", "incapaz", "estupido", "game over", "otra vez", "dash", "salto", "tajo", "guardia", "jefe", "nivel", "checkpoint", "vidas", "corazones", "golpe pesado", "onda de espada", "doble salto", "estadistica", "porcentaje", "muertes")
+url_marks = PackedStringArray("http", "www", ".com", ".net", ".org", "://")
+themes = {
+"calma": ["Respira, nieto. La cabeza fría esquiva lo que la prisa no ve.", "El agua turbia se aclara cuando dejas de agitarla. Quédate quieto un instante, nieto.", "Un filo tranquilo corta más limpio que uno temblando. Suelta los hombros, nieto.", "La calma no es lentitud, nieto. Es saber dónde poner el siguiente paso."],
+"paciencia": ["El bambú no corre hacia el cielo, nieto. Crece un nudo cada vez.", "Quien espera el momento justo no pierde el paso. Aguanta un poco más.", "La piedra del río se pulió con paciencia, nieto, no con prisa.", "Todo lo bueno madura despacio. Dale tiempo al camino, nieto."],
+"distancia": ["Lo que muerde de cerca, calla de lejos. Mide el espacio, nieto.", "Un buen guerrero elige dónde pisar antes de elegir dónde cortar.", "La distancia también es un escudo, nieto. Úsala con inteligencia.", "Cuando algo te acecha desde lejos, acércate a tu manera y a tu tiempo."],
+"ritmo": ["Todo golpe tiene su respiración, nieto. Escucha el silencio antes del trueno.", "La hoja llega cuando el viento se detiene. Aprende a esperar ese instante.", "Hay una música en cada embestida, nieto. Aprende su compás y baila fuera.", "Antes de cada tormenta se oye un compás. Escúchalo y deja pasar el trueno."],
+"recursos": ["Una brasa bien guardada calienta toda la noche. Cuida tus fuerzas, nieto.", "El sabio no gasta todo su aliento en la primera colina.", "Quien reparte bien sus fuerzas llega lejos, nieto. Descansa cuando el camino lo permita.", "Guarda un poco de luz para el tramo más oscuro, nieto."],
+"valor": ["El miedo también camina contigo, nieto. Que vaya detrás, no delante.", "Dar un paso temblando sigue siendo dar un paso. Avanza, nieto.", "El valor no grita, nieto. A veces solo se levanta una vez más.", "Acércate a lo que temes con el corazón abierto y la hoja serena."],
+"equilibrio": ["Soltar y cargar pesan distinto, nieto. Elige con el corazón despierto.", "La luz no se gasta al compartirla. Recuérdalo cuando dudes, nieto.", "Entre la fuerza y la ternura hay un camino estrecho. Camínalo con calma.", "Cada elección deja huella, nieto, pero ninguna huella es el final del camino."]
+}
+memory_lines = Array[String](["El filo no es rabia, nieto. Es respeto por aquello que cortas.", "Cien cortes al amanecer, nieto, y ninguno con prisa. Así se aprende.", "Quien mira el cielo con respeto no teme a la noche, nieto.", "Antes de empuñar la hoja, nieto, aprende a escuchar el silencio."])
+memory_theme = "equilibrio"

@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="PackedScene" path="res://frontend/levels/level_base.tscn" id="1_base"]
 [ext_resource type="PackedScene" path="res://frontend/levels/blocks/placeholder_platform.tscn" id="2_platform"]
@@ -16,6 +16,8 @@
 [ext_resource type="Script" path="res://frontend/levels/blocks/debris_skin.gd" id="96_debris"]
 [ext_resource type="Script" path="res://frontend/levels/blocks/ground_props.gd" id="97_props"]
 [ext_resource type="Theme" path="res://frontend/ui/theme/quack_theme.tres" id="98_theme"]
+[ext_resource type="Script" path="res://frontend/ui/tutorial_hud.gd" id="99_hud"]
+[ext_resource type="Script" path="res://frontend/levels/blocks/tutorial_station.gd" id="100_station"]
 
 [sub_resource type="RectangleShape2D" id="Shape_exit"]
 size = Vector2(60, 220)
@@ -103,8 +105,8 @@ position = Vector2(120, 570)
 [node name="PromptLabel" type="Label" parent="PromptLayer"]
 self_modulate = Color(1, 1, 1, 0)
 anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
+anchor_left = 0.6
+anchor_right = 0.6
 offset_left = -400.0
 offset_top = 70.0
 offset_right = 400.0
@@ -113,46 +115,15 @@ grow_horizontal = 2
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="TutorialController" type="Node" parent="." index="13" node_paths=PackedStringArray("player", "dummy", "exit_area", "prompt_label", "grandfather_label")]
+[node name="TutorialController" type="Node" parent="." index="13" node_paths=PackedStringArray("player", "dummy", "exit_area", "prompt_label", "grandfather_label", "dummy_label", "hud")]
 script = ExtResource("7_tutorial")
 player = NodePath("../Player")
 dummy = NodePath("../Content/TrainingDummy")
 exit_area = NodePath("../Content/ExitTrigger")
 prompt_label = NodePath("../PromptLayer/PromptLabel")
 grandfather_label = NodePath("../Content/Grandfather/Label")
-steps = Array[Dictionary]([{
-"id": "move",
-"kind": "move",
-"text": "Muévete con {move_left} / {move_right}"
-}, {
-"id": "jump",
-"kind": "jump",
-"text": "Salta con {jump}"
-}, {
-"id": "dash",
-"kind": "dash",
-"text": "Esquiva con {dash}"
-}, {
-"id": "attack",
-"kind": "attack",
-"text": "Ataca con {attack}"
-}, {
-"id": "hit_dummy",
-"kind": "hit_dummy",
-"text": "Golpea al muñeco de entrenamiento"
-}, {
-"id": "wave",
-"kind": "wave",
-"text": "Lanza la onda de espada con clic derecho o {wave}"
-}, {
-"id": "heavy",
-"kind": "heavy",
-"text": "Golpe pesado con clic central o {heavy_attack}"
-}, {
-"id": "dash_slash",
-"kind": "dash_slash",
-"text": "Pulsa atacar ({attack}) durante el dash ({dash}) para el tajo de dash"
-}])
+dummy_label = NodePath("../Content/TrainingDummy/Speech")
+hud = NodePath("../PromptLayer/Hud")
 
 [node name="PrologueCutscene" parent="." instance=ExtResource("93_prologue")]
 
@@ -248,8 +219,8 @@ source = NodePath("../Label")
 [node name="PromptSign" type="Control" parent="PromptLayer"]
 layout_mode = 3
 anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
+anchor_left = 0.6
+anchor_right = 0.6
 offset_left = -400.0
 offset_top = 70.0
 offset_right = 400.0
@@ -258,3 +229,75 @@ grow_horizontal = 2
 mouse_filter = 2
 script = ExtResource("94_sign")
 source = NodePath("../PromptLabel")
+
+[node name="Speech" type="Label" parent="Content/TrainingDummy"]
+self_modulate = Color(1, 1, 1, 0)
+offset_left = -160.0
+offset_top = -190.0
+offset_right = 160.0
+offset_bottom = -140.0
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="SpeechBubble" type="Control" parent="Content/TrainingDummy"]
+layout_mode = 3
+anchors_preset = 0
+offset_left = -160.0
+offset_top = -190.0
+offset_right = 160.0
+offset_bottom = -140.0
+mouse_filter = 2
+theme = ExtResource("98_theme")
+script = ExtResource("94_sign")
+mode = 1
+source = NodePath("../Speech")
+
+[node name="Hud" type="Control" parent="PromptLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("99_hud")
+
+[node name="Station_move" type="Node2D" parent="Content"]
+position = Vector2(230, 600)
+script = ExtResource("100_station")
+step_id = "move"
+
+[node name="Station_jump" type="Node2D" parent="Content"]
+position = Vector2(510, 600)
+script = ExtResource("100_station")
+step_id = "jump"
+
+[node name="Station_dash" type="Node2D" parent="Content"]
+position = Vector2(610, 600)
+script = ExtResource("100_station")
+step_id = "dash"
+
+[node name="Station_attack" type="Node2D" parent="Content"]
+position = Vector2(700, 600)
+script = ExtResource("100_station")
+step_id = "attack"
+
+[node name="Station_heavy" type="Node2D" parent="Content"]
+position = Vector2(790, 600)
+script = ExtResource("100_station")
+step_id = "heavy"
+
+[node name="Station_soul" type="Node2D" parent="Content"]
+position = Vector2(1297, 600)
+script = ExtResource("100_station")
+step_id = "soul"
+
+[node name="Station_heal" type="Node2D" parent="Content"]
+position = Vector2(1650, 600)
+script = ExtResource("100_station")
+step_id = "heal"
+
+[node name="Station_pause" type="Node2D" parent="Content"]
+position = Vector2(2150, 600)
+script = ExtResource("100_station")
+step_id = "pause"
