@@ -167,3 +167,97 @@ La IA remota propone el plan del siguiente nivel (extras, pesos de patrones, tem
 ## Fase 16c: la parte visible del Director
 
 Nuevo: una línea breve del abuelo al empezar cada nivel (recuerdo en los niveles 1 y 2, voz directa en el 3), su reflejo de estrellas en el cielo y tres variantes de epílogo por final (12 textos). La petición al servicio admite `next_level = 4` (el final) y la respuesta un campo opcional `grandfather_line`. Los finales siguen decididos solo por las almas liberadas. Sin claves de guardado ni autoloads nuevos; la línea y la variante no se guardan.
+
+## Fase 15f: capa de armadura e introducciones con Enter
+
+La guardia de Kenzo pasa de 2 golpes a 1 y se dibuja como una capa de placas sobre su cuerpo (se quita el medidor de cajas bajo la barra). Cada guardián cuenta 4 líneas de su historia en la primera introducción, y todas las líneas de la introducción (guardián y pato) avanzan solo con Enter; antes avanzaban por tiempo y Enter saltaba todo (ahora lo hace mantener Enter).
+
+## Fase 15g: escenario interactivo del nivel 3
+
+Corrientes de aire, placas eléctricas, una ruta alta y decorado reactivo en el nivel 3, y tres corrientes en la arena del jefe 3 (sin plataformas ni placas). No cambian los huecos, los puntos de control ni los niveles 1 y 2.
+
+## Fase 15h: dos finales
+
+- Los cuatro finales (por almas liberadas) pasan a **dos**, por mayoría de las tres decisiones: guardadas > liberadas → «Estrellas que suben»; si no → «El acantilado». Los textos, estilos y pruebas de los cuatro finales antiguos se eliminaron. Los epílogos pasan de 12 a 6 (2 finales x 3 variantes).
+- `EndingSelector.ending_id_for(released, kept)`. Las líneas del final avanzan solo con confirmar (desde la Fase 15i, `EndingCinematic`); la escena del abuelo antes del jefe 3 no cambia.
+- «El acantilado» tiene manejo sensible (acto implícito, sin método, mensaje de apoyo en la tarjeta) y el menú «Acerca de» muestra un aviso de contenido; ambos viven en `default_story_texts.tres`. Sin claves de guardado ni autoloads nuevos.
+
+## Fase 15h-bis: huecos del nivel 3
+
+- Anchos de los huecos sin cambios (336 / 450 / 484 px): el modelo da ventanas de 360 ms (salto + doble salto), 375 ms (salto + dash) y 435 ms / 130 ms (cadena de tres acciones) en el hueco 1, y la cadena ya cumple los objetivos de los huecos 2 y 3. Falta la confirmación con el jugador real (ver KNOWN_ISSUES).
+- Nueva regla: 250 px entre los enemigos y los bordes (antes 150) y enemigos de suelo que no se acercan al borde (`EnemyBase.set_edge_keepout`).
+- Nuevo `GapGuard` en el nivel 3, `GapSafetyConfig` y la ayuda de la plataforma de restos tras 4 caídas; contador en memoria en `RunTelemetry.gap_falls`. Sin claves de guardado ni autoloads nuevos; los niveles 1 y 2 no cambian.
+
+## Fase 15i: finales cinematográficos
+
+- Los finales dejan de ser un `StoryReel` sobre `PrologueShots` y pasan a `EndingCinematic` + `EndingScene` + `GrandfatherPortrait`, con guion de beats en recursos. Se eliminó el código del epílogo de `PrologueShots` (el disparo `EPILOGUE`), el modo manual de `StoryReel` y la silueta de estrellas del abuelo en los finales (el recurso `default_ending_grandfather.tres`).
+- «Estrellas que suben» pasa a una muerte larga y dolorosa del pato (unos 56 s de beats); «El acantilado» muestra el salto como silueta (unos 58 s de beats), con las reglas de seguridad del cierre. Textos de los dos finales reescritos; los 6 epílogos, la regla de selección, la línea de apoyo y el aviso de contenido no cambian.
+- `EndingController` ya no tiene `reel_hold_scale`. `AudioDirector.play_event` gana un parámetro opcional de tono. Sin claves de guardado ni autoloads nuevos.
+
+## Fase 15j: el jefe 3, rediseño v2
+
+- **Quitado:** el ojo flotante de la fase 1 (`BossHover`, las inmersiones, la forma de ojo del `DuckRig`), el haz barredor (`BeamSweepPattern`), el patrón de columnas (`LightningColumnsPattern`, su matemática vive ahora en `StageMath`), `StormFx` y las 3 vigas de viento de la arena (con su `arena_wind_vent_config.tres`).
+- **Fase 1:** el pato poseído solo (tajo, carga, andanada) y la coraza de la Fase 15f (solo en esta fase). **Fase 2:** ciclo de invocador. **Fase 3:** el ojo rojo en el cielo con rayo rojo y el pato sin coraza.
+- Nuevo: `BossStage`, `SummonerCyclePattern`, `PlatformBarrage`, `StormEye`, `Duckling` («Patito corrupto», 1 PV, vale 5 de alma), `StageConfig`, el escudo en `BossShield`, `BossPattern.excluded_phases`, `BossBase.gravity_scale` y `exhausted`, `CombatLayers.LAYER_BOSS_PERCH`, `SoulComponent` admite que un enemigo fije lo que vale su golpe.
+- Sin claves de guardado ni autoloads nuevos; el pasillo, los huecos y los enemigos del nivel 3 no cambian; los niveles 1 y 2 siguen idénticos.
+
+## Fase 15i-bis: finales en un acantilado, cortes y arrepentimientos
+
+- Los dos finales en un acantilado; los dos se cortan a blanco o al cielo antes del acto. El paso al vacío de «El acantilado» (Fase 15i) se quitó: la regla de seguridad nueva prohíbe mostrarlo; el pato llega al borde, baja la cabeza y la cámara sube al cielo. Se quitaron también la espada y la capa del borde (la causa de la barra rara) y la espada que caía.
+- «El acantilado»: el abuelo ya no llora; aparece impasible (estado nuevo `solemn` del retrato) y dice solo «Se ha sellado la profecía.». «Estrellas que suben»: la corrupción le toma la mano, el pato se resiste y se arrepiente, y el final se corta a blanco antes de nada.
+- Las líneas, los guiones de beats y los 6 epílogos se reescribieron; el mensaje de apoyo sale en los dos finales y el aviso de contenido dice «dos finales».
+- Audio: 4 ranuras de graznidos y 2 ranuras de música (`EndingMusicSlot`) en `default_audio_events.tres`; `EndingStory.music` desaparece. Sin claves de guardado ni autoloads nuevos.
+
+## Fase 15k: sangre en el combate
+
+- La propuesta del proyecto prometía sangre en el combate y solo había chispas. Se añade sangre estilizada (gotas, salpicaduras cortas y manchas que se desvanecen; sin desmembramientos, vísceras ni gore persistente) con la opción «Sangre» (activada por defecto, solo en `settings.cfg`).
+- Solo en el combate de juego: nunca en los finales, el prólogo ni las escenas de historia (una prueba lo comprueba).
+- El aviso de contenido de «Acerca de» menciona ahora la violencia estilizada con sangre.
+- Sin claves de guardado ni autoloads nuevos; es un nodo hijo de `level_base.tscn`.
+- El «bruto con armadura» del encargo no existe como mecánica en los enemigos: la regla general (golpe aplicado = sangra, golpe bloqueado = solo chispas) cubre cualquier armadura o guardia que use `hit_filter`.
+
+## Fase 15l: final sin trabones, arte del final, venas reutilizables y absorción oscura
+
+- «Estrellas que suben»: las capas grandes ya no se redibujan en cada fotograma (frecuencia exportada), hay un vigilante de rendimiento (modo ligero) y topes de seguridad: ningún beat dura más que el máximo y una línea sin respuesta avanza tras el límite (antes solo avanzaba con la confirmación; el límite es muy largo, 120 s).
+- Ojo, ala y venas rediseñados (ojo con borde oscuro, iris violeta con grietas y brillo; ala del rig con plumas y manga en el hombro; venas ramificadas que siguen el cuerpo).
+- Venas moradas del pato en el juego desde el primer fragmento conservado, según el número de fragmentos (sin claves de guardado nuevas).
+- Absorción al conservar un fragmento: secuencia oscura de 3,6 s en lugar del exorcismo rojo de 6 s; la liberación no cambia.
+
+## Fase 15m: tutorial reconstruido
+
+- Los pasos dejan de ser una cadena ordenada: son comprobaciones independientes que se acreditan en cualquier orden (también antes de pedirlas). El muñeco revive tras 1,0 s y hay una pulsación larga de confirmar para saltar el tutorial.
+- Se quitan los pasos de la onda de espada y del tajo de dash (la onda llega después con los fragmentos); se añade el paso del medidor de alma y el de la pausa (opcional). Lista de tareas, carteles de práctica y frases del muñeco.
+- Siete pasos son obligatorios para abrir la salida; ninguna clave de guardado ni autoload nuevo. Los niveles 2 y 3 no cambian.
+
+## Fase 15n: diálogos cortos, fragmentos azules, graznidos, sonido del prólogo, rostro del abuelo y final sin tarjeta
+
+- Las introducciones de 4 líneas + monólogo del pato (Fases 15b/15f) se sustituyen por UNA línea del guardián y a lo sumo una del pato; al caer, 2–3 líneas con su historia y últimas palabras antes de la decisión. Se quitan las variantes por perfil de esas líneas.
+- Los enemigos normales sueltan un fragmento azul (antes un destello pálido); los patitos del jefe 3 sueltan uno pequeño con su valor y su golpe mortal ya no paga por sí mismo (se cuenta una sola vez).
+- Cada golpe que aterriza en un pato enemigo graznido (varios sonidos, tono aleatorio, límites por objetivo y global); antes era un solo graznido por objetivo.
+- El prólogo tiene música (procesada) y efectos; el abuelo aparece con su retrato en el cielo en lugar de la silueta de estrellas.
+- Tras el jefe 3 ya no sale tarjeta: el fragmento 3 no otorgaba ningún poder mecánico (la onda sube solo con los fragmentos 1 y 2); solo sube el coste de curar (+5 por fragmento conservado), que se mantiene.
+
+## Fase 15o: absorción roja, sin columnas de viento, sin armadura del jefe 3 y corrupción dentro del rig
+
+- La absorción de la Fase 15l (viñeta morada) se sustituye por el fondo oscuro con toques rojos y el emblema abajo, con rayos rojos, partículas y zarcillos que convergen en el pato; dura lo mismo (3,6 s) y la liberación luminosa no cambia. Sin tarjeta tras el jefe 3 (Fase 15n, se mantiene).
+- Nivel 3: fuera las dos columnas de viento y la ruta alta que dependía de una; el nivel se completa igual (nunca fueron obligatorias).
+- Jefe 3: sin armadura en ninguna fase (vida y umbrales iguales). En la fase 1 antes solo el golpe pesado y el tajo de dash hacían daño; ahora cualquier golpe. Con la onda y la espada ligera la fase 1 pasa de unos 65 s a unos 30 s; el escudo de la fase 2 (patitos) se mantiene.
+- La corrupción del pato deja de ser capas encima: venas recortadas a cada pieza, iris, plumas, manga y ala cambian dentro del propio rig. Los finales usan un solo dibujo por pose. Nueva ranura opcional de imágenes propias.
+
+## Fase 15p: restos de la 15o
+
+- La vida del jefe 3 sube a 102 PV (líneas 0,451 y 0,2255) para que la fase 1 sin armadura dure unos 24 s ideales; las fases 2 y 3 conservan sus 23 PV.
+- `BossGuard` pasa a `BossShield` y `GuardFx` a `ShieldFx` (sin cambio de comportamiento).
+- Dos pruebas antiguas estaban desfasadas, no el juego: la que esperaba que el atajo de desarrollo derrotara al jefe en cualquier estado (desde la Fase 15e-1 solo lo hace en la última fase) y la que esperaba huecos de 285/175/285 px en el nivel 3.
+
+## Fase 15q: arreglos tras la suite completa
+
+- Sin cambios de diseño. Dos errores reales del juego corregidos (la plataforma de ayuda de los huecos se añadía dentro de un callback de física; la lista de patitos del jefe 3 borraba instancias liberadas a través de un arreglo tipado) y uno más (un enemigo con el jugador liberado leía su posición). El dibujo de la imagen propia del pato se separó en una consulta pura (`DuckRig.override_texture`) y el dibujo.
+- Pruebas puestas al día con el diseño vigente: la carga del jefe solo es elegible con un carril de al menos 220 px (Fase 15d-bis), el lanzamiento del nenúfar es −930 (15d-bis), el jefe 3 no tiene caparazón (15o), sus últimas palabras retienen al jugador y retrasan el fragmento (15n), y el ciclo de invocación del jefe 3 necesita el escenario del nivel.
+
+## Fase 15r: el abuelo desde su figura, siluetas en los finales y el alma del guardián
+
+- La cara dibujada del abuelo (Fase 15i) se sustituye por su figura de cuerpo entero con el cuerpo en la niebla (opacidad 0,4 / 0,6 / 0,7). Se retira el código de lágrimas.
+- Los dos finales muestran siluetas planas sobre el blanco del corte; el blanco dura 0,5 s más. El acto sigue sin mostrarse y las reglas de seguridad no cambian.
+- Los guardianes dejan un alma que dice las líneas de despedida y se convierte en el fragmento; el fragmento sale al terminar el alma, sin la espera restante de antes.
+- Pruebas puestas al día a propósito: `phase15i` (el retrato dibujado y sus lágrimas por la figura y la niebla), `phase15n` y `phase16c` (estados y lágrimas del retrato).
