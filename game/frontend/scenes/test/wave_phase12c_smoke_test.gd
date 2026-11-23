@@ -854,6 +854,7 @@ func _test_hud() -> void:
 # --- Tutorial ---
 
 func _test_tutorial() -> void:
+	# Phase 15m: the tutorial no longer teaches the sword wave (it comes later with the fragments) and its steps are independent.
 	_clean_state()
 	SceneManager.dry_run = true
 	var registry := SceneRegistry.new()
@@ -865,41 +866,13 @@ func _test_tutorial() -> void:
 	add_child(tutorial)
 	await _physics(5)
 	var controller: TutorialController = tutorial.get_node("TutorialController")
-	var player: Player = tutorial.player
 	var ids: Array[String] = []
 	for step in controller.steps:
 		ids.append(String(step["id"]))
-	_check("tutorial: the wave step is followed by the Phase 13c steps and the Phase 15a heal step", ids == ["move", "jump", "dash", "attack", "hit_dummy", "wave", "heavy", "dash_slash", "heal"], str(ids))
-	_check("tutorial: the wave prompt resolves its key from the InputMap", controller.build_text(String(controller.steps[5]["text"])).contains("U") and not controller.build_text(String(controller.steps[5]["text"])).contains("{"))
-	# A real cast before its step does not count.
+	_check("tutorial: no wave step any more (Phase 15m)", not ids.has("wave") and ids.has("heavy") and ids.has("heal"), str(ids))
 	await _tap_wave(true)
 	await _physics(15)
-	_check("tutorial: a real cast before the wave step does not complete anything", controller.current_index == 0)
-	await _wait_until(func() -> bool: return player.wave_caster.get_cooldown_remaining() <= 0.0 and player.state == Player.State.IDLE, 120)
-	_free_projectiles()
-	player.dash_started.emit()
-	player.attack_started.emit()
-	player.state_changed.emit(Player.State.IDLE, Player.State.JUMP)
-	controller.current_index = 0
-	controller._moved = 999.0
-	await _physics(2)
-	_check("tutorial: move completes", controller.get_current_step_id() == "jump")
-	player.state_changed.emit(Player.State.IDLE, Player.State.JUMP)
-	player.dash_started.emit()
-	player.attack_started.emit()
-	_check("tutorial: jump, dash and attack complete in order", controller.get_current_step_id() == "hit_dummy")
-	controller.exit_area.body_entered.emit(player)
-	_check("tutorial: the exit stays closed", SceneManager.last_requested_scene_id == "" and not controller.is_completed)
-	controller.dummy.hurtbox.receive_hit(DamageInfo.create(1, Vector2.ZERO, player, CombatLayers.Team.PLAYER))
-	_check("tutorial: the dummy hit leads to the wave step", controller.get_current_step_id() == "wave" and not controller.is_completed)
-	controller.exit_area.body_entered.emit(player)
-	_check("tutorial: the exit still requires the wave step", SceneManager.last_requested_scene_id == "" and not controller.is_completed)
-	await _wait_until(func() -> bool: return controller._feedback_left <= 0.0, 120)
-	await _tap_wave(false)
-	var completed: bool = await _wait_until(func() -> bool: return controller.current_index == 6, 40)
-	_check("tutorial: a real cast completes the wave step (the heavy and dash slash steps follow)", completed and controller.get_current_step_id() == "heavy" and not controller.is_completed)
-	controller.exit_area.body_entered.emit(player)
-	_check("tutorial: the exit stays locked until the last step", SceneManager.last_requested_scene_id == "" and not controller.is_completed)
+	_check("tutorial: a real wave cast completes nothing", controller.done.is_empty() or not controller.done.has("wave"))
 	tutorial.free()
 	_free_projectiles()
 	await get_tree().process_frame
