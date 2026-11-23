@@ -21,33 +21,35 @@ Hechos que el guion respeta: abuelo samurái que entrenó al pato; las almas de 
 - **Si la liberas:** Kenzo inclina la cabeza. Por fin alguien llegó a tiempo.
 - **Si la conservas:** Kenzo arde en tu katana. Tu abuelo no podrá mirar esa hoja.
 
-## 2. Los guardianes
+## 2. Los guardianes (Fase 15n: diálogos cortos)
 
-Se dicen al empezar el combate (una sola vez por encuentro); la variante según el perfil se añade al final de las líneas. Enter las salta.
+Cada guardián habla dos veces. **Al verlo por primera vez** (solo esa vez; un reintento o continuar desde el punto de control de la arena lo salta): UNA línea corta suya (hasta 80 caracteres) y a lo sumo una línea corta del pato; luego empieza el combate. **Al caer** (antes de la decisión del fragmento, una vez por derrota): 2 o 3 líneas suyas de hasta 120 caracteres con su historia y sus últimas palabras. Las líneas avanzan solo con la confirmación (Enter por defecto; mantener 1,2 s salta); el jugador queda bloqueado e invulnerable mientras hablan y el fragmento aparece al terminar. Nadie nombra al abuelo antes del nivel 3.
 
 ### Nivel 1: EL LEÑADOR
-
-- «¿Quién viene a mi bosque? Hay que cortar. Hay que cortar.»
-- «La leña no se calienta sola, pequeño.»
-- *Variante compasivo:* «Esa mirada... se parece a la de un viejo samurái.»
-- *Variante corrupto:* «Hueles a hierro y a rencor. Hueles a mí.»
-- *Al caer:* «El hacha pesa tanto... ¿Ya amanece?»
+- *Al verlo:* «¿Quién viene a mi bosque? Hay que cortar. Hay que cortar.»
+- *Pato:* «El filo no es rabia. Es respeto por aquello que cortas.»
+- *Al caer:*
+  1. «Aquí hubo un dojo y leña para todos. Yo silbaba al amanecer, pequeño.»
+  2. «Cuando cayó la estrella nadie vino a buscarme. Por eso corté: para que alguien volviera a casa.»
+  3. «El hacha pesa tanto... ¿Ya amanece?»
 
 ### Nivel 2: LA COSA DEL PANTANO
-
-- «Shhh... el agua duerme. No la despiertes.»
-- «Curé a todos. A mí no me curó nadie.»
-- *Variante compasivo:* «Tus manos no traen fuego. Hace tanto que nadie me toca así.»
-- *Variante corrupto:* «El lodo también se te pega. Ya empieza.»
-- *Al caer:* «Gracias por sacarme del agua.»
+- *Al verla:* «Shhh... el agua duerme. No la despiertes.»
+- *Pato:* Creí que la katana mataba. Solo separa el alma de la ruina.
+- *Al caer:*
+  1. «Curaba al barrio con hierbas y paciencia. Cuando subió el agua, sostuve a todos... menos a mí.»
+  2. «A mí no me curó nadie. Por eso me quedé: alguien debía velar a los que el agua se llevó.»
+  3. «Gracias por sacarme del agua.»
 
 ### Nivel 3: EL OJO DE LA TORMENTA
+- *Al verlo:* «Tienes sus ojos. Él también llegó tarde.»
+- *Pato:* Podría soltar la hoja. Pero las estrellas siguen cayendo.
+- *Al caer (conserva la pista de la profecía):*
+  1. «Juramos guardar la última torre juntos. Yo me quedé al pie del relámpago y la tormenta creció con mi espera.»
+  2. «Mi hoja ya no distinguía entre guardar y castigar. La profecía lo dijo: quien la empuñe decidirá cada alma.»
+  3. «Dile que no fue su culpa... o que sí. Ya no importa.»
 
-- «Tienes sus ojos. Él también llegó tarde.»
-- «Te esperé en la tormenta. Cada trueno decía tu nombre.»
-- *Variante compasivo:* «¿Y si esta vez nadie llega tarde?»
-- *Variante corrupto:* «Ven. Enséñame cuánta alma cargas ya en la hoja.»
-- *Al caer:* «Dile que no fue su culpa... o que sí. Ya no importa.»
+(Las variantes por perfil y el monólogo largo del pato de las fases 15b y 15f ya no se dicen: se recortaron para que las introducciones sean breves.)
 
 ## 3. El abuelo vuelve (antes del jefe 3, al llegar al nivel 3)
 
@@ -61,162 +63,103 @@ Escena corta, se salta con Enter. La línea de ánimo se inserta antes de la úl
 - *(ánimo, 2 liberadas)* Abuelo: Liberaste a Daigo y a Hana. Hay luz en tu hoja. Cuídala.
 - Abuelo: En la tormenta está Kenzo, mi hermano. No llegué a tiempo. Ve.
 
-## 4. Los cuatro finales
+## 4. Los dos finales (Fases 15h, 15i y 15i-bis)
 
-Se eligen solo por las almas liberadas: 3 = *El cielo se abre*, 2 = *La cicatriz del cielo*, 1 = *El filo y la duda*, 0 = *La nueva estrella caída*. Cada uno dura unos 35-60 s y se salta manteniendo Enter; después viene la tarjeta de resumen.
+Solo hay **dos finales**, elegidos por la **mayoría** de las tres decisiones de fragmento: más almas guardadas que liberadas → *Estrellas que suben* (`ending_kept`); en cualquier otro caso → *El acantilado* (`ending_released`). Es determinista. Los títulos, los textos y el guion de cada final están en recursos (`default_story_texts.tres`, `default_kept_beats.tres`, `default_released_beats.tres`).
 
-### EL CIELO SE ABRE (`ending_full`, música `title_screen.ogg`)
+**Los dos ocurren en un acantilado** sobre la ciudad. Cada final es una cinematográfica dibujada por código (guion de beats): los beats temporizados corren solos; cada línea espera la acción de confirmar (primera pulsación completa, segunda avanza; Enter por defecto, se respeta la reasignación); mantener 1,2 s salta; Esc/pausa funcionan; con «Efectos de corrupción» desactivado son imágenes fijas con fundidos y el mismo texto (el audio sigue sonando).
 
-1. Daigo, Hana y Kenzo subieron juntos, sin peso y sin hambre.
-2. Las estrellas dejaron de caer. Una a una, volvieron a su sitio.
-3. Abuelo: Yo no llegué a tiempo. Tú sí.
-4. Abuelo: Ahora entiendo la piedra. «Quien la empuñe» no era un guerrero. Era alguien que supiera soltar.
-5. La katana nunca fue una espada para matar. Era una hoja para dejar ir.
-6. Esa noche el cielo se vio entero por primera vez desde la caída.
-7. Y tres luces parpadearon allá arriba. Era una despedida.
+### Reglas de seguridad (obligatorias en los dos finales)
+- **El acto nunca se muestra ni se oye**: ni hoja que toque o entre en el cuerpo, ni herida, ni sangre, ni impacto, ni suelo, ni cuerpo después. En los dos la escena **se corta a blanco o al cielo ANTES del acto** (un fundido lento de más de 1 s, nunca un destello). Después solo hay viento frío.
+- Ningún texto nombra ni describe un método (lista de términos prohibidos ampliada en `default_story_texts.tres`: sangre, herida, clavar, atravesar, vientre, tajo…).
+- **No se honra ni se romantiza**: la lista de términos prohibidos incluye honor, honra, deshonra, ritual, dignidad, única salida, único camino, liberación, descanso, paz… El acto no es el único desenlace posible: en los dos finales el pato expresa **arrepentimientos** y el sentido de que no debería estar solo.
+- Sin música y sin graznido en el momento del corte ni después.
+- El **mensaje de apoyo** sale en la tarjeta final de AMBOS finales y el aviso de contenido de «Acerca de» dice que dos finales tratan el suicidio de forma implícita: «Este juego trata temas de pérdida, duelo y muerte, incluido el suicidio de forma implícita en sus dos finales.»
 
-*Tarjeta de resumen:* Liberaste las tres almas. El cielo volvió a ser un cielo.
+### El rostro del abuelo
+Retrato luminoso con el diseño de su rig (pato viejo de plumas crema, moño deshecho, cejas largas, bolsas, pico naranja, bigote caído, barba larga). Cinco estados: **observa**, **habla**, **sufre** (lágrimas), **se quiebra** y **impasible** (*solemn*: ojos firmes, sin lágrimas, sin temblor, sin sonrisa). En modo reducido es un retrato fijo y las expresiones cambian con un fundido.
 
-### LA CICATRIZ DEL CIELO (`ending_scar`, música `castle_on_the_mountain.ogg`)
+### ESTRELLAS QUE SUBEN (`ending_kept`)
+El pato en un acantilado sobre la ciudad liberada, consumido por la corrupción: venas, ojo nublado, respiración jadeante, tos, tambaleo, rodillas, ala temblorosa hacia las estrellas. Luego la corrupción le toma la mano y el pato **se resiste** (el ala va hacia la cadera y se retira, sacude la cabeza, grita), dice sus arrepentimientos (haberlas guardado, no haber dicho que tenía miedo, que nadie sepa quién salvó la ciudad) y se arrodilla en el borde; aparece el rostro del abuelo, que sufre; baja la cabeza y la escena se corta a blanco antes de que ocurra nada.
+| # | Beat | s | Qué se ve y se oye |
+|---|---|---|---|
+| 1 | `city_dawn` | 6 | Plano general: el pato en un acantilado sobre la ciudad que se enciende ventana a ventana; suben estrellas |
+| 2 | línea 1 | (Enter) | |
+| 3 | `cliff_duck` | 4 | Respira con esfuerzo; latido grave; graznido débil |
+| 4 | línea 2 | (Enter) | |
+| 5 | `corruption_spreads` | 7 | Las venas oscuras trepan, el ojo se nubla, el color se va; jadeo, tos y un graznido débil |
+| 6 | línea 3 | (Enter) | |
+| 7 | `stagger_and_fall` | 5 | Se tambalea y cae de rodillas; graznido de dolor (la espada sigue en su mano) |
+| 8 | `closeup_pain` | 5 | Primer plano del dolor; graznido de dolor |
+| 9 | línea 4 | (Enter) | |
+| 10 | `reach_for_stars` | 5 | Intenta levantarse, falla y extiende un ala temblorosa hacia las estrellas; graznido de dolor |
+| 11 | línea 5 | (Enter) | |
+| 12 | `corruption_takes_hand` | 5 | La corrupción le toma la mano: el ala va hacia la cadera y se retira, sacude la cabeza; graznido forzado de resistencia; la música se apaga |
+| 13-15 | líneas 6, 7 y 8 | (Enter) | El pato resiste y dice sus arrepentimientos |
+| 16 | `kneel_at_edge` | 5 | Se arrodilla en el borde; aparece el rostro del abuelo, que sufre; sin música, solo viento |
+| 17 | `bow_and_cut` | 3 | Baja la cabeza y la escena **se funde a blanco, lentamente (sin destello)** ANTES de que ocurra nada; no se ve ni se oye el acto |
+| 18 | `white_hold` | 2 | Blanco, silencio |
+| 19 | `empty_edge` | 5 | El borde vacío (el blanco se retira); solo viento |
+| 20 | `grandfather_breaking` | 4 | El rostro del abuelo se quiebra |
+| 21 | línea 9 | (Enter) | «Perdóname, nieto.» (sin sonido) |
+| 22 | `hold_quiet` | 5 | Fundido lento a negro y tarjeta final |
 
-1. Dos almas subieron al cielo. La de {kept} se quedó contigo.
-2. Las estrellas casi dejaron de caer. Casi.
-3. Cada noche, la hoja susurra el nombre de {kept}.
-4. Abuelo: Te dije que el resto era tuyo. No te dije cuánto pesaría: importa, y duele.
-5. Abuelo: Pero cargar a una por amor no es cargar a todas por miedo.
-6. La profecía se cumplió a medias: la hoja separó el alma de la ruina y tú guardaste su eco.
-7. El cielo sanó con una cicatriz. Tú también.
+Líneas:
+1. La ciudad se encendió ventana a ventana, y las almas subieron como ríos de luz sobre ella.
+2. Pato: Las guardé a todas. Creí que podría cargar con ellas y seguir en pie.
+3. Pato: Me arden las venas. Cada respiración pesa más que la anterior.
+4. Pato: Tengo miedo, abuelo. Duele, y no quiero estar solo en esto.
+5. Pato: Mira cuántas estrellas suben... y a mí se me va apagando todo.
+6. Pato: No es mi mano. ¡Suéltame! No quiero... no quiero.
+7. Pato: Me arrepiento de haberlas guardado, y de no decirte que tenía miedo, abuelo.
+8. Pato: Me arrepiento de que nadie en la ciudad sepa quién la salvó. Debí pedir ayuda.
+9. Abuelo: Perdóname, nieto.
 
-*Tarjeta de resumen:* Liberaste dos almas y guardaste una. El cielo sanó con una cicatriz.
+### EL ACANTILADO (`ending_released`)
+| # | Beat | s | Qué se ve y se oye |
+|---|---|---|---|
+| 1 | `dusk_wide` | 6 | Atardecer, viento, acantilado, ciudad liberada a lo lejos, estrellas que suben |
+| 2 | línea 1 | (Enter) | |
+| 3 | `grandfather_proud` | 4 | El rostro del abuelo en el cielo |
+| 4 | línea 2 | (Enter) | «Bien hecho, nieto.» |
+| 5-6 | `duck_closeup`, `still_wide` | 5 + 4 | Planos quietos y largos del pato en el borde, con sus líneas entre medias |
+| 7 | `still_close` | 4 | Baja la mirada |
+| 8 | `long_still` | 5 | Plano largo; **un solo graznido lejano y solitario** |
+| 9-11 | líneas 6 y 7 | (Enter) | Sus arrepentimientos |
+| 12 | `walk_to_edge` | 6 | Camina hasta el borde, ya en silueta; la música se apaga; solo viento |
+| 13 | `stop_at_edge` | 4 | Se detiene y baja la cabeza |
+| 14 | `look_to_sky` | 4 | La cámara sube al cielo y la escena se **funde a blanco lentamente (sin destello)**; el pato sale de cuadro por abajo, de pie |
+| 15 | `white_hold` | 2 | Blanco, silencio |
+| 16 | `empty_edge` | 5 | El borde vacío (nada en él: ni espada, ni capa); solo viento |
+| 17 | `grandfather_solemn` | 4 | El rostro del abuelo, **impasible**: sin lágrimas ni temblor ni sonrisa |
+| 18 | línea 8 | (Enter) | «Se ha sellado la profecía.» (sin sonido) |
+| 19 | `fade_out` | 5 | Fundido lento a negro y tarjeta final |
 
-### EL FILO Y LA DUDA (`ending_doubt`, música `dungeon.ogg`)
+Líneas:
+1. Cuando la última alma subió, la ciudad se encendió allá abajo y las estrellas ascendieron sobre ella.
+2. Abuelo: Bien hecho, nieto.
+3. Pato: Bien hecho. Eso era todo lo que me pedían. Para eso me criaste, para eso empuñé la hoja.
+4. Pato: Ya no queda nadie a quien salvar. Estoy tan solo, y tan cansado de estar solo.
+5. Pato: Se acabó la misión. No sé quién soy sin ella, y no sé cómo seguir.
+6. Pato: Nunca te dije que tenía miedo, abuelo. Nunca vi el mar que me prometiste.
+7. Pato: Me arrepiento de no haber pedido ayuda. Habría bastado una sola palabra.
+8. Abuelo: Se ha sellado la profecía.
 
-1. Tu katana nunca fue tan poderosa. Nunca pesó tanto.
-2. Solo {released} subió al cielo. Es la única luz que no cayó.
-3. Las estrellas siguieron cayendo, pero ya no las temías. Tenías la hoja.
-4. Abuelo: Eres más fuerte que yo. No sé si eso me alegra.
-5. Abuelo: Dime, nieto. Cuando mires el cielo, ¿verás la estrella de {released} o las que faltan?
-6. «Quien la empuñe», decía la piedra. Ahora sabes lo que seguía: tendrá poder, y tendrá dudas.
-7. El duelo terminó. La duda, no.
+**La profecía** ya está establecida: la escena del abuelo antes del jefe 3 (sección 3: «termino la profecía que borré, nieto» y «Quien la empuñe decidirá cada alma: liberarla o cargarla»). No se añadió ninguna mención nueva; el cierre «Se ha sellado la profecía.» la retoma.
 
-*Tarjeta de resumen:* Liberaste una sola alma. Tienes el poder, y tienes la duda.
+### Diseño del audio
+- **Graznidos** (ranuras de `default_audio_events.tres`, solo en las cinematográficas): `duck_cry_weak` (graznido del héroe más grave), `duck_cry_pain` (el quejido del héroe más grave), `duck_cry_resist` (el graznido del héroe muy grave y forzado), `duck_cry_lonely` (el graznido 2 muy grave y lejano). Archivos usados: `ducks/quack_hero.wav`, `ducks/quack_hurt.wav`, `ducks/quack_2.wav`. «Estrellas que suben»: débil en la respiración y la tos, de dolor en el tambaleo, la caída y el ala, forzado cuando la corrupción le toma la mano; ninguno al arrodillarse ni en el corte. «El acantilado»: uno solo, lejano, en los planos largos antes del paseo.
+- **Música** (ranuras `ending_kept_music` y `ending_released_music`): pistas existentes procesadas por código (tono más bajo, filtro paso bajo y reverberación en el bus de música). «Estrellas que suben»: `castle_on_the_mountain.ogg`, tono ×0,78, 1500 Hz, reverb 0,35, se apaga cuando la corrupción toma la mano. «El acantilado»: `dungeon.ogg`, tono ×0,70, 1100 Hz, reverb 0,50 y muy baja (−14 dB); en silencio desde el paseo al borde. No hay pad procedural.
 
-### LA NUEVA ESTRELLA CAÍDA (`ending_corrupt`, música `the_evil_one.ogg`)
+### Epílogos
+Los seis epílogos (dos finales × tres variantes) viven ahora en la sección 4.
 
-1. Guardaste a Daigo, a Hana y a Kenzo. Su peso nunca te soltó.
-2. La hoja ya no cortaba: bebía. Y tú, de tanto sostenerla, empezaste a brillar.
-3. Abuelo: Nieto... tus ojos. Esos no son los tuyos.
-4. Abuelo: La piedra no estaba borrada. La borré yo, por miedo a leer esto.
-5. «Y quien la empuñe...» se levantará de las estrellas con un cuerpo que no es suyo.
-6. Una luz violeta cruzó el cielo. Cayó despacio, sin ruido, sobre una ciudad que ya no existía.
-7. En alguna parte, algo que antes fue un pato abrió los ojos. Tenía hambre.
+## 7. Historias de los guardianes
 
-*Tarjeta de resumen:* No liberaste ninguna alma. La profecía se cumplió contigo.
+La historia de cada guardián está ahora repartida entre su línea al verlo y sus últimas palabras (sección 2).
 
-## 5. La historia del pato antes de cada jefe (Fase 15b)
+## Fase 15r: el alma del guardián y el abuelo en el cielo
 
-La **primera vez** que el pato entra en la arena de un jefe pasa esto, en este orden: la presentación «VS», los saludos del guardián (sección 2) y **el pato cuenta su historia** (6 líneas, unos 20 s por jefe; Enter las salta). Durante todo ello el jefe está quieto y el pato no puede moverse ni recibir daño. No se repite si el pato muere y reintenta, ni si la partida se continúa desde el checkpoint de la arena. Son tres capítulos de una misma historia; hablan por «Pato». Fuente: `duck_lines` de cada `BossStory` en `default_story_texts.tres`.
-
-### Capítulo 1 (EL LEÑADOR): el entrenamiento y la noche de la primera estrella
-
-1. Pato: Mi abuelo me enseñó a sostener la katana antes de que yo supiera para qué servía.
-2. Pato: Cada amanecer, cien cortes al aire. Él, en silencio, contando.
-3. Pato: «El filo no es rabia, nieto. Es respeto por aquello que cortas.»
-4. Pato: La noche en que cayó la primera estrella, el cielo entero crujió como el hielo.
-5. Pato: Abuelo me tapó los ojos con su manga. Aun así vi cómo ardía al caer.
-6. Pato: Desde esa noche, entrenar dejó de ser un juego. Y yo dejé de ser un niño.
-
-### Capítulo 2 (LA COSA DEL PANTANO): lo que hace la hoja y el silencio del abuelo
-
-1. Pato: Creí que la katana servía para matar. No corta la carne: separa el alma de la ruina.
-2. Pato: Cuando cae un guardián, su alma queda ahí, colgando. Y me toca decidir a mí.
-3. Pato: Abuelo lo sabía. Siempre lo supo. Y nunca me lo dijo.
-4. Pato: Al terminar la profecía solo dijo: «El resto está borrado. No importa.»
-5. Pato: Pero nadie borra lo que no le importa. Su silencio pesa más que la hoja.
-6. Pato: Si él no habla, tendré que descubrirlo yo, alma por alma.
-
-### Capítulo 3 (EL OJO DE LA TORMENTA): Kenzo, la duda y por qué no hay vuelta atrás
-
-1. Pato: Kenzo fue el hermano de espada de mi abuelo. Ahora su alma arde en la tormenta.
-2. Pato: Cada alma que decidí, la decidí con las manos temblando. No sé si fue piedad o hambre.
-3. Pato: A veces la hoja pesa tanto que dudo de quién sostiene a quién.
-4. Pato: Podría soltarla y volver a la cueva. Pero las estrellas siguen cayendo.
-5. Pato: Si me detengo ahora, todo lo que perdí habrá sido en vano.
-6. Pato: Abuelo llegó tarde una vez. Yo no puedo volver atrás. Tampoco puedo llegar tarde.
-
-## 6. La voz del abuelo en el cielo y los epílogos (Fase 16c)
-
-Copia legible de `game/backend/ai/director/default_grandfather_lines.tres` (la fuente de verdad) y de los epílogos de `default_story_texts.tres`.
-
-Reglas de una línea: 8 a 18 palabras y como mucho 110 caracteres, una sola línea, sin cifras, enlaces, marcas ni emojis, sin reproche (moriste, fallaste, errores...) y sin nombrar mecánicas. En los niveles 1 y 2 se presenta como un recuerdo («Recuerdas su voz… «…»»); en el nivel 3 como su voz directa («Abuelo: «…»»), después de su escena de entrada.
-
-### Nivel 1 (recuerdos)
-- El filo no es rabia, nieto. Es respeto por aquello que cortas.
-- Cien cortes al amanecer, nieto, y ninguno con prisa. Así se aprende.
-- Quien mira el cielo con respeto no teme a la noche, nieto.
-- Antes de empuñar la hoja, nieto, aprende a escuchar el silencio.
-
-### Tema: calma
-- Respira, nieto. La cabeza fría esquiva lo que la prisa no ve.
-- El agua turbia se aclara cuando dejas de agitarla. Quédate quieto un instante, nieto.
-- Un filo tranquilo corta más limpio que uno temblando. Suelta los hombros, nieto.
-- La calma no es lentitud, nieto. Es saber dónde poner el siguiente paso.
-
-### Tema: paciencia
-- El bambú no corre hacia el cielo, nieto. Crece un nudo cada vez.
-- Quien espera el momento justo no pierde el paso. Aguanta un poco más.
-- La piedra del río se pulió con paciencia, nieto, no con prisa.
-- Todo lo bueno madura despacio. Dale tiempo al camino, nieto.
-
-### Tema: distancia
-- Lo que muerde de cerca, calla de lejos. Mide el espacio, nieto.
-- Un buen guerrero elige dónde pisar antes de elegir dónde cortar.
-- La distancia también es un escudo, nieto. Úsala con inteligencia.
-- Cuando algo te acecha desde lejos, acércate a tu manera y a tu tiempo.
-
-### Tema: ritmo
-- Todo golpe tiene su respiración, nieto. Escucha el silencio antes del trueno.
-- La hoja llega cuando el viento se detiene. Aprende a esperar ese instante.
-- Hay una música en cada embestida, nieto. Aprende su compás y baila fuera.
-- Antes de cada tormenta se oye un compás. Escúchalo y deja pasar el trueno.
-
-### Tema: recursos
-- Una brasa bien guardada calienta toda la noche. Cuida tus fuerzas, nieto.
-- El sabio no gasta todo su aliento en la primera colina.
-- Quien reparte bien sus fuerzas llega lejos, nieto. Descansa cuando el camino lo permita.
-- Guarda un poco de luz para el tramo más oscuro, nieto.
-
-### Tema: valor
-- El miedo también camina contigo, nieto. Que vaya detrás, no delante.
-- Dar un paso temblando sigue siendo dar un paso. Avanza, nieto.
-- El valor no grita, nieto. A veces solo se levanta una vez más.
-- Acércate a lo que temes con el corazón abierto y la hoja serena.
-
-### Tema: equilibrio
-- Soltar y cargar pesan distinto, nieto. Elige con el corazón despierto.
-- La luz no se gasta al compartirla. Recuérdalo cuando dudes, nieto.
-- Entre la fuerza y la ternura hay un camino estrecho. Camínalo con calma.
-- Cada elección deja huella, nieto, pero ninguna huella es el final del camino.
-
-### Epílogos (variante 0 neutra, 1 jugó con comodidad, 2 lo pasó mal)
-Solo cambian el cierre de la tarjeta final; el final (3, 2, 1 o 0 almas liberadas) no cambia nunca.
-
-**EL CIELO SE ABRE (`ending_full`)**
-0. Abuelo: Mira el cielo entero, nieto. Cada estrella volvió a casa gracias a tus manos.
-1. Abuelo: Caminaste ligero y el cielo lo notó. Descansa, nieto: la noche ya es tuya.
-2. Abuelo: El camino pesó y aun así llegaste. Esa constancia también ilumina, nieto.
-
-**LA CICATRIZ DEL CIELO (`ending_scar`)**
-0. Abuelo: Toda cicatriz recuerda que hubo amor. Llévala con la cabeza alta, nieto.
-1. Abuelo: Fuiste firme y sereno hasta el final. La cicatriz será solo un recuerdo tibio.
-2. Abuelo: Fue un camino duro y lo recorriste entero. Tu cicatriz es la de quien no se rindió.
-
-**EL FILO Y LA DUDA (`ending_doubt`)**
-0. Abuelo: Dudar no es perder el rumbo, nieto: es escuchar al corazón. Aún estás a tiempo.
-1. Abuelo: Tu filo fue seguro y limpio. Ahora déjalo aprender a soltar, nieto.
-2. Abuelo: Cada tropiezo te enseñó a pesar la hoja. Sigue aprendiendo; yo camino contigo.
-
-**LA NUEVA ESTRELLA CAÍDA (`ending_corrupt`)**
-0. Abuelo: Aun en la noche más honda queda una estrella despierta. Búscala, nieto.
-1. Abuelo: Fuiste fuerte, nieto, y la fuerza sola pesa. Todavía puedes volver a la luz.
-2. Abuelo: Sé cuánto cargaste. No estás solo en esta oscuridad: mi voz aún te espera.
+- **El alma como narradora.** Cuando un guardián cae, su cuerpo se desvanece y **su alma** aparece donde cayó: la misma figura (con su hacha, sus juncos y su loto, o su hoja de tormenta) en azul translúcido, flotando. Las dos o tres líneas de despedida las **dice el alma** («Alma del Leñador», «Alma de la Cosa del Pantano», «Alma del Ojo de la Tormenta»). Al terminar, el alma se deshace en partículas que fluyen hacia el fragmento y este se condensa en el cristal; solo entonces llega la decisión. El texto de las líneas no cambia.
+- **El abuelo.** En los finales y al empezar cada nivel ya no se ve una cara dibujada: se ve **su propia figura completa**, grande en el cielo, con el cuerpo oculto en la niebla y solo el rostro claro, un poco borroso y translúcido (recuerdo tenue en los niveles 1 y 2, más presente en el 3 y en los finales). La pena se muestra con la cabeza baja y un brillo más tenue, nunca con lágrimas dibujadas.
+- **Los finales, sobre el blanco.** Final conservado: sobre el blanco, la silueta oscura del pato arrodillado con la cabeza baja y la espada clavada a su lado, sin tocarlo; después, la silueta quieta junto a la espada. Final del acantilado: la silueta del pato de pie en el borde, mirando al cielo, que se desvanece; tras el blanco, el borde vacío con su espada y su sombrero. El acto nunca se muestra y el pato nunca se ve saltar ni caer.
