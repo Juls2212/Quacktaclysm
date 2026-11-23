@@ -426,6 +426,12 @@ signal presentation_finished
 
 
 ## True while the full VS presentation is on screen.
+## Ends the VS presentation now (the intro's developer finish); a no-op when none is on screen.
+func skip_presentation() -> void:
+	if _vs != Vs.NONE and _leave_t < 0.0:
+		_start_leaving()
+
+
 func is_presenting() -> bool:
 	return _vs == Vs.FULL
 
