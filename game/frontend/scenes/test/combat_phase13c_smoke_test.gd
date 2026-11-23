@@ -490,6 +490,14 @@ func _isolated_boss(scene: PackedScene, extra: Dictionary = {}) -> BossBase:
 		stats.set(key, extra[key])
 	boss.stats = stats
 	boss.rng_seed = 5
+	# Phase 15q: boss 3 needs the level's BossStage for its summon cycle; in this bare scene nothing of its rotation fits, so it falls back to its
+	# volley / charge / stomp at once and those attacks add hits that are not the contact. The contact test wants a boss that only touches.
+	var patterns_node: Node = boss.get_node_or_null("Patterns")
+	if patterns_node != null and patterns_node.get_node_or_null("SummonCycle") != null:
+		for pattern_node in patterns_node.get_children():
+			if pattern_node.name != "Swipe":
+				patterns_node.remove_child(pattern_node)
+				pattern_node.free()
 	return boss
 
 
@@ -1023,65 +1031,25 @@ func _test_tutorial() -> void:
 	var ids: Array[String] = []
 	for step in controller.steps:
 		ids.append(String(step["id"]))
-	_check("tutorial: nine steps ending with heavy, dash_slash and heal (Phase 15a)", ids == ["move", "jump", "dash", "attack", "hit_dummy", "wave", "heavy", "dash_slash", "heal"], str(ids))
-	var heavy_text: String = controller.build_text(String(controller.steps[6]["text"]))
-	var slash_text: String = controller.build_text(String(controller.steps[7]["text"]))
-	_check("tutorial: the new prompts resolve their keys from the InputMap", heavy_text.contains("I") and not heavy_text.contains("{") and slash_text.contains("J") and slash_text.contains("Shift")
-		and not slash_text.contains("{"), heavy_text + " | " + slash_text)
-	# Real moves before their step do not count.
-	await _tap_heavy(false)
-	await _physics(80)
-	_check("tutorial: a real heavy attack before its step completes nothing", controller.current_index == 0)
-	player.heavy_attack_started.emit()
-	player.dash_slash_started.emit()
-	_check("tutorial: the new signals before their step are ignored", controller.current_index == 0)
-	# Move the controller to the wave step with the usual signals.
-	controller._moved = 999.0
-	await _physics(2)
-	player.state_changed.emit(Player.State.IDLE, Player.State.JUMP)
-	player.dash_started.emit()
-	player.attack_started.emit()
-	controller.dummy.hurtbox.receive_hit(DamageInfo.create(1, Vector2.ZERO, player, CombatLayers.Team.PLAYER))
-	_check("tutorial: reaches the wave step", controller.get_current_step_id() == "wave")
-	player.heavy_attack_started.emit()
-	_check("tutorial: heavy does not skip the wave step", controller.get_current_step_id() == "wave")
-	player.wave_cast.emit(0)
-	_check("tutorial: wave completes, then the heavy step", controller.get_current_step_id() == "heavy")
-	controller.exit_area.body_entered.emit(player)
-	_check("tutorial: the exit is locked before the heavy step", SceneManager.last_requested_scene_id == "" and not controller.is_completed)
-	player.dash_slash_started.emit()
-	_check("tutorial: dash slash does not skip the heavy step", controller.get_current_step_id() == "heavy")
-	await _wait_until(func() -> bool: return controller._feedback_left <= 0.0, 120)
+	_check("tutorial: independent steps ending with heavy, soul, heal and pause (Phase 15m)", ids == ["move", "jump", "dash", "attack", "heavy", "soul", "heal", "pause"], str(ids))
+	var heavy_text: String = controller.build_text(String(controller.steps[4]["text"]))
+	_check("tutorial: the heavy prompt resolves its key from the InputMap", heavy_text.contains("C") and not heavy_text.contains("{"), heavy_text)
 	await _wait_until(func() -> bool: return player.state == Player.State.IDLE and not player.health.is_invulnerable(), 120)
 	await _tap_heavy(true)
-	var heavy_done: bool = await _wait_until(func() -> bool: return controller.get_current_step_id() == "dash_slash", 20)
-	_check("tutorial: a real heavy attack (middle mouse) completes the heavy step", heavy_done)
+	var heavy_done: bool = await _wait_until(func() -> bool: return controller.is_step_done("heavy"), 20)
+	_check("tutorial: a real heavy attack (middle mouse) completes the heavy step even before it is asked (Phase 15m)", heavy_done)
 	controller.exit_area.body_entered.emit(player)
-	_check("tutorial: the exit stays locked before the dash slash step", SceneManager.last_requested_scene_id == "" and not controller.is_completed)
-	await _wait_until(func() -> bool: return player.state == Player.State.IDLE, 150)
-	await _physics(40)
-	# A plain dash and a plain attack do not complete it; the combination does.
-	Input.parse_input_event(_key_event(KEY_SHIFT, true))
-	await get_tree().physics_frame
-	Input.parse_input_event(_key_event(KEY_SHIFT, false))
-	await _physics(30)
-	_check("tutorial: a plain dash does not complete the dash slash step", controller.get_current_step_id() == "dash_slash")
-	await _physics(40)
-	await _hold_dash_slash(player, 2)
-	Input.parse_input_event(_key_event(KEY_D, false))
-	var heal_step: bool = await _wait_until(func() -> bool: return controller.get_current_step_id() == "heal", 30)
-	_check("tutorial: a real dash slash leaves the dash slash step for the heal step (Phase 15a)", heal_step and not controller.is_completed)
-	controller.exit_area.body_entered.emit(player)
-	_check("tutorial: the exit stays locked before the heal step", SceneManager.last_requested_scene_id == "")
-	# The heal step: gather soul, then hold the heal key; at full health it only spends the soul.
+	_check("tutorial: the exit stays locked while required steps are missing", SceneManager.last_requested_scene_id == "" and not controller.is_completed)
+	for kind in ["move", "jump", "dash", "attack", "soul"]:
+		controller._on_action(kind)
 	await _wait_until(func() -> bool: return player.state == Player.State.IDLE or player.state == Player.State.RUN, 150)
 	player.soul.add_soul(60)
 	var soul_before: int = player.soul.soul
 	Input.parse_input_event(_key_event(KEY_E, true))
 	var all_done: bool = await _wait_until(func() -> bool: return controller.is_completed, 150)
 	Input.parse_input_event(_key_event(KEY_E, false))
-	_check("tutorial: a real held heal key completes the tutorial; at full health nothing heals but the soul is spent (Phase 15a)",
-		all_done and controller.current_index == 9 and player.health.current_health == player.health.max_health and player.soul.soul == soul_before - player.soul.heal_cost())
+	_check("tutorial: a real held heal key completes the last required step; at full health nothing heals but the soul is spent",
+		all_done and player.health.current_health == player.health.max_health and player.soul.soul == soul_before - player.soul.heal_cost())
 	controller.exit_area.body_entered.emit(player)
 	_check("tutorial: the exit opens only now", SceneManager.last_requested_scene_id == "level_1")
 	tutorial.free()
