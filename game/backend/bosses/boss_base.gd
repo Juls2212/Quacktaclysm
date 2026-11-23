@@ -62,8 +62,10 @@ var _phase_2_started: bool = false
 ## How many phase thresholds the boss has crossed (Phase 15e-1: a boss may have several; bosses 1 and 2 have one).
 var _phases_crossed: int = 0
 var _transition_target: int = 2
-## Optional floating controller (a BossHover): while it says the boss floats, gravity does not pull it down.
-@export var hover: Node
+## How much of its gravity pulls the boss (Phase 15j): 0 lets a pattern hold it in the air (the leap before the floor collapses).
+var gravity_scale: float = 1.0
+## The boss is worn out on the floor (the vulnerable window of boss 3): the visual kneels and pants. Set by the pattern that owns it.
+var exhausted: bool = false
 ## Owners that keep the phase transition open (the possession sequence). While any holds it the boss stays
 ## inactive and invulnerable and its pattern cooldowns do not advance.
 var _transition_holders: Array = []
@@ -197,6 +199,8 @@ func reset_encounter() -> void:
 		return
 	_cancel_current_pattern()
 	_deactivate_all_hitboxes()
+	gravity_scale = 1.0
+	exhausted = false
 	for pattern in patterns:
 		pattern.cooldown_left = 0.0
 	health.reset()
@@ -252,10 +256,8 @@ func _physics_process(delta: float) -> void:
 		State.DEAD:
 			_update_dead(delta)
 
-	if hover != null and state != State.DEAD and bool(hover.call(&"is_floating")):
-		hover.call(&"drive", self, delta)
-	elif not is_on_floor():
-		velocity.y = minf(velocity.y + stats.gravity * delta, stats.max_fall_speed)
+	if not is_on_floor():
+		velocity.y = minf(velocity.y + stats.gravity * gravity_scale * delta, stats.max_fall_speed)
 	move_and_slide()
 
 
@@ -444,11 +446,34 @@ func _check_phase_threshold() -> void:
 	_phase_2_started = true
 	_transition_target = _phases_crossed + 1
 	_cancel_current_pattern()
+	gravity_scale = 1.0
+	exhausted = false
 	_deactivate_all_hitboxes()
 	_transition_left = stats.phase_transition_time
 	health.grant_invulnerability(stats.phase_transition_time)
 	_set_state(State.PHASE_TRANSITION)
 	phase_transition_started.emit(_transition_target)
+
+
+## How many phase lines the boss has not crossed yet (0 = it is in its last phase).
+func phase_lines_left() -> int:
+	return maxi(stats.get_phase_thresholds().size() - _phases_crossed, 0)
+
+
+## Sends the boss to its NEXT corruption state: its health goes just under the next phase line and the normal transition runs (the
+## current pattern is cancelled cleanly by `_check_phase_threshold`). Returns false, doing nothing, during a transition, when the boss is
+## not in the fight, or in its last phase (there is no next line).
+func force_next_phase() -> bool:
+	if state != State.IDLE and state != State.PATTERN:
+		return false
+	var thresholds: PackedFloat32Array = stats.get_phase_thresholds()
+	if _phases_crossed >= thresholds.size():
+		return false
+	var line: int = int(floorf(float(health.max_health) * thresholds[_phases_crossed]))
+	health.current_health = clampi(mini(health.current_health, line), 1, health.max_health)
+	health.health_changed.emit(health.current_health, health.max_health)
+	_check_phase_threshold()
+	return state == State.PHASE_TRANSITION
 
 
 ## The multiplier of every pattern cooldown in the current phase (boss 3 phase 3 shortens them; the others are 1).
@@ -459,6 +484,8 @@ func cooldown_factor() -> float:
 func _on_health_died() -> void:
 	_transition_holders.clear()
 	_cancel_current_pattern()
+	gravity_scale = 1.0
+	exhausted = false
 	_deactivate_all_hitboxes()
 	hurtbox.set_enabled(false)
 	velocity.x = 0.0
@@ -492,7 +519,7 @@ func _apply_facing() -> void:
 ## Contact damage only while the boss is fighting (IDLE or PATTERN) against a living target:
 ## never when inactive, in the phase transition, defeated or when the target is dead.
 func _update_contact_active() -> void:
-	var fighting: bool = state == State.IDLE or state == State.PATTERN
+	var fighting: bool = (state == State.IDLE or state == State.PATTERN) and not exhausted
 	contact_hitbox.set_contact_active(fighting and is_target_valid())
 
 
