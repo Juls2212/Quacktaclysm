@@ -24,21 +24,8 @@ extends Control
 @export var shake_text: String = "Sacudida de cámara"
 @export var controls_text: String = "Controles"
 @export_group("Credits")
-## Masthead under the credits title, like the front page of the last newspaper.
-@export_multiline var credits_body: String = "EDICIÓN ESPECIAL · ÚLTIMO NÚMERO ANTES DEL FIN"
-@export var credits_title: String = "QUACKTACLYSM"
-@export var credits_dev_line: String = "Desarrollo y sistemas: Juliana Peñafiel"
-@export var credits_art_line: String = "Diseño visual, interfaces y escenarios: Laura Escobar"
-@export var credits_engine_line: String = "Hecho con Godot 4 y GDScript"
-@export var credits_resources_title: String = "Recursos externos"
-## One line per external asset.
-@export var credits_resources: PackedStringArray = PackedStringArray([
-	"Fuentes: Rubik Wet Paint y Patrick Hand (Google Fonts, licencia SIL OFL), Special Elite y Rock Salt (Google Fonts, licencia Apache 2.0)",
-])
-@export var credits_thanks_title: String = "Agradecimientos"
-@export_multiline var credits_thanks: String = "A quien juegue hasta el final.\nA los patos que no lo lograron."
-## Pixels per second the credits roll up.
-@export var credits_speed: float = 26.0
+## The credits (names, technology, audio, thanks) live in ONE resource shared with the end of the game (Phase 15t).
+@export var credits_content: CreditsContent
 @export_group("")
 @export var version_text: String = "Versión de desarrollo"
 @export var confirm_text: String = "Ya existe una partida guardada. Se reemplazará en el próximo guardado automático."
@@ -129,7 +116,9 @@ func _ready() -> void:
 	options_back_button.text = back_text
 	credits_back_button.text = back_text
 	# Phase 15h: the content notice goes with the credits (never a pop-up, never in the way of play).
-	credits_label.text = credits_body + "\n\n" + StoryTexts.get_default().content_notice
+	if credits_content == null:
+		credits_content = CreditsContent.get_default()
+	credits_label.text = credits_content.masthead + "\n\n" + StoryTexts.get_default().content_notice
 	version_label.text = version_text
 	music_label.text = music_text
 	sfx_label.text = sfx_text
@@ -198,7 +187,7 @@ func _process(delta: float) -> void:
 		_advance_opening(delta)
 	if credits_panel.visible:
 		# The front page scrolls up slowly and starts over once it has gone past.
-		credits_roll.position.y -= credits_speed * delta
+		credits_roll.position.y -= credits_content.menu_speed * delta
 		if credits_roll.position.y < -credits_roll.size.y:
 			credits_roll.position.y = credits_scroll.size.y
 
@@ -344,35 +333,12 @@ func _splash(panel: Control) -> void:
 	ink_wipe.play(panel.position + panel.size * 0.5, maxf(panel.size.x, panel.size.y) * 0.75)
 
 
-## Front page of the credits: headline, the team, the engine, external resources and thanks.
+## The credits roll: the same content as the end of the game (the notice stays apart, always visible above the roll).
 func _build_credits() -> void:
-	for child in credits_roll.get_children():
-		child.queue_free()
-	var headline := InkLabel.new()
-	headline.text = credits_title
-	headline.cap_height = 30.0
-	headline.fill = Color(0.2, 0.15, 0.12)
-	headline.extrude = Color(0.6, 0.55, 0.44)
-	credits_roll.add_child(headline)
-	for line in [credits_dev_line, credits_art_line, credits_engine_line]:
-		_credit_line(line, &"")
-	_credit_line(credits_resources_title, &"HeaderLabel")
-	for line in credits_resources:
-		_credit_line(line, &"NoteLabel")
-	if credits_resources.is_empty():
-		_credit_line("—", &"NoteLabel")
-	_credit_line(credits_thanks_title, &"HeaderLabel")
-	_credit_line(credits_thanks, &"NoteLabel")
-
-
-func _credit_line(text: String, variation: StringName) -> void:
-	var label := Label.new()
-	label.text = text
-	label.theme_type_variation = variation
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.custom_minimum_size = Vector2(credits_scroll.custom_minimum_size.x, 0)
-	credits_roll.add_child(label)
+	CreditsRoll.fill(credits_roll, credits_content, credits_scroll.custom_minimum_size.x, false, {"header_variation": "HeaderLabel", "note_variation": "NoteLabel"})
+	var headline := credits_roll.get_child(0) as Label
+	headline.add_theme_font_size_override(&"font_size", 34)
+	headline.add_theme_color_override(&"font_color", Color(0.2, 0.15, 0.12))
 
 
 func _on_new_game_pressed() -> void:

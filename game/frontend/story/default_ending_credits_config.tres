@@ -1,0 +1,6 @@
+[gd_resource type="Resource" script_class="EndingCreditsConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://frontend/story/ending_credits_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")

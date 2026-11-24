@@ -374,7 +374,7 @@ func _test_boss_dialogue() -> void:
 		_check("guardian (%s): not repeated after a retry or respawn mid-fight" % profile, dialogue.sequence_count == 1 and not dialogue.is_speaking())
 		dialogue._on_boss_defeated(level.boss)
 		dialogue._start_defeat_dialogue(story)
-		_check("guardian (%s): its last words (2 to 3 lines) are said when it falls (Phase 15n)" % profile, dialogue.is_speaking() and dialogue.current_text() == "EL LEÑADOR: %s" % story.defeat_lines[0] and dialogue.sequence_count == 2)
+		_check("guardian (%s): its last words (2 to 3 lines) are said when it falls (Phase 15n)" % profile, dialogue.is_speaking() and dialogue.current_text() == "%s: %s" % [story.spirit_speaker, story.defeat_lines[0]] and dialogue.sequence_count == 2)
 		level.free()
 		await _frames(2)
 	# Skippable with the confirm action, and the press is not consumed.

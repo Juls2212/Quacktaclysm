@@ -23,6 +23,9 @@ const EVENT_IDS: Array[StringName] = [
 @export var ending_released_music: EndingMusicSlot = null
 ## Level number -> [music file in frontend/audio/music, pitch multiplier of that track].
 @export var boss_music: Dictionary = {}
+@export_group("Ambient (Phase 15t)")
+## The ambient sounds (AmbientSlot): untyped on purpose, like `events`. Change one slot's `file` to swap its sound.
+@export var ambient_slots: Array = []
 @export_group("Cries on hits (Phase 15n)")
 ## Every hit that LANDS on a duck enemy makes one of these cries (files of frontend/audio/sfx/ducks); blocked hits make none.
 @export var hit_cry_files: PackedStringArray = PackedStringArray(["quack_hurt.wav", "quack_1.wav", "quack_2.wav", "quack_3.wav"])
@@ -59,3 +62,12 @@ func get_event(event_id: StringName) -> AudioEvent:
 func get_boss_music(level: int) -> Array:
 	var entry: Variant = boss_music.get(level, [])
 	return entry as Array if entry is Array else []
+
+
+## The ambient slot with this id, or null.
+func get_ambient(ambient_id: StringName) -> AmbientSlot:
+	for entry: Variant in ambient_slots:
+		var slot := entry as AmbientSlot
+		if slot != null and slot.id == ambient_id:
+			return slot
+	return null

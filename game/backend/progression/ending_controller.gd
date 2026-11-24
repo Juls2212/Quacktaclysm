@@ -7,9 +7,14 @@ extends Control
 ## checkpoint marker stays, so "Continuar" reopens this scene) and needs no network. All texts live
 ## in StoryTexts. Automated (headless) runs go straight to the card unless `skip_reel_when_headless`
 ## is turned off.
+## Phase 15t: after the cinematic that finishes by itself comes the credits and statistics sequence (EndingCredits: the night sky, the credits,
+## the animated summary of the statistics); then the final card (the line of support and the way back). A skip goes straight to the final card.
 
 signal reel_finished
 signal card_shown
+## The credits sequence began / ended (Phase 15t).
+signal credits_started
+signal credits_finished
 
 @export var texts: StoryTexts
 @export var skip_reel_when_headless: bool = true
@@ -27,6 +32,10 @@ var support_label: Label = null
 var released_names: Array[String] = []
 var kept_names: Array[String] = []
 var reel: EndingCinematic = null
+## The credits and statistics sequence (null before it starts and in automated runs that go straight to the card).
+var credits: EndingCredits = null
+var credits_played: bool = false
+var _music_slot: EndingMusicSlot = null
 var card_visible: bool = false
 
 @onready var title_label: Label = $Center/Box/TitleLabel
@@ -86,6 +95,7 @@ func _play_reel(story: EndingStory) -> void:
 	# Each ending has its own music, processed by code (the slots of the audio table).
 	var audio: AudioEvents = AudioEvents.get_default()
 	reel.music_slot = audio.ending_kept_music if shown_variant == StoryTexts.ENDING_KEPT else audio.ending_released_music
+	_music_slot = reel.music_slot
 	reel.line_changed.connect(_on_reel_line)
 	reel.finished.connect(_on_reel_finished)
 	add_child(reel)
@@ -98,13 +108,50 @@ func _on_reel_line(_index: int, text: String) -> void:
 		AudioDirector.play_event(&"grandfather_voice")
 
 
-func _on_reel_finished(_skipped: bool) -> void:
+func _on_reel_finished(skipped: bool) -> void:
 	reel = null
 	reel_finished.emit()
+	if skipped:
+		_show_card()
+	else:
+		_play_credits()
+
+
+## The credits and the statistics (Phase 15t): the white of the cut clears into the night sky of the ending, the credits roll, the numbers count up.
+func _play_credits() -> void:
+	credits = EndingCredits.new()
+	credits.style = "kept" if shown_variant == StoryTexts.ENDING_KEPT else "released"
+	credits.music_slot = _music_slot
+	credits.stats_title = title_label.text
+	credits.stat_rows = stat_rows()
+	credits.skip_hint_text = texts.hold_skip_hint
+	credits.start_white = true
+	credits.finished.connect(_on_credits_finished)
+	add_child(credits)
+	credits_played = true
+	credits_started.emit()
+
+
+## The statistics the card always showed, as the rows of the animated summary: the two counters (they count up) and the two lists of names.
+func stat_rows() -> Array:
+	return [
+		{"format": texts.summary_released_format, "value": GameState.souls_released},
+		{"format": texts.summary_kept_format, "value": GameState.souls_kept},
+		{"text": released_names_label.text},
+		{"text": kept_names_label.text},
+	]
+
+
+func _on_credits_finished(_skipped: bool) -> void:
+	credits_finished.emit()
 	_show_card()
 
 
 func _show_card() -> void:
+	# After the animated summary the statistics are not shown twice: the card is the ending sentence, the epilogue, the line of support and the way back.
+	if credits_played:
+		for stat: Control in [released_label, kept_label, released_names_label, kept_names_label]:
+			stat.visible = false
 	box.visible = true
 	card_visible = true
 	back_button.grab_focus()

@@ -1,8 +1,9 @@
-[gd_resource type="Resource" script_class="AudioEvents" load_steps=38 format=3]
+[gd_resource type="Resource" script_class="AudioEvents" load_steps=40 format=3]
 
 [ext_resource type="Script" path="res://frontend/audio/audio_events.gd" id="1_events"]
 [ext_resource type="Script" path="res://frontend/audio/audio_event.gd" id="2_event"]
 [ext_resource type="Script" path="res://frontend/audio/ending_music_slot.gd" id="3_slot"]
+[ext_resource type="Script" path="res://frontend/audio/ambient_slot.gd" id="4_ambient"]
 
 [sub_resource type="Resource" id="Event_footstep"]
 script = ExtResource("2_event")
@@ -349,12 +350,31 @@ note = "Graznido forzado de resistencia cuando la corrupción le toma la mano: e
 script = ExtResource("2_event")
 id = &"duck_cry_lonely"
 files = Array[String](["ducks/quack_2.wav"])
-volume_db = -18.0
+volume_db = -23.0
 pitch_min = 0.55
 pitch_max = 0.6
 cooldown = 1.5
 max_voices = 1
 note = "Un graznido lejano y solitario durante los planos largos de «El acantilado»."
+
+[sub_resource type="Resource" id="Ambient_wind"]
+script = ExtResource("4_ambient")
+id = &"wind"
+file = ""
+volume_db = -27.0
+volume_jitter_db = 2.5
+pitch_min = 0.85
+pitch_max = 1.1
+lowpass_hz = 700.0
+fade_in_seconds = 3.0
+fade_out_seconds = 3.5
+gust_seconds = 8.0
+interval_min_seconds = 4.0
+interval_max_seconds = 9.0
+start_offset_max_seconds = 3.0
+max_voices = 2
+follow_duck = 0.6
+note = "El viento frío de los finales (suena en y después del corte). Vacío = viento generado por código; para usar un archivo, escribe aquí su nombre (carpeta sfx) y anota su fuente y licencia en los créditos."
 
 [sub_resource type="Resource" id="Slot_kept"]
 script = ExtResource("3_slot")
@@ -377,6 +397,7 @@ base_duck_db = -14.0
 [resource]
 script = ExtResource("1_events")
 events = [SubResource("Event_footstep"), SubResource("Event_exorcism"), SubResource("Event_boss_vs_sting"), SubResource("Event_title_card"), SubResource("Event_transition"), SubResource("Event_portal_lit"), SubResource("Event_portal_enter"), SubResource("Event_projectile_impact_world"), SubResource("Event_projectile_impact_player"), SubResource("Event_projectile_impact_enemy"), SubResource("Event_wave_impact"), SubResource("Event_wave_impact_world"), SubResource("Event_game_over"), SubResource("Event_soul_gain"), SubResource("Event_focus_start"), SubResource("Event_heal_done"), SubResource("Event_heal_denied"), SubResource("Event_soul_full"), SubResource("Event_pad_bounce"), SubResource("Event_double_jump"), SubResource("Event_spike_warning"), SubResource("Event_spike_rise"), SubResource("Event_boss_leap"), SubResource("Event_leap_land"), SubResource("Event_possession_start"), SubResource("Event_possession_roar"), SubResource("Event_possession_slam"), SubResource("Event_grandfather_voice"), SubResource("Event_duck_cry_weak"), SubResource("Event_duck_cry_pain"), SubResource("Event_duck_cry_resist"), SubResource("Event_duck_cry_lonely")]
+ambient_slots = [SubResource("Ambient_wind")]
 ending_kept_music = SubResource("Slot_kept")
 ending_released_music = SubResource("Slot_released")
 boss_music = {

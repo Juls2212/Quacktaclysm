@@ -264,7 +264,7 @@ func _test_contrast() -> void:
 func _test_story_patches() -> void:
 	var texts := load(StoryTexts.DEFAULT_PATH) as StoryTexts
 	var kept_ending: String = " ".join(texts.get_ending("ending_kept").lines)
-	_check("story (b): the kept ending (Phase 15h) ends with the grandfather's apology", kept_ending.contains("Abuelo: Perdóname, nieto.") and not kept_ending.contains("daba igual lo que decidieras"))
+	_check("story (b): the kept ending (Phase 15h) ends with the grandfather's «Se ha sellado la profecía.» (Phase 15t)", kept_ending.contains("Abuelo: Se ha sellado la profecía.") and not kept_ending.contains("daba igual lo que decidieras"))
 	_check("story (c): the grandfather scene line has plain guillemets", texts.elder_lines.has("«Quien la empuñe decidirá cada alma: liberarla o cargarla.»")
 		and not " ".join(texts.elder_lines).contains("««") and not " ".join(texts.elder_lines).contains("»»"))
 	var storm: BossStory = texts.get_boss(3)

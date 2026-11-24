@@ -96,13 +96,12 @@ El pato en un acantilado sobre la ciudad liberada, consumido por la corrupción:
 | 11 | línea 5 | (Enter) | |
 | 12 | `corruption_takes_hand` | 5 | La corrupción le toma la mano: el ala va hacia la cadera y se retira, sacude la cabeza; graznido forzado de resistencia; la música se apaga |
 | 13-15 | líneas 6, 7 y 8 | (Enter) | El pato resiste y dice sus arrepentimientos |
-| 16 | `kneel_at_edge` | 5 | Se arrodilla en el borde; aparece el rostro del abuelo, que sufre; sin música, solo viento |
+| 16 | `kneel_at_edge` | 5 | Se arrodilla en el borde; sin música, solo viento (el abuelo ya no aparece aquí: solo dice la última línea) |
 | 17 | `bow_and_cut` | 3 | Baja la cabeza y la escena **se funde a blanco, lentamente (sin destello)** ANTES de que ocurra nada; no se ve ni se oye el acto |
 | 18 | `white_hold` | 2 | Blanco, silencio |
 | 19 | `empty_edge` | 5 | El borde vacío (el blanco se retira); solo viento |
-| 20 | `grandfather_breaking` | 4 | El rostro del abuelo se quiebra |
-| 21 | línea 9 | (Enter) | «Perdóname, nieto.» (sin sonido) |
-| 22 | `hold_quiet` | 5 | Fundido lento a negro y tarjeta final |
+| 20 | `line_prophecy` | (Enter) | El abuelo, sereno, dice la última línea (Fase 15t): «Se ha sellado la profecía.» (sin sonido) |
+| 21 | `hold_quiet` | 5 | Fundido lento a blanco y los créditos |
 
 Líneas:
 1. La ciudad se encendió ventana a ventana, y las almas subieron como ríos de luz sobre ella.
@@ -113,7 +112,7 @@ Líneas:
 6. Pato: No es mi mano. ¡Suéltame! No quiero... no quiero.
 7. Pato: Me arrepiento de haberlas guardado, y de no decirte que tenía miedo, abuelo.
 8. Pato: Me arrepiento de que nadie en la ciudad sepa quién la salvó. Debí pedir ayuda.
-9. Abuelo: Perdóname, nieto.
+9. Abuelo: Se ha sellado la profecía.
 
 ### EL ACANTILADO (`ending_released`)
 | # | Beat | s | Qué se ve y se oye |
@@ -163,3 +162,10 @@ La historia de cada guardián está ahora repartida entre su línea al verlo y s
 - **El alma como narradora.** Cuando un guardián cae, su cuerpo se desvanece y **su alma** aparece donde cayó: la misma figura (con su hacha, sus juncos y su loto, o su hoja de tormenta) en azul translúcido, flotando. Las dos o tres líneas de despedida las **dice el alma** («Alma del Leñador», «Alma de la Cosa del Pantano», «Alma del Ojo de la Tormenta»). Al terminar, el alma se deshace en partículas que fluyen hacia el fragmento y este se condensa en el cristal; solo entonces llega la decisión. El texto de las líneas no cambia.
 - **El abuelo.** En los finales y al empezar cada nivel ya no se ve una cara dibujada: se ve **su propia figura completa**, grande en el cielo, con el cuerpo oculto en la niebla y solo el rostro claro, un poco borroso y translúcido (recuerdo tenue en los niveles 1 y 2, más presente en el 3 y en los finales). La pena se muestra con la cabeza baja y un brillo más tenue, nunca con lágrimas dibujadas.
 - **Los finales, sobre el blanco.** Final conservado: sobre el blanco, la silueta oscura del pato arrodillado con la cabeza baja y la espada clavada a su lado, sin tocarlo; después, la silueta quieta junto a la espada. Final del acantilado: la silueta del pato de pie en el borde, mirando al cielo, que se desvanece; tras el blanco, el borde vacío con su espada y su sombrero. El acto nunca se muestra y el pato nunca se ve saltar ni caer.
+
+## Fase 15t: la última línea, el abuelo sereno y los créditos animados
+
+- **La última línea de AMBOS finales** es «Abuelo: Se ha sellado la profecía.» (sustituye a «Perdóname, nieto.» del final conservado). El abuelo aparece **solo para decirla**, en su estado sereno de hablar: sin llanto, sin cabeza baja, sin brillo apagado, sin lágrimas. Las líneas del pato (sus arrepentimientos) no cambian.
+- **Después de la última línea** la escena se funde despacio a blanco y de ahí amanece el cielo nocturno de los créditos. Final conservado («Estrellas que suben»): estrellas pequeñas suben despacio desde la ciudad liberada, cuya silueta se desplaza con un suave paralaje. Final del acantilado: un cielo frío y casi quieto, pocas estrellas lejanas, una niebla fina y el borde del acantilado con la espada y el sombrero; mucho más callado.
+- **Los créditos** suben sobre ese cielo (el mismo contenido que la sección «Créditos» del menú). Después las estadísticas aparecen como una tarjeta animada: los contadores suben suavemente y cada dato entra en su turno con un fundido suave. Luego, la tarjeta final con la línea de apoyo (en los dos finales) y la vuelta al menú.
+- **Lo que no cambia:** el acto nunca se muestra, sin sangre en los finales, corte a blanco lento antes del acto, aviso de contenido en los créditos, solo viento frío en y después del corte, sin destellos.
