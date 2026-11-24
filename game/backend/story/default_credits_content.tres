@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="CreditsContent" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://backend/story/credits_content.gd" id="1_credits"]
+
+[resource]
+script = ExtResource("1_credits")
+game_title = "QUACKTACLYSM"
+tagline = "Un cuento de patos, almas y una profecía"
+masthead = "EDICIÓN ESPECIAL · ÚLTIMO NÚMERO ANTES DEL FIN"
+developers_title = "Equipo"
+developers = PackedStringArray("Juliana Peñafiel", "Laura Escobar")
+technology_title = "Tecnología"
+technology_lines = PackedStringArray("Godot Engine 4 y GDScript", "Python y FastAPI (servicio del Director de IA)", "OpenAI (modelo de lenguaje del Director de IA)")
+ai_note = "El Director de IA adapta la partida a tu forma de jugar. Se puede apagar en Opciones: «Adaptación con IA»."
+audio_title = "Música y efectos de sonido"
+audio_lines = PackedStringArray("Música de las pantallas y los jefes: Juhani Junkala, «15 Melodic RPG Chiptunes» (CC0, opengameart.org)", "«Treacherous path loop» (CC0, opengameart.org; autoría sin documentar en el proyecto)", "Efectos de combate y magia: «RPG Sound Pack» de artisticdude (CC0, opengameart.org)", "Golpes, salto y pasos: «RPG Sounds» e «Interface Sounds» de Kenney (CC0, kenney.nl)", "Espadas y choques: «20 Sword Sound Effects» de StarNinjas (CC0, opengameart.org)", "Graznidos de los patos: sintetizados para este juego", "Sonido ambiente (el viento de los finales): generado por el propio juego, sin archivos de terceros")
+fonts_title = "Tipografías"
+fonts_lines = PackedStringArray("Rubik Wet Paint y Patrick Hand (Google Fonts, licencia SIL OFL)", "Special Elite y Rock Salt (Google Fonts, licencia Apache 2.0)")
+thanks_title = "Agradecimientos"
+thanks_lines = PackedStringArray("A quien ayudó con los sonidos ambientales", "A quien juegue hasta el final", "A los patos que no lo lograron")
+notice_title = "Aviso de contenido"
+menu_speed = 26.0
+ending_speed = 34.0

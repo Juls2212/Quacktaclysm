@@ -230,7 +230,7 @@ func _test_selection_rule() -> void:
 func _test_released_and_kept_texts() -> void:
 	var kept: EndingStory = texts.get_ending(KEPT)
 	var released: EndingStory = texts.get_ending(RELEASED)
-	_check("kept: 7 to 9 lines (Phase 15i-bis) and the last one is the grandfather's «Perdóname, nieto.»", kept.lines.size() >= 7 and kept.lines.size() <= 9 and kept.lines[kept.lines.size() - 1] == "Abuelo: Perdóname, nieto.")
+	_check("kept: 7 to 9 lines (Phase 15i-bis) and the last one is the grandfather's «Se ha sellado la profecía.» (Phase 15t)", kept.lines.size() >= 7 and kept.lines.size() <= 9 and kept.lines[kept.lines.size() - 1] == "Abuelo: Se ha sellado la profecía.")
 	_check("released: 5 to 8 lines and the grandfather says «Bien hecho, nieto.»", released.lines.size() >= 5 and released.lines.size() <= 8 and released.lines.has("Abuelo: Bien hecho, nieto."))
 	var words: String = " ".join(released.lines)
 	_check("released: the duck realizes it only served for that moment and does not know who it is without the mission", words.contains("Eso era todo") and words.contains("No sé quién soy sin ella"))
@@ -322,7 +322,8 @@ func _test_manual_advance(ending_id: String) -> void:
 	reel._input(_accept())
 	reel._input(_accept())
 	Engine.time_scale = 20.0
-	await _until(func() -> bool: return ending.card_visible, 30.0)
+	# Phase 15t: after the last line come the credits and the animated statistics (about 100 game seconds), then the final card.
+	await _until(func() -> bool: return ending.card_visible, 240.0)
 	Engine.time_scale = 1.0
 	_check("%s: after the last line the ending closes by itself and the final card appears" % ending_id, ending.card_visible)
 	ending.free()

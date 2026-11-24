@@ -26,6 +26,9 @@ const INPUT_GRACE: float = 0.5
 ## The fade from black at every beat of a reduced (still) ending.
 const STILL_FADE: float = 0.5
 const GRANDFATHER_PREFIX: String = "Abuelo:"
+## The beats' old wind loop (the «transition» event pitched down) now plays as the ambient slot of the same job: soft gusts, not a repeated sample.
+const WIND_LOOP: StringName = &"transition"
+const WIND_AMBIENT: StringName = &"wind"
 
 @export var beats: EndingBeatList = null
 @export var lines: Array[String] = []
@@ -75,6 +78,7 @@ var _reverb: AudioEffectReverb = null
 ## Owners of the music duck while paused and while a beat asks for silence.
 var _pause_token := RefCounted.new()
 var music_playing: bool = false
+var _wind_on: bool = false
 ## How many times a fail-safe moved the ending on (a beat that ran too long, the total limit); 0 in a healthy ending.
 var failsafe_count: int = 0
 ## True once the frame watchdog switched the scene to its light mode.
@@ -92,6 +96,7 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	_stop_music()
+	_stop_wind()
 
 
 func _notification(what: int) -> void:
@@ -353,6 +358,14 @@ func _update_sound(beat: EndingBeat, delta: float) -> void:
 	var raw: float = clampf(beat_t / maxf(beat.seconds, 0.01), 0.0, 1.0)
 	if beat.sfx != &"" and beat.sfx_at > 0.001 and raw >= beat.sfx_at and raw - delta / maxf(beat.seconds, 0.01) < beat.sfx_at:
 		_play(beat.sfx, beat.sfx_pitch, beat.sfx_volume_db)
+	if beat.loop_sfx == WIND_LOOP:
+		# The cold wind: gusts of the ambient slot, as loud as the scene's wind (and only while the beat asks for it).
+		if raw <= beat.loop_until:
+			_wind_on = AudioDirector.start_ambient(WIND_AMBIENT, clampf(beat.wind, 0.0, 1.0)) or _wind_on
+		else:
+			_stop_wind()
+		return
+	_stop_wind()
 	if beat.loop_sfx == &"" or raw > beat.loop_until:
 		return
 	var rate: float = lerpf(beat.loop_hz_from, beat.loop_hz_to, raw)
@@ -360,6 +373,12 @@ func _update_sound(beat: EndingBeat, delta: float) -> void:
 	if _loop_clock >= 1.0:
 		_loop_clock -= 1.0
 		_play(beat.loop_sfx, lerpf(beat.loop_pitch_from, beat.loop_pitch_to, raw), beat.loop_volume_db)
+
+
+func _stop_wind() -> void:
+	if _wind_on:
+		_wind_on = false
+		AudioDirector.stop_ambient()
 
 
 func _update_hold(delta: float) -> void:
@@ -382,6 +401,7 @@ func _finish(skipped: bool) -> void:
 	_prompt.visible = false
 	# Everything the ending plays stops now (the music fades to silence under the closing fade).
 	AudioDirector.set_music_duck(self, -60.0)
+	_stop_wind()
 	var seconds: float = skip_fade if skipped else 0.1
 	var tween := create_tween()
 	tween.tween_property(_fade, "color:a", 1.0, seconds)

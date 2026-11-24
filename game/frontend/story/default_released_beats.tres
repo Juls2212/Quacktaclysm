@@ -419,30 +419,6 @@ focus_to = Vector2(780, 380)
 zoom_to = 1.35
 leave_items = true
 
-[sub_resource type="Resource" id="Released_18"]
-script = ExtResource("2_beat")
-id = &"grandfather_solemn"
-seconds = 4.0
-line = -1
-duck_visible = false
-duck_from = Vector2(765, 520)
-duck_to = Vector2(765, 520)
-wind = 1.0
-music_db = -60.0
-expression = &"solemn"
-portrait_at = Vector2(0.5, 0.27)
-portrait_scale = 1.1
-loop_sfx = &"transition"
-loop_pitch_from = 0.45
-loop_pitch_to = 0.4
-loop_hz_from = 0.3
-loop_hz_to = 0.25
-loop_volume_db = -16.0
-focus_from = Vector2(780, 380)
-zoom_from = 1.35
-focus_to = Vector2(780, 380)
-zoom_to = 1.35
-
 [sub_resource type="Resource" id="Released_19"]
 script = ExtResource("2_beat")
 id = &"line_prophecy"
@@ -454,7 +430,7 @@ duck_to = Vector2(765, 520)
 voiced = false
 wind = 1.0
 music_db = -60.0
-expression = &"solemn"
+expression = &"speaking"
 portrait_at = Vector2(0.5, 0.27)
 portrait_scale = 1.1
 loop_sfx = &"transition"
@@ -479,6 +455,7 @@ duck_to = Vector2(765, 520)
 wind = 1.0
 music_db = -60.0
 fade_to = 1.0
+fade_white = true
 loop_sfx = &"transition"
 loop_pitch_from = 0.45
 loop_pitch_to = 0.4
@@ -492,7 +469,7 @@ zoom_to = 1.35
 
 [resource]
 script = ExtResource("1_list")
-beats = Array[ExtResource("2_beat")]([SubResource("Released_0"), SubResource("Released_1"), SubResource("Released_2"), SubResource("Released_3"), SubResource("Released_4"), SubResource("Released_5"), SubResource("Released_6"), SubResource("Released_7"), SubResource("Released_8"), SubResource("Released_9"), SubResource("Released_10"), SubResource("Released_11"), SubResource("Released_12"), SubResource("Released_13"), SubResource("Released_14"), SubResource("Released_15"), SubResource("Released_16"), SubResource("Released_17"), SubResource("Released_18"), SubResource("Released_19"), SubResource("Released_20")])
+beats = Array[ExtResource("2_beat")]([SubResource("Released_0"), SubResource("Released_1"), SubResource("Released_2"), SubResource("Released_3"), SubResource("Released_4"), SubResource("Released_5"), SubResource("Released_6"), SubResource("Released_7"), SubResource("Released_8"), SubResource("Released_9"), SubResource("Released_10"), SubResource("Released_11"), SubResource("Released_12"), SubResource("Released_13"), SubResource("Released_14"), SubResource("Released_15"), SubResource("Released_16"), SubResource("Released_17"), SubResource("Released_19"), SubResource("Released_20")])
 fade_color = Color(0.0, 0.0, 0.0, 1)
 min_seconds = 45.0
 max_seconds = 70.0

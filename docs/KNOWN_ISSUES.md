@@ -253,3 +253,10 @@ El bot de resistencia (5400 fotogramas por nivel, tres semillas por escena, más
 - El alma del Ojo de la Tormenta es su figura de pato poseído tal como la dibuja el rig, teñida de azul; no hay un diseño de espíritu aparte.
 - El abuelo del cielo solo tiene las poses de su figura (quieto y hablando); la pena es la cabeza inclinada y el brillo tenue.
 - Pruebas que mencionan el retrato antiguo y deben correr completas en la suite: `phase15i`, `phase15n`, `phase16c`.
+
+## Fase 15t
+
+- **Sin verificar en una ventana real:** la animación de los créditos y de las estadísticas (cómo se lee el rodillo sobre el cielo, el ritmo de los contadores) y la mezcla del ambiente (el viento generado no se pudo escuchar aquí: se midió su suavidad y su nivel, no cómo suena). Si el viento no gusta, bajar `volume_db` o `lowpass_hz` del espacio `wind`, o cambiarlo por un archivo.
+- Falta documentar la autoría de «Treacherous path loop» (solo consta la página de origen) y el nombre de la persona que ayudó con los sonidos ambientales (línea editable de agradecimientos).
+- La música de los créditos vuelve despacio a un nivel bajo tras el corte; si se prefiere silencio total hasta la tarjeta final, bajar `kept_music_db` y `released_music_db` a -40.
+- Pruebas antiguas que mencionan la última línea o el abuelo en los finales y deben correr completas en la suite: `phase14e`, `phase15h`, `phase15i`, `phase15k`, `phase15l`, `phase16c`.

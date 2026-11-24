@@ -248,7 +248,7 @@ Corrientes de aire, placas eléctricas, una ruta alta y decorado reactivo en el 
 
 - La vida del jefe 3 sube a 102 PV (líneas 0,451 y 0,2255) para que la fase 1 sin armadura dure unos 24 s ideales; las fases 2 y 3 conservan sus 23 PV.
 - `BossGuard` pasa a `BossShield` y `GuardFx` a `ShieldFx` (sin cambio de comportamiento).
-- Dos pruebas antiguas estaban desfasadas, no el juego: la que esperaba que el atajo de desarrollo derrotara al jefe en cualquier estado (desde la Fase 15e-1 solo lo hace en la última fase) y la que esperaba huecos de 285/175/285 px en el nivel 3.
+- Dos pruebas antiguas estaban desfasadas, no el juego: la que esperaba que el jefe cayera en cualquier estado (desde la Fase 15e-1 solo cae en la última fase) y la que esperaba huecos de 285/175/285 px en el nivel 3.
 
 ## Fase 15q: arreglos tras la suite completa
 
@@ -261,3 +261,11 @@ Corrientes de aire, placas eléctricas, una ruta alta y decorado reactivo en el 
 - Los dos finales muestran siluetas planas sobre el blanco del corte; el blanco dura 0,5 s más. El acto sigue sin mostrarse y las reglas de seguridad no cambian.
 - Los guardianes dejan un alma que dice las líneas de despedida y se convierte en el fragmento; el fragmento sale al terminar el alma, sin la espera restante de antes.
 - Pruebas puestas al día a propósito: `phase15i` (el retrato dibujado y sus lágrimas por la figura y la niebla), `phase15n` y `phase16c` (estados y lágrimas del retrato).
+
+## Fase 15t: última línea, créditos animados, créditos únicos y ambiente
+
+- La última línea del final conservado pasa de «Perdóname, nieto.» a «Se ha sellado la profecía.», igual que el del acantilado. El abuelo solo aparece (sereno) para decirla; se quitan sus compases de pena (`grandfather_breaking`, `grandfather_solemn`) y su presencia llorosa junto al pato arrodillado. Los estados `grieving`/`breaking` siguen existiendo en `GrandfatherSky` para el resto del juego, pero ningún final los usa.
+- Tras la última línea hay una secuencia de créditos y estadísticas animada (antes, la tarjeta de estadísticas salía de golpe). Un salto (mantener Enter) va directo a la tarjeta final, como antes.
+- La sección «Créditos» del menú y los créditos del final comparten un recurso; se retiran los cargos del equipo (solo nombres) y se amplía el contenido.
+- El viento de los finales dejó de ser el sonido del dash bajado de tono y repetido: ahora son ráfagas suaves de un espacio de ambiente.
+- Pruebas puestas al día a propósito: `phase15i`, `phase15h`, `phase14e` (la última línea y los estados del abuelo en los finales).

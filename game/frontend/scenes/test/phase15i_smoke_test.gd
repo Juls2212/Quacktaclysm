@@ -261,14 +261,14 @@ func _test_kept_beats() -> void:
 	_check("kept: the ending has a beat list", list != null and list.beats.size() >= 18)
 	var seconds: float = list.timed_seconds()
 	_check("kept: %.0f s of timed beats, inside the exported range (%.0f to %.0f s), the same range as before" % [seconds, list.min_seconds, list.max_seconds], seconds >= list.min_seconds and seconds <= list.max_seconds and seconds >= 50.0 and seconds <= 75.0)
-	var order: Array[StringName] = [&"city_dawn", &"cliff_duck", &"corruption_spreads", &"stagger_and_fall", &"closeup_pain", &"reach_for_stars", &"corruption_takes_hand", &"kneel_at_edge", &"bow_and_cut", &"white_hold", &"empty_edge", &"grandfather_breaking", &"hold_quiet"]
+	var order: Array[StringName] = [&"city_dawn", &"cliff_duck", &"corruption_spreads", &"stagger_and_fall", &"closeup_pain", &"reach_for_stars", &"corruption_takes_hand", &"kneel_at_edge", &"bow_and_cut", &"white_hold", &"empty_edge", &"line_prophecy", &"hold_quiet"]
 	var positions: Array[int] = []
 	for id in order:
 		positions.append(_index_of(list, id))
 	var in_order: bool = true
 	for i in positions.size():
 		in_order = in_order and positions[i] >= 0 and (i == 0 or positions[i] > positions[i - 1])
-	_check("kept: the arc is there, in order: the city lights come on below the cliff, labored breathing, corruption spreading, the stagger and fall, the close-up of pain, the reach for the stars, the corruption takes the hand (it resists), it kneels at the edge, the cut to white, the empty edge, the grandfather breaks down, the quiet", in_order, str(positions))
+	_check("kept: the arc is there, in order: the city lights come on below the cliff, labored breathing, corruption spreading, the stagger and fall, the close-up of pain, the reach for the stars, the corruption takes the hand (it resists), it kneels at the edge, the cut to white, the empty edge, the grandfather's last line, the quiet", in_order, str(positions))
 	var spreads: EndingBeat = list.beats[_index_of(list, &"corruption_spreads")]
 	var takes: EndingBeat = list.beats[_index_of(list, &"corruption_takes_hand")]
 	var cut: EndingBeat = list.beats[_index_of(list, &"bow_and_cut")]
@@ -306,14 +306,15 @@ func _test_kept_beats() -> void:
 	for beat in list.beats:
 		if beat.expression != &"":
 			expressions.append(beat.expression)
-	_check("kept: the grandfather grieves (before the cut) and breaks down (after it), in that order (%s)" % str(expressions), expressions.has(&"grieving") and expressions.has(&"breaking") and expressions.find(&"grieving") < expressions.find(&"breaking") and not expressions.has(&"solemn"))
+	# Phase 15t: the grandfather appears ONLY saying the final line, calm: no grieving, no breaking down, no lowered head.
+	_check("kept: the grandfather appears only to say the final line, in the calm speaking state (%s)" % str(expressions), expressions == [&"speaking"])
 	var line_numbers: Array[int] = []
 	for beat in list.line_beats():
 		line_numbers.append(beat.line)
 	var lines_ok: bool = true
 	for i in line_numbers.size():
 		lines_ok = lines_ok and line_numbers[i] == i
-	_check("kept: %d lines (7 to 9), every one has its beat in order, and «Perdóname, nieto.» is the last spoken line, after the cut" % story.lines.size(), lines_ok and story.lines.size() >= 7 and story.lines.size() <= 9 and line_numbers.size() == story.lines.size() and story.lines[story.lines.size() - 1] == "Abuelo: Perdóname, nieto." and _index_of(list, &"line_forgive") > cut_index)
+	_check("kept: %d lines (7 to 9), every one has its beat in order, and «Se ha sellado la profecía.» is the last spoken line, after the cut" % story.lines.size(), lines_ok and story.lines.size() >= 7 and story.lines.size() <= 9 and line_numbers.size() == story.lines.size() and story.lines[story.lines.size() - 1] == "Abuelo: Se ha sellado la profecía." and _index_of(list, &"line_prophecy") > cut_index)
 	_check("kept: it ends with a slow fade (%.0f s) and nothing after it" % list.beats[list.beats.size() - 1].seconds, list.beats[list.beats.size() - 1].fade_to >= 0.99 and list.beats[list.beats.size() - 1].seconds >= 4.0)
 	var veins_never_back: bool = true
 	var previous: float = 0.0
@@ -331,14 +332,14 @@ func _test_released_beats() -> void:
 	_check("released: the ending has a beat list", list != null and list.beats.size() >= 14)
 	var seconds: float = list.timed_seconds()
 	_check("released: %.0f s of timed beats, inside the exported range (%.0f to %.0f s)" % [seconds, list.min_seconds, list.max_seconds], seconds >= list.min_seconds and seconds <= list.max_seconds and seconds >= 45.0 and seconds <= 70.0)
-	var order: Array[StringName] = [&"dusk_wide", &"grandfather_proud", &"duck_closeup", &"still_wide", &"long_still", &"walk_to_edge", &"stop_at_edge", &"look_to_sky", &"white_hold", &"empty_edge", &"grandfather_solemn", &"fade_out"]
+	var order: Array[StringName] = [&"dusk_wide", &"grandfather_proud", &"duck_closeup", &"still_wide", &"long_still", &"walk_to_edge", &"stop_at_edge", &"look_to_sky", &"white_hold", &"empty_edge", &"line_prophecy", &"fade_out"]
 	var positions: Array[int] = []
 	for id in order:
 		positions.append(list.index_of(id))
 	var in_order: bool = true
 	for i in positions.size():
 		in_order = in_order and positions[i] >= 0 and (i == 0 or positions[i] > positions[i - 1])
-	_check("released: the beats are in order: dusk, the grandfather's pride, long still shots, the walk to the edge, the stop, the camera lifts to the sky and cuts to white, the empty edge, the solemn grandfather, the fade", in_order, str(positions))
+	_check("released: the beats are in order: dusk, the grandfather's pride, long still shots, the walk to the edge, the stop, the camera lifts to the sky and cuts to white, the empty edge, the grandfather's last line, the fade", in_order, str(positions))
 	var sky: int = list.index_of(&"look_to_sky")
 	var last_visible: int = -1
 	for i in list.beats.size():
@@ -372,8 +373,8 @@ func _test_released_beats() -> void:
 	var solemn: EndingBeat = list.beats[list.index_of(&"line_prophecy")]
 	var tearful: bool = false
 	for beat in list.beats:
-		tearful = tearful or beat.expression == &"grieving" or beat.expression == &"breaking"
-	_check("released: the grandfather does NOT cry: his closing portrait is the solemn one, with the line «Se ha sellado la profecía.» as the last spoken line, and no beat has him grieving or breaking down", solemn.expression == &"solemn" and not tearful and story.lines[story.lines.size() - 1] == "Abuelo: Se ha sellado la profecía." and list.beats[list.index_of(&"grandfather_solemn")].expression == &"solemn")
+		tearful = tearful or beat.expression == &"grieving" or beat.expression == &"breaking" or beat.expression == &"solemn"
+	_check("released: the grandfather does NOT cry: his closing portrait is calm and speaking, with the line «Se ha sellado la profecía.» as the last spoken line, and no beat has him grieving or breaking down (Phase 15t)", solemn.expression == &"speaking" and not tearful and story.lines[story.lines.size() - 1] == "Abuelo: Se ha sellado la profecía.")
 	var line_numbers: Array[int] = []
 	for beat in list.line_beats():
 		line_numbers.append(beat.line)
@@ -420,8 +421,8 @@ func _test_texts_and_notice() -> void:
 			count += 1 if line.contains("Me arrepiento") or line.contains("Nunca te dije") else 0
 		regrets.append("%d" % count)
 	_check("safety: both endings carry the duck's regrets (%s lines each) and it is never presented as the only possible outcome" % str(regrets), int(regrets[0]) >= 2 and int(regrets[1]) >= 2)
-	_check("safety: the cliff ending's closing is exactly «Abuelo: Se ha sellado la profecía.» and the kept one's «Abuelo: Perdóname, nieto.»; the cliff epilogues are neutral lines about the world (no grandfather, no regret, no consolation)",
-		released.lines[released.lines.size() - 1] == "Abuelo: Se ha sellado la profecía." and kept.lines[kept.lines.size() - 1] == "Abuelo: Perdóname, nieto." and released.epilogues.size() == 3 and not " ".join(released.epilogues).contains("Abuelo") and not " ".join(released.epilogues).contains("Perdóname"))
+	_check("safety: the cliff ending's closing is exactly «Abuelo: Se ha sellado la profecía.» and so is the kept one's (Phase 15t: «Abuelo: Se ha sellado la profecía.» in BOTH endings); the cliff epilogues are neutral lines about the world (no grandfather, no regret, no consolation)",
+		released.lines[released.lines.size() - 1] == "Abuelo: Se ha sellado la profecía." and kept.lines[kept.lines.size() - 1] == "Abuelo: Se ha sellado la profecía." and released.epilogues.size() == 3 and not " ".join(released.epilogues).contains("Abuelo") and not " ".join(released.epilogues).contains("Perdóname"))
 	_check("safety: the support line is on BOTH endings", released.support_line == SUPPORT_LINE and kept.support_line == SUPPORT_LINE)
 	_check("safety: the content notice says that two endings deal with suicide in an implicit way", texts.content_notice.contains("pérdida") and texts.content_notice.contains("suicidio") and texts.content_notice.contains("implícita") and texts.content_notice.contains("dos finales"))
 	_check("epilogues: the six texts are still there (2 endings x 3 variants), all different, and the old four endings are gone", texts.epilogue_text(KEPT, 0) != texts.epilogue_text(KEPT, 1) and texts.epilogue_text(RELEASED, 2) != texts.epilogue_text(RELEASED, 0) and texts.get_ending("ending_full") == null and texts.get_ending("ending_scar") == null)

@@ -256,3 +256,7 @@ La absorción al conservar un fragmento vuelve al fondo oscuro con toques rojos 
 ## El abuelo desde su figura, siluetas en los finales y el alma de los guardianes (Fase 15r)
 
 El abuelo del cielo (niveles y finales) es ahora su propia figura de cuerpo entero, con el cuerpo oculto en la niebla y solo la cara visible, borrosa y translúcida; no hay cara dibujada ni lágrimas. En los dos finales, sobre el blanco del corte aparecen siluetas planas oscuras del pato (arrodillado con la espada clavada al lado y luego quieto, o de pie en el borde mirando al cielo); el acto no se ve nunca. Al caer un guardián aparece su alma en azul, dice sus últimas palabras, se deshace en partículas y se convierte en el cristal del fragmento.
+
+## Última línea, créditos animados y ambiente (Fase 15t)
+
+En los dos finales el abuelo solo aparece, sereno, para decir la última línea: «Se ha sellado la profecía.». Después el blanco se aclara hacia un cielo nocturno propio de cada final (estrellas que suben desde la ciudad, o un cielo frío y casi quieto con niebla), los créditos suben sobre él, las estadísticas aparecen como una tarjeta animada con contadores y por último sale la tarjeta final con la línea de apoyo. Los créditos son un único recurso (`default_credits_content.tres`) que lee tanto la sección «Créditos» del menú como el final: nombres de las personas del equipo sin cargos, tecnología, música y efectos con su fuente y licencia, agradecimientos y el aviso de contenido. El sonido ambiente (el viento de los finales) ahora son ráfagas suaves, filtradas y más bajas.

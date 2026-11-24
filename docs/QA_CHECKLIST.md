@@ -77,7 +77,7 @@ Para repetir con otras elecciones: Menú principal → «Nueva partida» (confir
 | COR-04 | Aspecto corrupto | Opciones → apaga «Efectos de corrupción» con un nivel abierto | Vuelve todo a neutral (sin viñeta, sin tinte, sin brillo, sin filtro de música); la placa y la línea de consecuencias se quedan; los avisos de ataque siguen visibles (#39) | | |
 | AUD-03 | Audio | Escucha un nivel con el aspecto corrupto | La música suena más grave y apagada sin ser molesta (#52) | | |
 | AUD-04 | Audio | Habla un guardián / se muestra el abuelo | La música baja un poco y vuelve al terminar (#52, #57) | | |
-| FIN-01 | Finales | «Estrellas que suben»: 3/0 y 2/1 guardadas | Ciudad que recupera luz, pato que se apaga; termina en «Perdóname, nieto.» | |
+| FIN-01 | Finales | «Estrellas que suben»: 3/0 y 2/1 guardadas | Ciudad que recupera luz, pato que se apaga; termina en «Se ha sellado la profecía.» (Fase 15t) | |
 | FIN-02 | Finales | «El acantilado»: 0/3 y 1/2 guardadas | Atardecer, acantilado, la cámara sube y funde a blanco; nada después | |
 | FIN-03 | Finales | Avance solo con Enter, también con la tecla reasignada | Primera pulsación completa, segunda avanza; esperar no avanza | |
 | FIN-04 | Finales | Saltar manteniendo confirmar 1,2 s y pausar con Esc | Salta a la tarjeta; la pausa congela la escena | |
@@ -327,3 +327,9 @@ Para repetir con otras elecciones: Menú principal → «Nueva partida» (confir
 | FIN-01 | Finales | Ver el final conservado | Tras el corte a blanco se ve la silueta oscura del pato arrodillado con la espada clavada a su lado y luego quieta junto a ella; nada de sangre ni contacto; solo viento frío | |
 | FIN-02 | Finales | Ver el final del acantilado | Sobre el blanco, la silueta del pato en el borde mirando al cielo, que se desvanece; después el borde vacío con su espada y su sombrero; el pato nunca salta ni cae | |
 | ALM-01 | Jefes | Derrotar a cada guardián | El cuerpo se desvanece, aparece su alma en azul y dice las líneas con su nombre («Alma del Leñador»…); al terminar se deshace en partículas que forman el cristal; la decisión llega después; saltar (mantener Enter) va directo al cristal | |
+| FIN-10 | Finales | Ver los dos finales hasta la última línea | El abuelo sale sereno solo para decir «Se ha sellado la profecía.»; sin llanto, sin cabeza baja, sin lágrimas | |
+| CRE-01 | Créditos | Tras la última línea | El blanco se aclara hacia un cielo nocturno; conservado: estrellas que suben y ciudad que se desplaza; acantilado: cielo frío, niebla fina, borde con espada y sombrero; los créditos suben sin cortarse | |
+| CRE-02 | Créditos | Después de los créditos | Las estadísticas aparecen una a una con contadores que suben; luego la tarjeta final con la línea de apoyo en los dos finales y el botón de volver | |
+| CRE-03 | Créditos | Menú principal → Créditos y el final | El mismo contenido en ambos: título, nombres sin cargos, tecnología, música y efectos con fuente y licencia, agradecimientos, aviso de contenido | |
+| CRE-04 | Créditos | Efectos de corrupción apagados; mantener Enter; pausar | Cielo quieto, créditos en páginas estáticas, estadísticas sin contar; mantener Enter salta a la tarjeta final; la pausa congela todo | |
+| AMB-01 | Audio | Escuchar el viento de los finales | Ráfagas suaves y graves, siempre por debajo de la música, las voces y los efectos; sin golpecitos repetidos | |

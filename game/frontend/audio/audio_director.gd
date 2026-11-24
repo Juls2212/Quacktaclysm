@@ -84,6 +84,20 @@ var _boss_music_active: bool = false
 var _duck_owners: Dictionary = {}
 var _duck_db: float = 0.0
 
+## Ambient sounds (Phase 15t): the active slot, its gusts (each {player, t, length, level_db}), the timer to the next one and the bus of its filter.
+const AMBIENT_BUS: StringName = &"Ambient"
+var ambient_id: StringName = &""
+var ambient_intensity: float = 1.0
+## Gusts started since the ambient began (the tests read it; headless runs count none because they hear nothing).
+var ambient_gusts: int = 0
+var _ambient_slot: AmbientSlot = null
+var _ambient_voices: Array[Dictionary] = []
+var _ambient_pool: Array[AudioStreamPlayer] = []
+var _ambient_wait: float = 0.0
+var _ambient_bus_made: bool = false
+var _ambient_paused: bool = false
+var _ambient_stream: AudioStream = null
+
 const HERO_FEATHERS := Color(0.97, 0.95, 0.86)
 const ENEMY_FEATHERS := Color(0.78, 0.74, 0.66)
 const BOSS_FEATHERS := Color(0.42, 0.36, 0.48)
@@ -110,6 +124,7 @@ func _ready() -> void:
 
 ## Releases every stream so no audio resource is still in use when the game quits.
 func _exit_tree() -> void:
+	_drop_ambient_now()
 	if _active_music == null:
 		return
 	for player in [_music_a, _music_b] + _voices:
@@ -120,6 +135,8 @@ func _exit_tree() -> void:
 
 func _process(delta: float) -> void:
 	_scene_age += delta
+	if _ambient_slot != null or not _ambient_voices.is_empty():
+		_update_ambient(delta)
 
 
 # =====================================================================================
@@ -349,6 +366,147 @@ func _track_pitch_of(player: AudioStreamPlayer) -> float:
 ## Volume the music player of the current track should have (ducking included).
 func _music_target_db() -> float:
 	return MUSIC_DB + _duck_db
+
+
+# =====================================================================================
+# Ambient (Phase 15t): soft gusts, never a short sample repeated on a timer
+# =====================================================================================
+
+## Starts the ambient `slot_id` of the audio table (the cold wind of the endings): gusts that fade in and out, overlap a little and differ every time.
+## `intensity` (0 to 1) scales how loud they are (the beats follow the wind of the scene). Calling it again only updates the intensity.
+func start_ambient(slot_id: StringName, intensity: float = 1.0) -> bool:
+	ambient_intensity = clampf(intensity, 0.0, 1.0)
+	if ambient_id == slot_id and _ambient_slot != null:
+		return true
+	var slot: AmbientSlot = _audio_events().get_ambient(slot_id)
+	if slot == null:
+		push_warning("AudioDirector: unknown ambient '%s'" % slot_id)
+		return false
+	_ambient_slot = slot
+	ambient_id = slot_id
+	ambient_gusts = 0
+	_ambient_wait = 0.5
+	_ambient_stream = null
+	return true
+
+
+## Lets the gusts die away (their own fade-out) and starts no new one. `now` silences them at once.
+func stop_ambient(now: bool = false) -> void:
+	_ambient_slot = null
+	ambient_id = &""
+	if now:
+		_drop_ambient_now()
+
+
+## True while an ambient is started (its gusts may still be fading after it stopped).
+func is_ambient_active() -> bool:
+	return _ambient_slot != null
+
+
+func ambient_voice_count() -> int:
+	return _ambient_voices.size()
+
+
+func _update_ambient(delta: float) -> void:
+	if _ambient_pool.is_empty() and _voices.is_empty():
+		# Headless: nothing is heard, nothing is played.
+		return
+	var tree_paused: bool = get_tree().paused
+	if tree_paused != _ambient_paused:
+		_ambient_paused = tree_paused
+		for player in _ambient_pool:
+			player.stream_paused = tree_paused
+	if tree_paused:
+		return
+	var slot: AmbientSlot = _ambient_slot
+	if slot != null:
+		_ambient_wait -= delta
+		if _ambient_wait <= 0.0 and _ambient_voices.size() < slot.max_voices:
+			_start_gust(slot)
+	for i in range(_ambient_voices.size() - 1, -1, -1):
+		var voice: Dictionary = _ambient_voices[i]
+		var player: AudioStreamPlayer = voice["player"] as AudioStreamPlayer
+		var gust_slot: AmbientSlot = voice["slot"] as AmbientSlot
+		var t: float = float(voice["t"]) + delta
+		voice["t"] = t
+		var length: float = float(voice["length"])
+		if t >= length:
+			player.stop()
+			_ambient_voices.remove_at(i)
+			continue
+		var env: float = gust_slot.envelope(t, length)
+		var follow: float = _duck_db * gust_slot.follow_duck
+		player.volume_db = SFX_DB + float(voice["level_db"]) + linear_to_db(maxf(env * lerpf(0.35, 1.0, ambient_intensity), 0.0001)) + follow
+
+
+func _start_gust(slot: AmbientSlot) -> void:
+	var plan: Dictionary = slot.plan(_rng)
+	_ambient_wait = float(plan["gap"])
+	if _ambient_stream == null:
+		_ambient_stream = slot.generate_wind() if slot.file.is_empty() else _load(SFX_DIR + slot.file)
+	if _ambient_stream == null:
+		return
+	var player: AudioStreamPlayer = _ambient_player()
+	if player == null:
+		return
+	var pitch: float = float(plan["pitch"])
+	var stream_length: float = _ambient_stream.get_length()
+	var looped: bool = _ambient_stream is AudioStreamWAV and (_ambient_stream as AudioStreamWAV).loop_mode != AudioStreamWAV.LOOP_DISABLED
+	var offset: float = minf(float(plan["offset"]), maxf(stream_length - 0.5, 0.0))
+	# A file shorter than a gust makes a shorter gust (never a repeated loop); the generated wind loops under its fades.
+	var length: float = slot.gust_seconds if looped else minf(slot.gust_seconds, maxf((stream_length - offset) / pitch, 1.0))
+	player.stream = _ambient_stream
+	player.pitch_scale = pitch
+	player.volume_db = -60.0
+	player.bus = AMBIENT_BUS if _ambient_bus_made else GameSettings.SFX_BUS
+	player.play(offset)
+	ambient_gusts += 1
+	_ambient_voices.append({"player": player, "slot": slot, "t": 0.0, "length": length, "level_db": float(plan["volume_db"])})
+
+
+## A free ambient player (up to the slot's voices), created on the first gust; also makes the filter bus for a file that needs one.
+func _ambient_player() -> AudioStreamPlayer:
+	for player in _ambient_pool:
+		if not player.playing:
+			return player
+	if _ambient_pool.size() >= 4:
+		return null
+	if not _ambient_bus_made and _ambient_slot != null and not _ambient_slot.file.is_empty() and _ambient_slot.lowpass_hz < 20000.0:
+		_make_ambient_bus(_ambient_slot.lowpass_hz)
+	var player := _make_player(AMBIENT_BUS if _ambient_bus_made else GameSettings.SFX_BUS)
+	_ambient_pool.append(player)
+	return player
+
+
+func _make_ambient_bus(cutoff_hz: float) -> void:
+	AudioServer.add_bus()
+	var index: int = AudioServer.bus_count - 1
+	AudioServer.set_bus_name(index, AMBIENT_BUS)
+	AudioServer.set_bus_send(index, GameSettings.SFX_BUS)
+	var filter := AudioEffectLowPassFilter.new()
+	filter.cutoff_hz = cutoff_hz
+	AudioServer.add_bus_effect(index, filter)
+	_ambient_bus_made = true
+
+
+## Silences every gust, frees the players and removes the filter bus (everything is as it was before the ambient).
+func _drop_ambient_now() -> void:
+	_ambient_slot = null
+	ambient_id = &""
+	_ambient_voices.clear()
+	for player in _ambient_pool:
+		if is_instance_valid(player):
+			player.stop()
+			player.stream = null
+			player.bus = GameSettings.SFX_BUS
+			player.queue_free()
+	_ambient_pool.clear()
+	_ambient_stream = null
+	if _ambient_bus_made:
+		var index: int = AudioServer.get_bus_index(AMBIENT_BUS)
+		if index >= 0:
+			AudioServer.remove_bus(index)
+		_ambient_bus_made = false
 
 
 # =====================================================================================
